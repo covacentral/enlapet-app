@@ -5,12 +5,18 @@ import {
 } from "firebase/auth";
 import './App.css';
 
-// --- CONFIGURACIÓN DE LA URL DE LA API ---
-// Vite expone las variables de entorno en el objeto import.meta.env
-// VITE_API_URL será 'https://enlapet-api.onrender.com' en producción (Vercel)
-// y 'http://localhost:3001' en desarrollo (local).
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
+// --- DATOS CURIOSOS PARA LA PANTALLA DE CARGA ---
+const loadingFacts = [
+    "¿Sabías que Laika fue el primer ser vivo en orbitar la Tierra?",
+    "Hachiko, un perro Akita, esperó a su dueño por más de 9 años tras su muerte.",
+    "Buscando en los archivos de mascotas famosas...",
+    "Cher Ami, una paloma mensajera, salvó a casi 200 soldados en la I Guerra Mundial.",
+    "Ajustando los collares del tiempo...",
+    "Balto, un husky, lideró una expedición para llevar medicinas a un pueblo de Alaska.",
+    "Pulimos tu placa con la historia de las mascotas..."
+];
 
 function AuthPage() {
   const [view, setView] = useState('login'); 
@@ -19,7 +25,6 @@ function AuthPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    // Resetea el formulario y los mensajes al cambiar de vista
     setFormData({ name: '', email: '', password: '' });
     setMessage('');
   }, [view]);
@@ -32,8 +37,36 @@ function AuthPage() {
     e.preventDefault();
     setIsLoading(true);
     setMessage('Registrando...');
+
+    // --- MEJORA DE EXPERIENCIA DE USUARIO (v3 - Con datos curiosos) ---
+    let initialTimeout;
+    let factIntervalId;
+    
+    // Mensaje inicial más sutil después de 7 segundos
+    initialTimeout = setTimeout(() => {
+        setMessage('Un momento, estamos creando tu perfil en la base de datos...');
+    }, 7000);
+
+    // Después de 15 segundos, empezamos a mostrar datos curiosos
+    const startFactsTimeout = setTimeout(() => {
+        let factIndex = 0;
+        setMessage(loadingFacts[factIndex]); // Muestra el primer dato
+
+        // Cambia el dato cada 8 segundos
+        factIntervalId = setInterval(() => {
+            factIndex = (factIndex + 1) % loadingFacts.length; // Avanza al siguiente dato de forma cíclica
+            setMessage(loadingFacts[factIndex]);
+        }, 8000);
+
+    }, 15000);
+
+    const clearAllTimers = () => {
+        clearTimeout(initialTimeout);
+        clearTimeout(startFactsTimeout);
+        clearInterval(factIntervalId);
+    };
+
     try {
-      // Usamos la variable API_URL que apunta al backend correcto
       const response = await fetch(`${API_URL}/api/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -44,18 +77,19 @@ function AuthPage() {
         })
       });
 
+      clearAllTimers(); // Cancelamos los temporizadores si la respuesta llega
+
       const data = await response.json();
 
-      // Mejora en el manejo de errores para mostrar el mensaje del backend
       if (!response.ok) {
-        throw new Error(data.message || 'Ocurrió un error al registrar. Inténtalo de nuevo.');
+        throw new Error(data.message || 'Ocurrió un error al registrar.');
       }
       
-      setMessage('¡Usuario registrado con éxito! Por favor, inicia sesión para continuar.');
-      setView('login'); // Cambia a la vista de login tras el registro exitoso
+      setMessage('¡Usuario registrado con éxito! Por favor, inicia sesión.');
+      setView('login');
 
     } catch (error) {
-      // Muestra el mensaje de error de forma más clara
+      clearAllTimers(); // También cancelamos en caso de error
       setMessage(`Error: ${error.message}`);
     } finally {
         setIsLoading(false);
@@ -68,16 +102,15 @@ function AuthPage() {
     setMessage('Iniciando sesión...');
     try {
       await signInWithEmailAndPassword(auth, formData.email, formData.password);
-      // El componente se desmontará al iniciar sesión, no es necesario limpiar el mensaje aquí.
       setMessage('');
     } catch (error) {
-      // Firebase provee mensajes de error claros, los mostramos directamente.
       setMessage(`Error: ${error.message}`);
     } finally {
         setIsLoading(false);
     }
   };
 
+  // El resto del JSX se mantiene igual...
   return (
     <header className="App-header">
       {view === 'login' ? (
@@ -115,13 +148,18 @@ function AuthPage() {
               <input type="password" name="password" value={formData.password} onChange={handleChange} required minLength="6" disabled={isLoading} />
             </div>
             <button type="submit" disabled={isLoading}>
-              {isLoading ? 'Procesando...' : 'Registrarse'}
+              {isLoading ? message : 'Registrarse'}
             </button>
           </form>
           <p>¿Ya tienes cuenta? <button className="link-button" onClick={() => setView('login')} disabled={isLoading}>Inicia Sesión</button></p>
         </>
       )}
-      {message && <p className="response-message">{message}</p>}
+      {/* Mostramos el mensaje de carga/error fuera del botón para mayor claridad */}
+      {isLoading && view === 'register' ? (
+          <p className="response-message">{message}</p>
+      ) : (
+          message && <p className="response-message">{message}</p>
+      )}
     </header>
   );
 }
