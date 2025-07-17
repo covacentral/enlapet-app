@@ -1,15 +1,25 @@
 // --- CONFIGURACIÓN DE VARIABLES DE ENTORNO ---
-// Esta línea debe ir al principio de todo.
-// Carga las variables del archivo .env en process.env
 require('dotenv').config();
-
 const express = require('express');
 const cors = require('cors');
 const admin = require('firebase-admin');
 const multer = require('multer');
 
+// --- LÓGICA DE CREDENCIALES PARA DESARROLLO Y PRODUCCIÓN ---
+const serviceAccountBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
+
+let serviceAccount;
+if (serviceAccountBase64) {
+  // En producción (Render), decodificamos la variable de entorno
+  const serviceAccountString = Buffer.from(serviceAccountBase64, 'base64').toString('utf8');
+  serviceAccount = JSON.parse(serviceAccountString);
+} else {
+  // En desarrollo (tu PC), leemos el archivo local
+  console.log("Cargando credenciales desde archivo local...");
+  serviceAccount = require('./config/serviceAccountKey.json');
+}
+
 try {
-  const serviceAccount = require('./config/serviceAccountKey.json');
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
     storageBucket: 'enlapet.firebasestorage.app'
@@ -19,6 +29,7 @@ try {
   console.error('ERROR FATAL: No se pudo inicializar Firebase Admin SDK.', error);
   process.exit(1);
 }
+
 const db = admin.firestore();
 const auth = admin.auth();
 const bucket = admin.storage().bucket();
@@ -28,11 +39,9 @@ app.use(cors());
 app.use(express.json());
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
-
-// Ahora, process.env.PORT leerá el valor de tu archivo .env
 const PORT = process.env.PORT || 3001;
 
-// ... (El resto de tus endpoints se mantienen exactamente igual)
+// --- ENDPOINTS DE LA APLICACIÓN ---
 
 app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet!' }));
 
