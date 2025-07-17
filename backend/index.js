@@ -1,21 +1,16 @@
-// --- CONFIGURACIÓN DE VARIABLES DE ENTORNO ---
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const admin = require('firebase-admin');
 const multer = require('multer');
 
-// --- LÓGICA DE CREDENCIALES PARA DESARROLLO Y PRODUCCIÓN ---
+// --- LÓGICA DE CREDENCIALES ---
 const serviceAccountBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
-
 let serviceAccount;
 if (serviceAccountBase64) {
-  // En producción (Render), decodificamos la variable de entorno
   const serviceAccountString = Buffer.from(serviceAccountBase64, 'base64').toString('utf8');
   serviceAccount = JSON.parse(serviceAccountString);
 } else {
-  // En desarrollo (tu PC), leemos el archivo local
-  console.log("Cargando credenciales desde archivo local...");
   serviceAccount = require('./config/serviceAccountKey.json');
 }
 
@@ -35,13 +30,35 @@ const auth = admin.auth();
 const bucket = admin.storage().bucket();
 
 const app = express();
-app.use(cors());
+
+// --- CONFIGURACIÓN DE CORS PARA PRODUCCIÓN ---
+// Lista de dominios permitidos (nuestra "lista de invitados")
+const whitelist = [
+  'https://www.covacentral.shop', // Tu dominio principal
+  'https://enlapet-app.vercel.app', // El dominio de Vercel
+  'http://localhost:5173' // Para seguir desarrollando en local
+];
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Permite peticiones si el origen está en la whitelist (o si no hay origen, como en las pruebas de servidor)
+    if (whitelist.indexOf(origin) !== -1 || !origin) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  }
+};
+
+// Usamos la nueva configuración de CORS
+app.use(cors(corsOptions));
 app.use(express.json());
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 const PORT = process.env.PORT || 3001;
 
 // --- ENDPOINTS DE LA APLICACIÓN ---
+// (El resto de tus endpoints se mantienen exactamente igual)
 
 app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet!' }));
 
