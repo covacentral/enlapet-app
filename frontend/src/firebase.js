@@ -1,19 +1,32 @@
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth"; // Importamos el servicio de autenticación
+// frontend/src/firebase.js
 
-// Your web app's Firebase configuration (la que obtuviste de la consola)
+import { initializeApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
+import { getStorage } from "firebase/storage"; // Importamos Firebase Storage
+
+// --- CONFIGURACIÓN SEGURA DE FIREBASE DESDE VARIABLES DE ENTORNO ---
+// Leemos las credenciales desde las variables de entorno de Vite (import.meta.env)
+// Esto evita exponer las claves en el código fuente.
 const firebaseConfig = {
-  apiKey: "AIzaSyBTPYaCM4Ghs3zpLSR0k1DS0AycRrotzBk", // Reemplaza con tu API Key
-  authDomain: "enlapet.firebaseapp.com",
-  projectId: "enlapet",
-  storageBucket: "enlapet.firebasestorage.app",
-  messagingSenderId: "421172827289",
-  appId: "1:421172827289:web:98042910b5fcdb3e711408"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
-// Initialize Firebase
+// Verificación para asegurar que las variables de entorno se cargaron correctamente
+if (!firebaseConfig.apiKey) {
+  throw new Error("No se encontraron las variables de entorno de Firebase. Asegúrate de que tu archivo .env.local esté configurado.");
+}
+
+// Inicializamos la aplicación de Firebase
 const app = initializeApp(firebaseConfig);
 
-// Exportamos el servicio de autenticación para usarlo en otros componentes
+// --- EXPORTACIÓN DE SERVICIOS DE FIREBASE ---
+// Exportamos los servicios que usaremos en la aplicación.
 export const auth = getAuth(app);
+export const storage = getStorage(app); // Exportamos storage para la subida de archivos
+
+export default app;
