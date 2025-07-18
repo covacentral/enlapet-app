@@ -4,7 +4,8 @@ import { auth } from './firebase';
 import './App.css';
 import SettingsTab from './SettingsTab';
 import PetsTab from './PetsTab';
-import LoadingComponent from './LoadingComponent'; // <-- 1. IMPORTAMOS EL NUEVO COMPONENTE
+// --- CORRECCIÓN: Añadimos la extensión .jsx al nombre del archivo ---
+import LoadingComponent from './LoadingComponent.jsx'; 
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -46,7 +47,6 @@ function ProfileLayout({ user }) {
 
   const fetchAllData = async () => {
     if (!user) return;
-    // No establecemos loading a true aquí para que la recarga sea en segundo plano
     try {
       const idToken = await user.getIdToken();
       
@@ -71,7 +71,6 @@ function ProfileLayout({ user }) {
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
-      // Solo desactivamos el loading la primera vez
       if (loading) setLoading(false);
     }
   };
@@ -84,7 +83,6 @@ function ProfileLayout({ user }) {
     await signOut(auth);
   };
 
-  // --- 2. USAMOS EL NUEVO COMPONENTE DE CARGA ---
   if (loading) {
     return <LoadingComponent text="Cargando tu perfil..." />;
   }
