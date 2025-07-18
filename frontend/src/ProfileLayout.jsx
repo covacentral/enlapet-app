@@ -5,8 +5,8 @@ import './App.css';
 import SettingsTab from './SettingsTab';
 import PetsTab from './PetsTab';
 
-// --- Lee la URL base de la API desde las variables de entorno ---
-const API_URL = import.meta.env.VITE_API_BASE_URL;
+// --- CORRECCIÓN: Unificamos el nombre de la variable de entorno ---
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const PetBubble = ({ pet }) => (
   <div className="pet-bubble" title={pet.name}>
@@ -51,10 +51,10 @@ function ProfileLayout({ user }) {
       const idToken = await user.getIdToken();
       
       const [profileResponse, petsResponse] = await Promise.all([
-        fetch(`${API_URL}/profile`, {
+        fetch(`${API_URL}/api/profile`, { // Se usa la variable corregida
           headers: { 'Authorization': `Bearer ${idToken}` },
         }),
-        fetch(`${API_URL}/pets`, {
+        fetch(`${API_URL}/api/pets`, { // Se usa la variable corregida
           headers: { 'Authorization': `Bearer ${idToken}` },
         }),
       ]);

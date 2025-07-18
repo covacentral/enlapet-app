@@ -1,18 +1,28 @@
 /* --- Importación de Tipografía --- */
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap');
 
-/* --- NUEVA PALETA DE COLORES "OLED LAVENDER" --- */
+/* --- Paleta de Colores "OLED LAVENDER" (Sin cambios) --- */
 :root {
-  --background-dark: #000000;    /* Negro absoluto para OLED */
-  --background-light: #1C1C1E;   /* Gris oscuro para tarjetas */
-  --primary-accent: #9B89B3;     /* Morado lavanda suave */
-  --primary-accent-hover: #8A79A2; /* Tono más oscuro para hover */
-  --text-primary: #FFFFFF;      /* Blanco puro para legibilidad */
-  --text-secondary: #AEAEB2;    /* Gris claro para texto secundario */
-  --brand-cream: #FDFBF5;        /* Blanco crema sutil para la marca */
-  --error-red: #E74C3C;          /* Rojo alizarina */
-  --whatsapp-green: #25D366;     /* Verde WhatsApp */
-  --border-color: #2C2C2E;       /* Borde muy sutil */
+  --background-dark: #000000;
+  --background-light: #1C1C1E;
+  --primary-accent: #9B89B3;
+  --primary-accent-hover: #8A79A2;
+  --text-primary: #FFFFFF;
+  --text-secondary: #AEAEB2;
+  --brand-cream: #FDFBF5;
+  --error-red: #E74C3C;
+  --whatsapp-green: #25D366;
+  --border-color: #2C2C2E;
+}
+
+/* --- FIX 1: ESTILOS GLOBALES PARA ELIMINAR SCROLL Y FIJAR FONDO --- */
+html, body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--background-dark); /* Asegura que el fondo cubra todo */
+  color: var(--text-primary);
+  font-family: 'Nunito', sans-serif;
+  overflow-x: hidden; /* Previene el scroll horizontal globalmente */
 }
 
 #root {
@@ -20,21 +30,133 @@
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
-  font-family: 'Nunito', sans-serif;
-  background-color: var(--background-dark);
-  color: var(--text-primary);
+  box-sizing: border-box; /* Asegura que el padding no cause overflow */
+  width: 100%;
 }
 
-/* --- Estilos Generales para Formularios --- */
+/* --- FIX 2: ESTILOS PARA LA PÁGINA DE AUTENTICACIÓN --- */
+.App-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 4rem); /* Ocupa la altura de la pantalla menos el padding de #root */
+    width: 100%;
+}
+
+.register-form {
+    background-color: var(--background-light);
+    padding: 30px;
+    border-radius: 15px;
+    width: 100%;
+    max-width: 400px; /* Limita el ancho del formulario */
+    text-align: left;
+    border: 1px solid var(--border-color);
+    margin-bottom: 20px;
+}
+
+.register-form h1 {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
 .register-form label {
   display: block;
-  text-align: left;
   margin-bottom: 8px;
   font-weight: bold;
   color: var(--text-secondary);
 }
 
-/* --- Estilos para la Cabecera Final --- */
+.form-group input {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  background-color: var(--background-dark);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  box-sizing: border-box;
+  font-size: 1rem;
+}
+
+/* --- FIX 3: ESTILOS PARA EL BOTÓN DE VISUALIZAR CONTRASEÑA --- */
+.password-group {
+    position: relative;
+}
+
+.password-toggle-button {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+    color: var(--text-secondary);
+}
+
+.password-toggle-button:hover {
+    color: var(--primary-accent);
+}
+
+.auth-links {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.link-button {
+    background: none;
+    border: none;
+    color: var(--primary-accent);
+    cursor: pointer;
+    text-decoration: underline;
+    font-size: 0.9rem;
+}
+
+.link-button:hover {
+    color: var(--primary-accent-hover);
+}
+
+.response-message {
+    margin-top: 15px;
+    color: var(--text-secondary);
+    min-height: 20px; /* Evita saltos de layout */
+}
+
+.response-message.error {
+    color: var(--error-red);
+}
+
+/* --- FIX 4: ESTILOS PARA EL BOTÓN DE ATRÁS EN EL PERFIL PÚBLICO --- */
+.back-button {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    background-color: rgba(0, 0, 0, 0.4);
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: white;
+    transition: background-color 0.2s;
+}
+
+.back-button:hover {
+    background-color: rgba(0, 0, 0, 0.7);
+}
+
+/* --- El resto de tus estilos (sin cambios) --- */
+
 .main-header {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -46,6 +168,7 @@
   margin-bottom: 20px;
 }
 
+/* ... (Todos tus otros estilos de .main-header, .pet-card, .modal, etc. se mantienen aquí) ... */
 .user-profile-section {
   display: flex;
   flex-direction: column;
@@ -600,20 +723,6 @@
   background-color: #3C3C3E;
 }
 
-.form-group {
-  margin-bottom: 15px;
-}
-
-.form-group input, .form-group textarea {
-  width: 100%;
-  padding: 10px;
-  border-radius: 4px;
-  background-color: var(--background-dark);
-  border: 1px solid var(--border-color);
-  color: var(--text-primary);
-  box-sizing: border-box;
-}
-
 /* --- ESTILOS PARA PERFIL PÚBLICO --- */
 .public-profile-container {
   display: flex;
@@ -622,7 +731,7 @@
   justify-content: center;
   min-height: 100vh;
   padding: 20px;
-  background-color: var(--background-dark);
+  box-sizing: border-box; /* Añadido para controlar el padding */
 }
 
 .pet-profile-card {
@@ -633,6 +742,7 @@
   text-align: center;
   max-width: 500px;
   width: 100%;
+  position: relative; /* Necesario para posicionar el botón de atrás */
 }
 
 .pet-profile-picture {
