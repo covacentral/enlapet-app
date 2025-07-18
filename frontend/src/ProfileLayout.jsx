@@ -5,8 +5,23 @@ import './App.css';
 import SettingsTab from './SettingsTab';
 import PetsTab from './PetsTab';
 
-// --- CORRECCIÓN: Unificamos el nombre de la variable de entorno ---
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+// --- 1. NUEVO COMPONENTE PARA LA ANIMACIÓN DE CARGA ---
+const LoadingAnimation = () => (
+  <div className="loading-overlay">
+    <div className="paw-prints-container">
+      <div className="paw-print paw-1">🐾</div>
+      <div className="paw-print paw-2">🐾</div>
+      <div className="paw-print paw-3">🐾</div>
+      <div className="paw-print paw-4">🐾</div>
+      <div className="paw-print paw-5">🐾</div>
+      <div className="paw-print paw-6">🐾</div>
+    </div>
+    <p className="loading-text">Cargando tu perfil...</p>
+  </div>
+);
+
 
 const PetBubble = ({ pet }) => (
   <div className="pet-bubble" title={pet.name}>
@@ -46,15 +61,15 @@ function ProfileLayout({ user }) {
 
   const fetchAllData = async () => {
     if (!user) return;
-    setLoading(true);
+    // No establecemos loading a true aquí para que la recarga sea en segundo plano
     try {
       const idToken = await user.getIdToken();
       
       const [profileResponse, petsResponse] = await Promise.all([
-        fetch(`${API_URL}/api/profile`, { // Se usa la variable corregida
+        fetch(`${API_URL}/api/profile`, {
           headers: { 'Authorization': `Bearer ${idToken}` },
         }),
-        fetch(`${API_URL}/api/pets`, { // Se usa la variable corregida
+        fetch(`${API_URL}/api/pets`, {
           headers: { 'Authorization': `Bearer ${idToken}` },
         }),
       ]);
@@ -71,7 +86,8 @@ function ProfileLayout({ user }) {
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
-      setLoading(false);
+      // Solo desactivamos el loading la primera vez
+      if (loading) setLoading(false);
     }
   };
 
@@ -83,8 +99,9 @@ function ProfileLayout({ user }) {
     await signOut(auth);
   };
 
+  // --- 2. USAMOS EL NUEVO COMPONENTE DE CARGA ---
   if (loading) {
-    return <div className="App-header"><h1>Cargando tu perfil...</h1></div>;
+    return <LoadingAnimation />;
   }
 
   return (

@@ -1,24 +1,16 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom'; // <--- 1. IMPORTAMOS useNavigate
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import './App.css';
 
-// --- Lee la URL base de la API desde las variables de entorno ---
-// CORRECCIÓN: Asegúrate de que el nombre de la variable sea el mismo que usamos en otros archivos.
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-// --- 2. CREAMOS EL ICONO Y EL BOTÓN DE "ATRÁS" ---
-const BackArrowIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="19" y1="12" x2="5" y2="12"></line>
-        <polyline points="12 19 5 12 12 5"></polyline>
-    </svg>
-);
-
+// --- 1. MODIFICAMOS EL BOTÓN DE "ATRÁS" ---
+// Ahora será un botón de texto para máxima claridad.
 const BackButton = () => {
     const navigate = useNavigate();
     return (
-        <button onClick={() => navigate(-1)} className="back-button">
-            <BackArrowIcon />
+        <button onClick={() => navigate(-1)} className="back-button text-button">
+            &larr; Atrás
         </button>
     );
 };
@@ -33,7 +25,6 @@ const PetPicturePlaceholder = () => (
 const WhatsAppButton = ({ phoneNumber }) => {
   if (!phoneNumber) return null;
 
-  // Limpia el número para asegurar que solo contenga dígitos.
   const cleanedPhone = phoneNumber.replace(/\D/g, '');
   const whatsappLink = `https://wa.me/${cleanedPhone}`;
 
@@ -55,7 +46,6 @@ function PetProfile() {
       try {
         setLoading(true);
         setError('');
-        // Usamos la variable API_URL corregida
         const response = await fetch(`${API_URL}/api/public/pets/${petId}`);
         const data = await response.json();
 
@@ -81,7 +71,6 @@ function PetProfile() {
   if (error) {
     return (
       <div className="public-profile-container error-container">
-        {/* 3. AÑADIMOS EL BOTÓN DE ATRÁS TAMBIÉN EN LA PANTALLA DE ERROR */}
         <BackButton />
         <h2>Error</h2>
         <p>{error}</p>
@@ -97,7 +86,6 @@ function PetProfile() {
   return (
     <div className="public-profile-container">
       <div className="pet-profile-card">
-        {/* 4. AÑADIMOS EL BOTÓN DE ATRÁS EN LA TARJETA DEL PERFIL */}
         <BackButton />
         
         {profileData.pet.petPictureUrl ? (
