@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import './App.css';
-import LoadingComponent from './LoadingComponent.jsx'; // <-- 1. IMPORTAMOS EL COMPONENTE DE CARGA
+import LoadingComponent from './LoadingComponent.jsx';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -62,7 +62,6 @@ function PetProfile() {
     fetchPetProfile();
   }, [petId]);
 
-  // --- 2. USAMOS EL NUEVO COMPONENTE DE CARGA AQUÍ ---
   if (loading) {
     return <LoadingComponent text="Cargando perfil..." />;
   }
@@ -97,7 +96,8 @@ function PetProfile() {
         
         <div className="owner-info">
           <h2>¡Ayúdame a volver a casa!</h2>
-          <p><strong>Mi dueño es:</strong> {profileData.owner.name}</p>
+          {/* --- CAMBIO DE TEXTO --- */}
+          <p><strong>Responsable:</strong> {profileData.owner.name}</p>
           <p><strong>Su teléfono es:</strong> {profileData.owner.phone || 'No proporcionado'}</p>
           
           <WhatsAppButton phoneNumber={profileData.owner.phone} />
