@@ -7,7 +7,8 @@ import './App.css';
 import AuthPage from './AuthPage';
 import ProfileLayout from './ProfileLayout';
 import PetProfile from './PetProfile';
-import LoadingComponent from './LoadingComponent'; // <-- 1. IMPORTAMOS EL NUEVO COMPONENTE
+// --- CORRECCIÓN: Añadimos la extensión .jsx al nombre del archivo ---
+import LoadingComponent from './LoadingComponent.jsx'; 
 
 function ProtectedRoute({ user, children }) {
   if (!user) return <Navigate to="/" replace />;
@@ -26,7 +27,6 @@ function App() {
     return () => unsubscribe();
   }, []);
 
-  // --- 2. USAMOS EL NUEVO COMPONENTE DE CARGA AQUÍ ---
   if (loading) {
     return <LoadingComponent text="Cargando EnlaPet..." />;
   }
