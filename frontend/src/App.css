@@ -183,7 +183,7 @@ input::-ms-clear {
     gap: 15px;
 }
 
-/* --- ESTILOS PARA ANIMACIÓN DE CARGA (VERSIÓN FINAL) --- */
+/* --- ESTILOS PARA ANIMACIÓN DE CARGA (FRASES + SPINNER) --- */
 .loading-overlay {
   position: fixed;
   top: 0;
@@ -196,54 +196,47 @@ input::-ms-clear {
   align-items: center;
   justify-content: center;
   z-index: 2000;
-  overflow: hidden;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
+  text-align: center;
+}
+
+.loading-spinner {
+  width: 60px;
+  height: 60px;
+  border: 5px solid var(--border-color);
+  border-top-color: var(--primary-accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-fact {
+  font-size: 1.2rem;
+  color: var(--text-secondary);
+  max-width: 600px;
+  font-style: italic;
+  animation: fade-in 0.8s ease-in-out;
 }
 
 .loading-text {
   position: absolute;
   bottom: 5vh;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   color: var(--text-secondary);
-  animation: fade-in 1s ease-in-out;
+  opacity: 0.8;
 }
 
-.paw-prints-container {
-  position: relative;
-  width: 80vmin; /* Usamos vmin para que se adapte a la dimensión más pequeña de la pantalla */
-  height: 80vmin;
-}
-
-.paw-print {
-  position: absolute;
-  font-size: 4vmin; /* Tamaño de huella adaptable */
-  color: var(--primary-accent);
-  opacity: 0;
-  animation: stamp-paw 0.5s forwards;
-}
-
-/* Rotamos las huellas para que apunten en la dirección del camino */
-.paw-1, .paw-3, .paw-5, .paw-7 { transform: rotate(135deg); } /* Huellas derechas */
-.paw-2, .paw-4, .paw-6, .paw-8 { transform: rotate(135deg) scaleX(-1); } /* Huellas izquierdas (espejadas) */
-
-/* Posicionamiento en un camino diagonal, simulando pasos alternos */
-.paw-1 { bottom: 10%; left: 20%; animation-delay: 0s; }
-.paw-2 { bottom: 20%; left: 30%; animation-delay: 0.4s; }
-.paw-3 { bottom: 30%; left: 40%; animation-delay: 0.8s; }
-.paw-4 { bottom: 40%; left: 50%; animation-delay: 1.2s; }
-.paw-5 { bottom: 50%; left: 60%; animation-delay: 1.6s; }
-.paw-6 { bottom: 60%; left: 70%; animation-delay: 2.0s; }
-.paw-7 { bottom: 70%; left: 80%; animation-delay: 2.4s; }
-.paw-8 { bottom: 80%; left: 90%; animation-delay: 2.8s; }
-
-
-@keyframes stamp-paw {
-  from {
-    opacity: 0;
-    transform: scale(1.5); /* La rotación ya está aplicada en la clase */
-  }
+@keyframes spin {
   to {
-    opacity: 0.7;
-    transform: scale(1);
+    transform: rotate(360deg);
   }
 }
 
