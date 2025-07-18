@@ -1,9 +1,18 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import './App.css';
+import LoadingComponent from './LoadingComponent.jsx';
 
-// --- Lee la URL base de la API desde las variables de entorno ---
-const API_URL = import.meta.env.VITE_API_BASE_URL;
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+const BackButton = () => {
+    const navigate = useNavigate();
+    return (
+        <button onClick={() => navigate(-1)} className="back-button text-button">
+            &larr; Atrás
+        </button>
+    );
+};
 
 const PetPicturePlaceholder = () => (
   <div className="pet-profile-picture-placeholder">
@@ -35,7 +44,7 @@ function PetProfile() {
       try {
         setLoading(true);
         setError('');
-        const response = await fetch(`${API_URL}/public/pets/${petId}`);
+        const response = await fetch(`${API_URL}/api/public/pets/${petId}`);
         const data = await response.json();
 
         if (!response.ok) {
@@ -54,12 +63,13 @@ function PetProfile() {
   }, [petId]);
 
   if (loading) {
-    return <div className="public-profile-container"><h1>Cargando perfil...</h1></div>;
+    return <LoadingComponent text="Cargando perfil..." />;
   }
 
   if (error) {
     return (
       <div className="public-profile-container error-container">
+        <BackButton />
         <h2>Error</h2>
         <p>{error}</p>
         <Link to="/" className="link-button">Volver al inicio</Link>
@@ -74,6 +84,8 @@ function PetProfile() {
   return (
     <div className="public-profile-container">
       <div className="pet-profile-card">
+        <BackButton />
+        
         {profileData.pet.petPictureUrl ? (
           <img src={profileData.pet.petPictureUrl} alt={profileData.pet.name} className="pet-profile-picture" />
         ) : (
@@ -84,7 +96,8 @@ function PetProfile() {
         
         <div className="owner-info">
           <h2>¡Ayúdame a volver a casa!</h2>
-          <p><strong>Mi dueño es:</strong> {profileData.owner.name}</p>
+          {/* --- CAMBIO DE TEXTO --- */}
+          <p><strong>Responsable:</strong> {profileData.owner.name}</p>
           <p><strong>Su teléfono es:</strong> {profileData.owner.phone || 'No proporcionado'}</p>
           
           <WhatsAppButton phoneNumber={profileData.owner.phone} />
