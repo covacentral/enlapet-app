@@ -19,10 +19,10 @@
 html, body {
   margin: 0;
   padding: 0;
-  background-color: var(--background-dark); /* Asegura que el fondo cubra todo */
+  background-color: var(--background-dark);
   color: var(--text-primary);
   font-family: 'Nunito', sans-serif;
-  overflow-x: hidden; /* Previene el scroll horizontal globalmente */
+  overflow-x: hidden;
 }
 
 #root {
@@ -30,14 +30,13 @@ html, body {
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
-  box-sizing: border-box; /* Asegura que el padding no cause overflow */
+  box-sizing: border-box;
   width: 100%;
 }
 
-/* --- FIX: DISEÑO ANGOSTO EN MÓVILES --- */
 @media (max-width: 600px) {
   #root {
-    padding: 1rem; /* Reducimos el padding en pantallas pequeñas */
+    padding: 1rem;
   }
 }
 
@@ -56,11 +55,11 @@ html, body {
     padding: 30px;
     border-radius: 15px;
     width: 100%;
-    max-width: 400px; /* Limita el ancho del formulario */
+    max-width: 400px;
     text-align: left;
     border: 1px solid var(--border-color);
     margin-bottom: 20px;
-    box-sizing: border-box; /* Previene desbordamiento */
+    box-sizing: border-box;
 }
 
 .register-form h1 {
@@ -97,16 +96,20 @@ html, body {
 }
 
 .password-group input {
-    /* Añadimos padding a la derecha para hacer espacio para el ícono */
     padding-right: 50px; 
+}
+
+/* Oculta el ícono de "mostrar contraseña" por defecto del navegador */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
 }
 
 .password-toggle-button {
     position: absolute;
-    top: 50%;
-    /* Posicionamos el botón dentro del campo */
+    /* Corrección: El top se calcula desde el inicio del input, no del label */
+    top: calc(50% + 10px); /* Ajuste para alinearse con el input */
     right: 10px; 
-    /* Ajustamos la posición vertical */
     transform: translateY(-50%); 
     background: none;
     border: none;
@@ -167,7 +170,7 @@ html, body {
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    color: white; /* Color base para el SVG */
+    color: white;
     transition: background-color 0.2s;
     z-index: 10;
 }
@@ -176,20 +179,21 @@ html, body {
     background-color: rgba(0, 0, 0, 0.7);
 }
 
-/* Forzamos el color del ícono para que sea visible */
 .back-button svg {
-    stroke: var(--text-primary);
+    stroke: var(--text-primary) !important; /* Forzamos el color blanco */
 }
 
 
 /* --- FIX: DESFASE DE TARJETAS --- */
-/* Hacemos que los formularios no tengan su propio fondo, sino que sean transparentes
-   y se integren en la tarjeta contenedora. */
 .pet-edit-form, .settings-tab .register-form {
     background-color: transparent;
     padding: 0;
     border: none;
     margin-bottom: 0;
+    /* Añadimos flex y gap para espaciar los elementos internos */
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
 }
 
 /* --- El resto de tus estilos (sin cambios) --- */
