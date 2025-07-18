@@ -56,3 +56,5 @@ function App() {
 }
 
 export default App;
+
+// Aquí irá la nueva ruta de la tienda
