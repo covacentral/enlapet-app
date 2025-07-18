@@ -90,7 +90,6 @@ html, body {
   font-size: 1rem;
 }
 
-/* --- FIX: OJO DE LA CONTRASEÑA --- */
 .password-group {
     position: relative;
 }
@@ -99,7 +98,6 @@ html, body {
     padding-right: 50px; 
 }
 
-/* Oculta el ícono de "mostrar contraseña" por defecto del navegador */
 input::-ms-reveal,
 input::-ms-clear {
   display: none;
@@ -107,8 +105,7 @@ input::-ms-clear {
 
 .password-toggle-button {
     position: absolute;
-    /* Corrección: El top se calcula desde el inicio del input, no del label */
-    top: calc(50% + 10px); /* Ajuste para alinearse con el input */
+    top: calc(50% + 10px);
     right: 10px; 
     transform: translateY(-50%); 
     background: none;
@@ -156,45 +153,106 @@ input::-ms-clear {
     color: var(--error-red);
 }
 
-/* --- FIX: BOTÓN DE REGRESAR --- */
-.back-button {
+.back-button.text-button {
     position: absolute;
     top: 15px;
     left: 15px;
     background-color: rgba(0, 0, 0, 0.4);
-    border: none;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 8px 16px;
+    color: var(--text-primary);
     cursor: pointer;
-    color: white;
+    font-weight: bold;
+    font-size: 0.9rem;
     transition: background-color 0.2s;
     z-index: 10;
 }
 
-.back-button:hover {
+.back-button.text-button:hover {
     background-color: rgba(0, 0, 0, 0.7);
 }
 
-.back-button svg {
-    stroke: var(--text-primary) !important; /* Forzamos el color blanco */
-}
-
-
-/* --- FIX: DESFASE DE TARJETAS --- */
 .pet-edit-form, .settings-tab .register-form {
     background-color: transparent;
     padding: 0;
     border: none;
     margin-bottom: 0;
-    /* Añadimos flex y gap para espaciar los elementos internos */
     display: flex;
     flex-direction: column;
     gap: 15px;
 }
+
+/* --- ESTILOS PARA ANIMACIÓN DE CARGA --- */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: var(--background-dark);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  overflow: hidden;
+}
+
+.loading-text {
+  position: absolute;
+  bottom: 5vh;
+  font-size: 1.2rem;
+  color: var(--text-secondary);
+  animation: fade-in 1s ease-in-out;
+}
+
+.paw-prints-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.paw-print {
+  position: absolute;
+  font-size: 2rem;
+  color: var(--primary-accent);
+  opacity: 0;
+  animation: walk 2.5s infinite; /* Hacemos la animación un poco más lenta */
+  transform: rotate(-45deg);
+}
+
+.paw-1 { animation-delay: 0s; }
+.paw-2 { animation-delay: 0.4s; }
+.paw-3 { animation-delay: 0.8s; }
+.paw-4 { animation-delay: 1.2s; }
+.paw-5 { animation-delay: 1.6s; }
+.paw-6 { animation-delay: 2.0s; }
+
+@keyframes walk {
+  0% {
+    bottom: -10%;
+    left: -10%;
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.7;
+  }
+  75% {
+    opacity: 0.7;
+  }
+  100% {
+    bottom: 110%;
+    left: 110%;
+    opacity: 0;
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 
 /* --- El resto de tus estilos (sin cambios) --- */
 
@@ -209,6 +267,7 @@ input::-ms-clear {
   margin-bottom: 20px;
 }
 
+/* ... (Todos tus otros estilos de .main-header, .pet-card, .modal, etc. se mantienen aquí) ... */
 .user-profile-section {
   display: flex;
   flex-direction: column;
