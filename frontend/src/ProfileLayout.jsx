@@ -2,10 +2,9 @@ import { useState, useEffect } from 'react';
 import { signOut } from "firebase/auth";
 import { auth } from './firebase';
 import './App.css';
-import SettingsTab from './SettingsTab';
-import PetsTab from './PetsTab';
-// --- CORRECCIÓN: Añadimos la extensión .jsx al nombre del archivo ---
-import LoadingComponent from './LoadingComponent.jsx'; 
+import SettingsTab from './SettingsTab.jsx';
+import PetsTab from './PetsTab.jsx';
+import LoadingComponent from './LoadingComponent.jsx';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
