@@ -15,7 +15,7 @@
   --border-color: #2C2C2E;
 }
 
-/* --- FIX 1: ESTILOS GLOBALES PARA ELIMINAR SCROLL Y FIJAR FONDO --- */
+/* --- ESTILOS GLOBALES --- */
 html, body {
   margin: 0;
   padding: 0;
@@ -34,13 +34,20 @@ html, body {
   width: 100%;
 }
 
-/* --- FIX 2: ESTILOS PARA LA PÁGINA DE AUTENTICACIÓN --- */
+/* --- FIX: DISEÑO ANGOSTO EN MÓVILES --- */
+@media (max-width: 600px) {
+  #root {
+    padding: 1rem; /* Reducimos el padding en pantallas pequeñas */
+  }
+}
+
+/* --- ESTILOS PÁGINA DE AUTENTICACIÓN --- */
 .App-header {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: calc(100vh - 4rem); /* Ocupa la altura de la pantalla menos el padding de #root */
+    min-height: calc(100vh - 4rem);
     width: 100%;
 }
 
@@ -53,10 +60,12 @@ html, body {
     text-align: left;
     border: 1px solid var(--border-color);
     margin-bottom: 20px;
+    box-sizing: border-box; /* Previene desbordamiento */
 }
 
 .register-form h1 {
     text-align: center;
+    margin-top: 0;
     margin-bottom: 25px;
 }
 
@@ -82,21 +91,31 @@ html, body {
   font-size: 1rem;
 }
 
-/* --- FIX 3: ESTILOS PARA EL BOTÓN DE VISUALIZAR CONTRASEÑA --- */
+/* --- FIX: OJO DE LA CONTRASEÑA --- */
 .password-group {
     position: relative;
+}
+
+.password-group input {
+    /* Añadimos padding a la derecha para hacer espacio para el ícono */
+    padding-right: 50px; 
 }
 
 .password-toggle-button {
     position: absolute;
     top: 50%;
-    right: 10px;
-    transform: translateY(-50%);
+    /* Posicionamos el botón dentro del campo */
+    right: 10px; 
+    /* Ajustamos la posición vertical */
+    transform: translateY(-50%); 
     background: none;
     border: none;
     cursor: pointer;
     padding: 5px;
     color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .password-toggle-button:hover {
@@ -117,6 +136,7 @@ html, body {
     cursor: pointer;
     text-decoration: underline;
     font-size: 0.9rem;
+    padding: 5px;
 }
 
 .link-button:hover {
@@ -126,14 +146,14 @@ html, body {
 .response-message {
     margin-top: 15px;
     color: var(--text-secondary);
-    min-height: 20px; /* Evita saltos de layout */
+    min-height: 20px;
 }
 
 .response-message.error {
     color: var(--error-red);
 }
 
-/* --- FIX 4: ESTILOS PARA EL BOTÓN DE ATRÁS EN EL PERFIL PÚBLICO --- */
+/* --- FIX: BOTÓN DE REGRESAR --- */
 .back-button {
     position: absolute;
     top: 15px;
@@ -147,12 +167,29 @@ html, body {
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    color: white;
+    color: white; /* Color base para el SVG */
     transition: background-color 0.2s;
+    z-index: 10;
 }
 
 .back-button:hover {
     background-color: rgba(0, 0, 0, 0.7);
+}
+
+/* Forzamos el color del ícono para que sea visible */
+.back-button svg {
+    stroke: var(--text-primary);
+}
+
+
+/* --- FIX: DESFASE DE TARJETAS --- */
+/* Hacemos que los formularios no tengan su propio fondo, sino que sean transparentes
+   y se integren en la tarjeta contenedora. */
+.pet-edit-form, .settings-tab .register-form {
+    background-color: transparent;
+    padding: 0;
+    border: none;
+    margin-bottom: 0;
 }
 
 /* --- El resto de tus estilos (sin cambios) --- */
@@ -168,7 +205,6 @@ html, body {
   margin-bottom: 20px;
 }
 
-/* ... (Todos tus otros estilos de .main-header, .pet-card, .modal, etc. se mantienen aquí) ... */
 .user-profile-section {
   display: flex;
   flex-direction: column;
@@ -246,7 +282,7 @@ html, body {
   font-size: 2rem;
   text-align: right;
   margin: 0 0 15px 0;
-  color: var(--brand-cream); /* Color de marca aplicado */
+  color: var(--brand-cream);
 }
 
 .pet-bubbles-container {
@@ -294,7 +330,6 @@ html, body {
   white-space: nowrap;
 }
 
-/* --- ESTILOS PARA LA BARRA DE NAVEGACIÓN (TABS) --- */
 .profile-tabs {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -361,7 +396,6 @@ html, body {
   stroke: var(--primary-accent);
 }
 
-/* --- ESTILOS PARA EL MODAL DE CONFIRMACIÓN --- */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -425,8 +459,6 @@ html, body {
   background-color: var(--error-red);
   color: #fff;
 }
-
-/* --- ESTILOS PARA PESTAÑA DE MASCOTAS --- */
 
 .pets-tab-container {
   display: grid;
@@ -564,12 +596,6 @@ html, body {
     background-color: var(--primary-accent-hover);
 }
 
-.pet-edit-form {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
 .pet-edit-form input {
   width: 100%;
   background-color: var(--background-dark);
@@ -621,7 +647,6 @@ html, body {
     color: var(--text-primary);
 }
 
-/* --- ESTILOS PARA PESTAÑA DE PERFIL (SETTINGS) --- */
 .settings-tab {
   background-color: var(--background-light);
   padding: 25px;
@@ -723,7 +748,6 @@ html, body {
   background-color: #3C3C3E;
 }
 
-/* --- ESTILOS PARA PERFIL PÚBLICO --- */
 .public-profile-container {
   display: flex;
   flex-direction: column;
@@ -731,7 +755,7 @@ html, body {
   justify-content: center;
   min-height: 100vh;
   padding: 20px;
-  box-sizing: border-box; /* Añadido para controlar el padding */
+  box-sizing: border-box;
 }
 
 .pet-profile-card {
@@ -742,7 +766,7 @@ html, body {
   text-align: center;
   max-width: 500px;
   width: 100%;
-  position: relative; /* Necesario para posicionar el botón de atrás */
+  position: relative;
 }
 
 .pet-profile-picture {
@@ -839,7 +863,6 @@ html, body {
   color: var(--brand-cream);
 }
 
-/* --- Media Query para Diseño Responsivo (Móviles) --- */
 @media (max-width: 900px) {
   .main-header, .pets-tab-container {
     grid-template-columns: 1fr;
