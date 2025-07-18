@@ -43,17 +43,22 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // -----------------------------------------------------------------------------
-// CORS Configuration (VERSIÓN FINAL Y ROBUSTA)
+// CORS Configuration (VERSIÓN FINAL CON SOPORTE PARA PREVIEWS DE VERCEL)
 // -----------------------------------------------------------------------------
-const whitelist = [
-  'https://www.covacentral.shop', // Tu dominio principal de producción
-  'https://enlapet-app.vercel.app', // Dominio de Vercel (si aún lo usas)
-  'http://localhost:5173' // Para desarrollo local
-];
+
+// Usamos una Expresión Regular (Regex) para validar los orígenes.
+// Esta regla permite:
+// 1. El dominio de producción.
+// 2. localhost para desarrollo.
+// 3. CUALQUIER subdominio de Vercel para nuestro proyecto (ej: enlapet-app-....vercel.app)
+const allowedOrigins = new RegExp(
+  /^https?:\/\/((www\.)?covacentral\.shop|localhost:5173|enlapet-app(-[a-z0-9-]+)?\.vercel\.app)$/
+);
 
 const corsOptions = {
   origin: function (origin, callback) {
-    if (whitelist.indexOf(origin) !== -1 || !origin) {
+    // Si no hay origen (como en Postman) o si el origen coincide con nuestra regla, se permite.
+    if (!origin || allowedOrigins.test(origin)) {
       callback(null, true);
     } else {
       console.error(`CORS: Origen denegado -> ${origin}`);
@@ -62,13 +67,12 @@ const corsOptions = {
   }
 };
 
-// --- LA LÍNEA CLAVE DE LA SOLUCIÓN ---
 // Habilita las pre-flight requests (peticiones OPTIONS) para TODAS las rutas.
-// Esto debe ir ANTES de las rutas de tu API.
 app.options('*', cors(corsOptions)); 
 
-// Ahora, aplica la configuración de CORS para todas las demás peticiones.
+// Aplica la configuración de CORS para todas las demás peticiones.
 app.use(cors(corsOptions));
+
 
 // Middleware para parsear JSON
 app.use(express.json());
@@ -81,9 +85,9 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 *
 // ENDPOINTS DE LA APLICACIÓN (Sin cambios aquí)
 // -----------------------------------------------------------------------------
 
-app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v2.0 Estable' }));
+app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v2.1 Estable' }));
 
-// ... (El resto de tus endpoints: /api/register, /api/profile, /api/pets, etc. se mantienen exactamente igual)
+// ... (El resto de tus endpoints: /api/register, /api/profile, /api/pets, etc. se mantienen exactamente igual que en tu archivo)
 app.post('/api/register', async (req, res) => {
   try {
     const { email, password, name } = req.body;
