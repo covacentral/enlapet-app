@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import './App.css';
+import LoadingComponent from './LoadingComponent.jsx'; // <-- 1. IMPORTAMOS EL COMPONENTE DE CARGA
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-// --- 1. MODIFICAMOS EL BOTÓN DE "ATRÁS" ---
-// Ahora será un botón de texto para máxima claridad.
 const BackButton = () => {
     const navigate = useNavigate();
     return (
@@ -14,7 +13,6 @@ const BackButton = () => {
         </button>
     );
 };
-
 
 const PetPicturePlaceholder = () => (
   <div className="pet-profile-picture-placeholder">
@@ -64,8 +62,9 @@ function PetProfile() {
     fetchPetProfile();
   }, [petId]);
 
+  // --- 2. USAMOS EL NUEVO COMPONENTE DE CARGA AQUÍ ---
   if (loading) {
-    return <div className="public-profile-container"><h1>Cargando perfil...</h1></div>;
+    return <LoadingComponent text="Cargando perfil..." />;
   }
 
   if (error) {
