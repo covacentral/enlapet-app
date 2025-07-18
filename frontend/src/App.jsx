@@ -4,11 +4,10 @@ import { auth } from './firebase';
 import { onAuthStateChanged } from "firebase/auth";
 import './App.css';
 
-import AuthPage from './AuthPage';
-import ProfileLayout from './ProfileLayout';
-import PetProfile from './PetProfile';
-// --- CORRECCIÓN: Añadimos la extensión .jsx al nombre del archivo ---
-import LoadingComponent from './LoadingComponent.jsx'; 
+import AuthPage from './AuthPage.jsx';
+import ProfileLayout from './ProfileLayout.jsx';
+import PetProfile from './PetProfile.jsx';
+import LoadingComponent from './LoadingComponent.jsx';
 
 function ProtectedRoute({ user, children }) {
   if (!user) return <Navigate to="/" replace />;
