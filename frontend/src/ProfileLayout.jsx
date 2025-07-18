@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react';
 import { signOut } from "firebase/auth";
 import { auth } from './firebase';
 import './App.css';
-import SettingsTab from './SettingsTab';
-import PetsTab from './PetsTab';
+import SettingsTab from './SettingsTab.jsx';
+import PetsTab from './PetsTab.jsx';
+import LoadingComponent from './LoadingComponent.jsx';
 
-// --- Lee la URL base de la API desde las variables de entorno ---
-const API_URL = import.meta.env.VITE_API_BASE_URL;
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const PetBubble = ({ pet }) => (
   <div className="pet-bubble" title={pet.name}>
@@ -46,15 +46,14 @@ function ProfileLayout({ user }) {
 
   const fetchAllData = async () => {
     if (!user) return;
-    setLoading(true);
     try {
       const idToken = await user.getIdToken();
       
       const [profileResponse, petsResponse] = await Promise.all([
-        fetch(`${API_URL}/profile`, {
+        fetch(`${API_URL}/api/profile`, {
           headers: { 'Authorization': `Bearer ${idToken}` },
         }),
-        fetch(`${API_URL}/pets`, {
+        fetch(`${API_URL}/api/pets`, {
           headers: { 'Authorization': `Bearer ${idToken}` },
         }),
       ]);
@@ -71,7 +70,7 @@ function ProfileLayout({ user }) {
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
-      setLoading(false);
+      if (loading) setLoading(false);
     }
   };
 
@@ -84,7 +83,7 @@ function ProfileLayout({ user }) {
   };
 
   if (loading) {
-    return <div className="App-header"><h1>Cargando tu perfil...</h1></div>;
+    return <LoadingComponent text="Cargando tu perfil..." />;
   }
 
   return (

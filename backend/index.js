@@ -10,26 +10,25 @@ const admin = require('firebase-admin');
 const multer = require('multer');
 
 // -----------------------------------------------------------------------------
-// Firebase Admin SDK Initialization
+// Firebase Admin SDK Initialization (Versión solo para producción)
 // -----------------------------------------------------------------------------
 const serviceAccountBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
-let serviceAccount;
 
-if (serviceAccountBase64) {
-  const serviceAccountString = Buffer.from(serviceAccountBase64, 'base64').toString('utf8');
-  serviceAccount = JSON.parse(serviceAccountString);
-} else {
-  // Fallback para desarrollo local si la variable de entorno no está
-  console.log("Cargando credenciales desde archivo local serviceAccountKey.json");
-  serviceAccount = require('./serviceAccountKey.json');
+// Verificación de seguridad: si la variable de entorno no existe, la aplicación no se iniciará.
+if (!serviceAccountBase64) {
+  console.error('ERROR FATAL: La variable de entorno FIREBASE_SERVICE_ACCOUNT_BASE64 no está definida.');
+  process.exit(1); // Detiene la aplicación si la clave no está presente.
 }
+
+const serviceAccountString = Buffer.from(serviceAccountBase64, 'base64').toString('utf8');
+const serviceAccount = JSON.parse(serviceAccountString);
 
 try {
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
     storageBucket: 'enlapet.firebasestorage.app'
   });
-  console.log('Firebase Admin SDK inicializado correctamente.');
+  console.log('Firebase Admin SDK inicializado correctamente desde variable de entorno.');
 } catch (error) {
   console.error('ERROR FATAL: No se pudo inicializar Firebase Admin SDK.', error);
   process.exit(1);
@@ -42,22 +41,15 @@ const bucket = admin.storage().bucket();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// -----------------------------------------------------------------------------
-// CORS Configuration (VERSIÓN FINAL CON SOPORTE PARA PREVIEWS DE VERCEL)
-// -----------------------------------------------------------------------------
+// --- El resto del archivo (CORS, Endpoints, etc.) se mantiene exactamente igual ---
 
-// Usamos una Expresión Regular (Regex) para validar los orígenes.
-// Esta regla permite:
-// 1. El dominio de producción.
-// 2. localhost para desarrollo.
-// 3. CUALQUIER subdominio de Vercel para nuestro proyecto (ej: enlapet-app-....vercel.app)
+// ... (El resto de tu código de CORS y endpoints va aquí sin ningún cambio)
 const allowedOrigins = new RegExp(
   /^https?:\/\/((www\.)?covacentral\.shop|localhost:5173|enlapet-app(-[a-z0-9-]+)?\.vercel\.app)$/
 );
 
 const corsOptions = {
   origin: function (origin, callback) {
-    // Si no hay origen (como en Postman) o si el origen coincide con nuestra regla, se permite.
     if (!origin || allowedOrigins.test(origin)) {
       callback(null, true);
     } else {
@@ -67,27 +59,13 @@ const corsOptions = {
   }
 };
 
-// Habilita las pre-flight requests (peticiones OPTIONS) para TODAS las rutas.
 app.options('*', cors(corsOptions)); 
-
-// Aplica la configuración de CORS para todas las demás peticiones.
 app.use(cors(corsOptions));
-
-
-// Middleware para parsear JSON
 app.use(express.json());
-
-// Configuración de Multer para la subida de archivos
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
+app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v2.2 Estable' }));
 
-// -----------------------------------------------------------------------------
-// ENDPOINTS DE LA APLICACIÓN (Sin cambios aquí)
-// -----------------------------------------------------------------------------
-
-app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v2.1 Estable' }));
-
-// ... (El resto de tus endpoints: /api/register, /api/profile, /api/pets, etc. se mantienen exactamente igual que en tu archivo)
 app.post('/api/register', async (req, res) => {
   try {
     const { email, password, name } = req.body;
@@ -312,7 +290,4 @@ app.get('/api/public/pets/:petId', async (req, res) => {
 });
 
 
-// -----------------------------------------------------------------------------
-// Server Initialization
-// -----------------------------------------------------------------------------
 app.listen(PORT, () => console.log(`Servidor corriendo en el puerto ${PORT}`));

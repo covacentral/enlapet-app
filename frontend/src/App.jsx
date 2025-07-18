@@ -4,9 +4,10 @@ import { auth } from './firebase';
 import { onAuthStateChanged } from "firebase/auth";
 import './App.css';
 
-import AuthPage from './AuthPage';
-import ProfileLayout from './ProfileLayout';
-import PetProfile from './PetProfile';
+import AuthPage from './AuthPage.jsx';
+import ProfileLayout from './ProfileLayout.jsx';
+import PetProfile from './PetProfile.jsx';
+import LoadingComponent from './LoadingComponent.jsx';
 
 function ProtectedRoute({ user, children }) {
   if (!user) return <Navigate to="/" replace />;
@@ -26,16 +27,14 @@ function App() {
   }, []);
 
   if (loading) {
-    return <div className="App-header"><h1>Cargando EnlaPet...</h1></div>;
+    return <LoadingComponent text="Cargando EnlaPet..." />;
   }
 
   return (
     <div className="App">
       <Routes>
-        {/* Ruta para el perfil público de la mascota. Es específica y se evalúa primero. */}
         <Route path="/pet/:petId" element={<PetProfile />} />
         
-        {/* Ruta para el panel de control del usuario. */}
         <Route 
           path="/dashboard" 
           element={
@@ -45,10 +44,8 @@ function App() {
           } 
         />
 
-        {/* Ruta principal: decide si mostrar el login o redirigir al dashboard. */}
         <Route path="/" element={user ? <Navigate to="/dashboard" /> : <AuthPage />} />
         
-        {/* Ruta comodín para cualquier otra URL no encontrada. */}
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </div>
@@ -56,5 +53,3 @@ function App() {
 }
 
 export default App;
-
-// Aquí irá la nueva ruta de la tienda
