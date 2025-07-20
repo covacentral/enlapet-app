@@ -60,7 +60,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 *
 // ENDPOINTS DE LA APLICACIÓN
 // -----------------------------------------------------------------------------
 
-app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v2.3 Social' }));
+app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v2.4 Estable' }));
 
 // --- Endpoints de Autenticación (Sin cambios) ---
 app.post('/api/register', async (req, res) => { /* ... */ });
@@ -77,10 +77,9 @@ app.post('/api/pets', async (req, res) => {
     const { name, breed } = req.body;
 
     if (!name) {
-      return res.status(400).json({ message: 'El nombre es requerido.' });
+      return res.status(400).json({ message: 'El nombre de la mascota es requerido.' });
     }
 
-    // Creamos un perfil de mascota mínimo
     const petData = { 
       ownerId: uid, 
       name, 
@@ -88,8 +87,7 @@ app.post('/api/pets', async (req, res) => {
       createdAt: new Date().toISOString(), 
       petPictureUrl: '',
       gallery: [],
-      isProfileComplete: false, // <-- CORRECCIÓN: Añadimos el flag por defecto
-      location: { city: '', country: '' },
+      location: { city: '', country: '', department: '' },
       healthRecord: {
         birthDate: null,
         gender: 'No especificado',
@@ -109,7 +107,7 @@ app.post('/api/pets', async (req, res) => {
   }
 });
 
-// --- ENDPOINT POTENCIADO: Actualización Completa del Perfil de la Mascota ---
+// --- ENDPOINT POTENCIADO Y CORREGIDO: Actualización Completa del Perfil de la Mascota ---
 app.put('/api/pets/:petId', async (req, res) => {
   try {
     const idToken = req.headers.authorization?.split('Bearer ')[1];
@@ -118,7 +116,7 @@ app.put('/api/pets/:petId', async (req, res) => {
     const { uid } = decodedToken;
 
     const { petId } = req.params;
-    const updateData = req.body; // Recibimos todos los datos a actualizar
+    const updateData = req.body;
 
     const petRef = db.collection('pets').doc(petId);
     const petDoc = await petRef.get();
@@ -130,14 +128,10 @@ app.put('/api/pets/:petId', async (req, res) => {
       return res.status(403).json({ message: 'No autorizado para modificar esta mascota.' });
     }
 
-    // Marcamos el perfil como completo si se está actualizando la ubicación
-    if (updateData.location && updateData.location.city) {
-        updateData.isProfileComplete = true;
-    }
+    // --- CORRECCIÓN: Usamos set con merge:true para guardar correctamente los datos anidados ---
+    await petRef.set(updateData, { merge: true });
 
-    await petRef.set(updateData, { merge: true }); // Usamos set con merge para actualizar campos anidados
-
-    // --- Lógica de Ubicación Implícita (Movida aquí) ---
+    // --- Lógica de Ubicación Implícita ---
     if (updateData.location && updateData.location.city) {
       const userRef = db.collection('users').doc(uid);
       const userDoc = await userRef.get();
@@ -148,7 +142,7 @@ app.put('/api/pets/:petId', async (req, res) => {
       }
     }
 
-    res.status(200).json({ message: 'Perfil de mascota actualizado con éxito.' });
+    res.status(200).json({ message: 'Perfil de la mascota actualizado con éxito.' });
 
   } catch (error) {
     console.error('Error en /api/pets/:petId (PUT):', error);
@@ -157,7 +151,7 @@ app.put('/api/pets/:petId', async (req, res) => {
 });
 
 
-// ... (El resto de tus endpoints: /api/profile, GET /api/pets, etc. se mantienen igual)
+// --- El resto de los endpoints se mantienen igual ---
 app.get('/api/profile', async (req, res) => { /* ... */ });
 app.put('/api/profile', async (req, res) => { /* ... */ });
 app.post('/api/profile/picture', upload.single('profilePicture'), async (req, res) => { /* ... */ });

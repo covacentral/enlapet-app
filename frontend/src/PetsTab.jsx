@@ -1,19 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import './App.css';
-import { colombiaData } from './colombiaData.js'; // Importamos los datos de Colombia
+import { colombiaData } from './colombiaData.js';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-// --- CORRECCIÓN: RESTAURAMOS EL CÓDIGO DEL ICONO DE EDICIÓN ---
 const EditIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg xmlns="http://www.w.3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
   </svg>
 );
 
-// --- Componente del Modal de Edición ---
 function PetEditModal({ pet, user, onUpdate, onClose }) {
     const [formData, setFormData] = useState({
         name: pet.name || '',
@@ -30,16 +28,19 @@ function PetEditModal({ pet, user, onUpdate, onClose }) {
     const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
-        const countryData = colombiaData; // Por ahora solo Colombia
+        const countryData = colombiaData;
         setDepartments(countryData.map(d => d.departamento).sort());
+        // Si la mascota ya tiene un departamento, cargamos las ciudades
+        if (formData.department) {
+            const selectedDept = colombiaData.find(d => d.departamento === formData.department);
+            setCities(selectedDept ? selectedDept.ciudades.sort() : []);
+        }
     }, []);
 
     useEffect(() => {
         if (formData.department) {
             const selectedDept = colombiaData.find(d => d.departamento === formData.department);
             setCities(selectedDept ? selectedDept.ciudades.sort() : []);
-            // Resetea la ciudad si el departamento cambia
-            setFormData(prev => ({ ...prev, city: '' }));
         } else {
             setCities([]);
         }
@@ -47,7 +48,12 @@ function PetEditModal({ pet, user, onUpdate, onClose }) {
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        // Si cambia el departamento, reseteamos la ciudad
+        if (name === 'department') {
+            setFormData(prev => ({ ...prev, department: value, city: '' }));
+        } else {
+            setFormData(prev => ({ ...prev, [name]: value }));
+        }
     };
     
     const handleSaveChanges = async (e) => {
@@ -65,7 +71,7 @@ function PetEditModal({ pet, user, onUpdate, onClose }) {
                     city: formData.city,
                 },
                 healthRecord: {
-                    ...pet.healthRecord, // Mantenemos datos existentes como vacunas
+                    ...pet.healthRecord,
                     birthDate: formData.birthDate,
                     gender: formData.gender,
                 }
@@ -82,7 +88,7 @@ function PetEditModal({ pet, user, onUpdate, onClose }) {
             
             setMessage('¡Perfil actualizado!');
             onUpdate();
-            setTimeout(() => onClose(), 1500); // Cierra el modal después de un segundo
+            setTimeout(() => onClose(), 1500);
         } catch (error) {
             setMessage(`Error: ${error.message}`);
         } finally {
@@ -95,7 +101,6 @@ function PetEditModal({ pet, user, onUpdate, onClose }) {
             <div className="modal-content pet-edit-modal">
                 <h2>Editar Perfil de {pet.name}</h2>
                 <form onSubmit={handleSaveChanges}>
-                    {/* Campos del formulario */}
                     <div className="form-group">
                         <label>Nombre:</label>
                         <input name="name" value={formData.name} onChange={handleChange} required />
@@ -134,7 +139,6 @@ function PetEditModal({ pet, user, onUpdate, onClose }) {
                             {cities.map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
                     </div>
-
                     <div className="modal-actions">
                         <button type="button" onClick={onClose} className="modal-button cancel" disabled={isLoading}>Cancelar</button>
                         <button type="submit" className="modal-button confirm" disabled={isLoading}>
@@ -148,10 +152,10 @@ function PetEditModal({ pet, user, onUpdate, onClose }) {
     );
 }
 
-
-// --- Componente de la Tarjeta de Mascota (Modificado) ---
 function PetCard({ pet, user, onUpdate, onEdit }) {
-    // Verificamos si el perfil está completo (si tiene una ciudad asignada)
+    // --- LÓGICA MEJORADA ---
+    // Un perfil se considera incompleto si no tiene una ciudad asignada.
+    // Esto funciona para mascotas nuevas y antiguas.
     const isProfileComplete = pet.location && pet.location.city;
 
     return (
@@ -173,7 +177,6 @@ function PetCard({ pet, user, onUpdate, onEdit }) {
                         <EditIcon />
                     </button>
                 </div>
-                {/* Aviso para completar el perfil */}
                 {!isProfileComplete && (
                     <button className="complete-profile-prompt" onClick={() => onEdit(pet)}>
                         ¡Completa mi perfil!
@@ -185,13 +188,12 @@ function PetCard({ pet, user, onUpdate, onEdit }) {
     );
 }
 
-// --- Componente Principal de la Pestaña (Reestructurado) ---
 function PetsTab({ user, initialPets, onPetsUpdate }) {
     const [pets, setPets] = useState(initialPets);
     const [message, setMessage] = useState('');
     const [formState, setFormState] = useState({ name: '', breed: '' });
     const [isAdding, setIsAdding] = useState(false);
-    const [editingPet, setEditingPet] = useState(null); // Estado para controlar el modal
+    const [editingPet, setEditingPet] = useState(null);
 
     useEffect(() => {
         setPets(initialPets);
@@ -237,7 +239,6 @@ function PetsTab({ user, initialPets, onPetsUpdate }) {
                     onClose={() => setEditingPet(null)}
                 />
             )}
-
             <div className="dashboard-column add-pet-column">
                 <h2>Añadir Nueva Mascota</h2>
                 <form onSubmit={handleAddPet} className="register-form">
