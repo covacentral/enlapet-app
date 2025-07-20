@@ -3,14 +3,14 @@ import { auth } from './firebase';
 import { 
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
-  GoogleAuthProvider, // <-- 1. Importamos el proveedor de Google
-  signInWithPopup     // <-- 2. Importamos la función para el pop-up
+  GoogleAuthProvider,
+  signInWithPopup
 } from "firebase/auth";
 import './App.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-// --- Iconos (Sin cambios) ---
+// --- Iconos ---
 const EyeIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -29,9 +29,6 @@ const GoogleIcon = () => (
     </svg>
 );
 
-// --- DATOS CURIOSOS (Sin cambios aquí) ---
-const loadingFacts = [ /* ... */ ];
-
 function AuthPage() {
   const [view, setView] = useState('login'); 
   const [showPassword, setShowPassword] = useState(false);
@@ -49,16 +46,21 @@ function AuthPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // --- (handleRegister sin cambios) ---
-  const handleRegister = async (e) => { /* ... */ };
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    // ... (lógica de registro sin cambios)
+  };
   
-  // --- (handleLogin sin cambios) ---
-  const handleLogin = async (e) => { /* ... */ };
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    // ... (lógica de inicio de sesión sin cambios)
+  };
 
-  // --- (handlePasswordReset sin cambios) ---
-  const handlePasswordReset = async (e) => { /* ... */ };
+  const handlePasswordReset = async (e) => {
+    e.preventDefault();
+    // ... (lógica de restablecer contraseña sin cambios)
+  };
 
-  // --- 3. NUEVA FUNCIÓN PARA INICIAR SESIÓN CON GOOGLE ---
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     setMessage('Conectando con Google...');
@@ -68,7 +70,6 @@ function AuthPage() {
         const user = result.user;
         const idToken = await user.getIdToken(true);
 
-        // Enviamos el token a nuestro backend para verificar y crear el perfil si es necesario
         const response = await fetch(`${API_URL}/api/auth/google`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -78,7 +79,6 @@ function AuthPage() {
         if (!response.ok) {
             throw new Error('No se pudo verificar la sesión con el servidor.');
         }
-        // El onAuthStateChanged en App.jsx se encargará de la redirección
         setMessage('');
 
     } catch (error) {
@@ -88,7 +88,6 @@ function AuthPage() {
     }
   };
 
-  // --- 4. RENDERIZADO CON EL NUEVO BOTÓN ---
   const renderContent = () => {
     switch (view) {
       case 'login':
@@ -99,13 +98,27 @@ function AuthPage() {
                 <GoogleIcon />
                 Continuar con Google
             </button>
-            <div className="auth-separator">
-                <span>o</span>
-            </div>
+            <div className="auth-separator"><span>o</span></div>
             <form onSubmit={handleLogin} className="register-form no-background">
-              {/* ... campos de email y contraseña ... */}
+              <div className="form-group">
+                <label htmlFor="email">Email:</label>
+                <input type="email" name="email" value={formData.email} onChange={handleChange} required disabled={isLoading} />
+              </div>
+              <div className="form-group password-group">
+                <label htmlFor="password">Contraseña:</label>
+                <input type={showPassword ? 'text' : 'password'} name="password" value={formData.password} onChange={handleChange} required disabled={isLoading} />
+                <button type="button" className="password-toggle-button" onClick={() => setShowPassword(!showPassword)}>
+                    {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                </button>
+              </div>
+              <button type="submit" disabled={isLoading}>
+                {isLoading ? 'Verificando...' : 'Iniciar Sesión'}
+              </button>
             </form>
-            {/* ... enlaces de olvidé contraseña y registrarse ... */}
+            <div className="auth-links">
+                <button className="link-button" onClick={() => setView('forgot-password')} disabled={isLoading}>Olvidé mi contraseña</button>
+                <p>¿No tienes cuenta? <button className="link-button" onClick={() => setView('register')} disabled={isLoading}>Regístrate</button></p>
+            </div>
           </>
         );
       case 'register':
@@ -116,19 +129,45 @@ function AuthPage() {
                 <GoogleIcon />
                 Continuar con Google
             </button>
-            <div className="auth-separator">
-                <span>o</span>
-            </div>
+            <div className="auth-separator"><span>o</span></div>
             <form onSubmit={handleRegister} className="register-form no-background">
-              {/* ... campos de nombre, email y contraseña ... */}
+              <div className="form-group">
+                <label htmlFor="name">Nombre:</label>
+                <input type="text" name="name" value={formData.name} onChange={handleChange} required disabled={isLoading} />
+              </div>
+              <div className="form-group">
+                <label htmlFor="email">Email:</label>
+                <input type="email" name="email" value={formData.email} onChange={handleChange} required disabled={isLoading} />
+              </div>
+              <div className="form-group password-group">
+                <label htmlFor="password">Contraseña:</label>
+                <input type={showPassword ? 'text' : 'password'} name="password" value={formData.password} onChange={handleChange} required minLength="6" disabled={isLoading} />
+                <button type="button" className="password-toggle-button" onClick={() => setShowPassword(!showPassword)}>
+                    {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                </button>
+              </div>
+              <button type="submit" disabled={isLoading}>
+                {isLoading ? 'Registrando...' : 'Registrarse'}
+              </button>
             </form>
-            {/* ... enlace de ya tienes cuenta ... */}
+            <p>¿Ya tienes cuenta? <button className="link-button" onClick={() => setView('login')} disabled={isLoading}>Inicia Sesión</button></p>
           </>
         );
       case 'forgot-password':
         return (
             <>
-              {/* ... vista de restablecer contraseña ... */}
+              <h1>Restablecer Contraseña</h1>
+              <form onSubmit={handlePasswordReset} className="register-form">
+                <p className="form-description">Ingresa tu correo y te enviaremos un enlace para que puedas restablecer tu contraseña.</p>
+                <div className="form-group">
+                  <label htmlFor="email">Email:</label>
+                  <input type="email" name="email" value={formData.email} onChange={handleChange} required disabled={isLoading} />
+                </div>
+                <button type="submit" disabled={isLoading}>
+                  {isLoading ? 'Enviando...' : 'Enviar Enlace'}
+                </button>
+              </form>
+              <button className="link-button" onClick={() => setView('login')} disabled={isLoading}>Volver a Iniciar Sesión</button>
             </>
         );
       default:
