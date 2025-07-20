@@ -128,7 +128,7 @@ app.put('/api/pets/:petId', async (req, res) => {
       return res.status(403).json({ message: 'No autorizado para modificar esta mascota.' });
     }
 
-    // --- CORRECCIÓN: Usamos set con merge:true para guardar correctamente los datos anidados ---
+    // --- CORRECCIÓN CLAVE: Usamos set con merge:true para guardar correctamente los datos anidados ---
     await petRef.set(updateData, { merge: true });
 
     // --- Lógica de Ubicación Implícita ---
