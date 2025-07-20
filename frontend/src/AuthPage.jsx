@@ -46,19 +46,65 @@ function AuthPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // --- LÓGICA DE REGISTRO RESTAURADA ---
   const handleRegister = async (e) => {
     e.preventDefault();
-    // ... (lógica de registro sin cambios)
+    setIsLoading(true);
+    setMessage('Registrando...');
+    try {
+      const response = await fetch(`${API_URL}/api/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+            name: formData.name, 
+            email: formData.email, 
+            password: formData.password
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Ocurrió un error al registrar.');
+      }
+      setMessage('¡Usuario registrado con éxito! Por favor, inicia sesión.');
+      setView('login');
+    } catch (error) {
+      setMessage(`Error: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
   };
   
+  // --- LÓGICA DE INICIO DE SESIÓN RESTAURADA ---
   const handleLogin = async (e) => {
     e.preventDefault();
-    // ... (lógica de inicio de sesión sin cambios)
+    setIsLoading(true);
+    setMessage('Iniciando sesión...');
+    try {
+      await signInWithEmailAndPassword(auth, formData.email, formData.password);
+      setMessage('');
+    } catch (error) {
+      setMessage(`Error: ${error.message}`);
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   const handlePasswordReset = async (e) => {
     e.preventDefault();
-    // ... (lógica de restablecer contraseña sin cambios)
+    if (!formData.email) {
+        setMessage('Por favor, ingresa tu correo electrónico.');
+        return;
+    }
+    setIsLoading(true);
+    setMessage('Enviando enlace de restablecimiento...');
+    try {
+        await sendPasswordResetEmail(auth, formData.email);
+        setMessage('¡Enlace enviado! Revisa tu correo electrónico (incluida la carpeta de spam).');
+    } catch (error) {
+        setMessage(`Error: ${error.message}`);
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   const handleGoogleSignIn = async () => {
