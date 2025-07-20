@@ -5,6 +5,14 @@ import { colombiaData } from './colombiaData.js'; // Importamos los datos de Col
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
+// --- CORRECCIÓN: RESTAURAMOS EL CÓDIGO DEL ICONO DE EDICIÓN ---
+const EditIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+  </svg>
+);
+
 // --- Componente del Modal de Edición ---
 function PetEditModal({ pet, user, onUpdate, onClose }) {
     const [formData, setFormData] = useState({
@@ -30,6 +38,8 @@ function PetEditModal({ pet, user, onUpdate, onClose }) {
         if (formData.department) {
             const selectedDept = colombiaData.find(d => d.departamento === formData.department);
             setCities(selectedDept ? selectedDept.ciudades.sort() : []);
+            // Resetea la ciudad si el departamento cambia
+            setFormData(prev => ({ ...prev, city: '' }));
         } else {
             setCities([]);
         }
@@ -141,6 +151,9 @@ function PetEditModal({ pet, user, onUpdate, onClose }) {
 
 // --- Componente de la Tarjeta de Mascota (Modificado) ---
 function PetCard({ pet, user, onUpdate, onEdit }) {
+    // Verificamos si el perfil está completo (si tiene una ciudad asignada)
+    const isProfileComplete = pet.location && pet.location.city;
+
     return (
         <div className="pet-card">
             <div className="pet-card-image-container">
@@ -156,13 +169,12 @@ function PetCard({ pet, user, onUpdate, onEdit }) {
                         <h3>{pet.name}</h3>
                         {pet.breed && <p className="pet-breed-subtitle">{pet.breed}</p>}
                     </div>
-                    {/* El botón de editar ahora abre el modal */}
                     <button className="edit-pet-button" onClick={() => onEdit(pet)}>
                         <EditIcon />
                     </button>
                 </div>
                 {/* Aviso para completar el perfil */}
-                {!pet.isProfileComplete && (
+                {!isProfileComplete && (
                     <button className="complete-profile-prompt" onClick={() => onEdit(pet)}>
                         ¡Completa mi perfil!
                     </button>
@@ -217,7 +229,6 @@ function PetsTab({ user, initialPets, onPetsUpdate }) {
 
     return (
         <div className="pets-tab-container">
-            {/* El modal de edición se muestra si hay una mascota seleccionada */}
             {editingPet && (
                 <PetEditModal 
                     pet={editingPet} 
@@ -254,7 +265,7 @@ function PetsTab({ user, initialPets, onPetsUpdate }) {
                                 pet={pet} 
                                 user={user} 
                                 onUpdate={onPetsUpdate} 
-                                onEdit={setEditingPet} // Pasamos la función para abrir el modal
+                                onEdit={setEditingPet}
                             />
                         ))
                     ) : (
