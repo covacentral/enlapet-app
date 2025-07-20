@@ -1,0 +1,37 @@
+// frontend/src/colombiaData.js
+// Fuente de datos de los departamentos y municipios de Colombia.
+
+export const colombiaData = [
+    { "departamento": "Amazonas", "ciudades": ["Leticia", "Puerto Nariño"] },
+    { "departamento": "Antioquia", "ciudades": ["Medellín", "Bello", "Itagüí", "Envigado", "Apartadó", "Turbo", "Rionegro", "Caucasia"] },
+    { "departamento": "Arauca", "ciudades": ["Arauca", "Saravena", "Tame"] },
+    { "departamento": "Atlántico", "ciudades": ["Barranquilla", "Soledad", "Malambo", "Sabanalarga"] },
+    { "departamento": "Bolívar", "ciudades": ["Cartagena", "Magangué", "El Carmen de Bolívar"] },
+    { "departamento": "Boyacá", "ciudades": ["Tunja", "Duitama", "Sogamoso", "Chiquinquirá"] },
+    { "departamento": "Caldas", "ciudades": ["Manizales", "La Dorada", "Chinchiná"] },
+    { "departamento": "Caquetá", "ciudades": ["Florencia", "San Vicente del Caguán"] },
+    { "departamento": "Casanare", "ciudades": ["Yopal", "Aguazul", "Villanueva"] },
+    { "departamento": "Cauca", "ciudades": ["Popayán", "Santander de Quilichao"] },
+    { "departamento": "Cesar", "ciudades": ["Valledupar", "Aguachica", "Agustín Codazzi"] },
+    { "departamento": "Chocó", "ciudades": ["Quibdó", "Istmina"] },
+    { "departamento": "Córdoba", "ciudades": ["Montería", "Cereté", "Sahagún", "Lorica"] },
+    { "departamento": "Cundinamarca", "ciudades": ["Bogotá D.C.", "Soacha", "Girardot", "Fusagasugá", "Zipaquirá", "Facatativá"] },
+    { "departamento": "Guainía", "ciudades": ["Inírida"] },
+    { "departamento": "Guaviare", "ciudades": ["San José del Guaviare"] },
+    { "departamento": "Huila", "ciudades": ["Neiva", "Pitalito", "Garzón"] },
+    { "departamento": "La Guajira", "ciudades": ["Riohacha", "Maicao", "Uribia"] },
+    { "departamento": "Magdalena", "ciudades": ["Santa Marta", "Ciénaga", "Fundación"] },
+    { "departamento": "Meta", "ciudades": ["Villavicencio", "Acacías", "Granada"] },
+    { "departamento": "Nariño", "ciudades": ["Pasto", "Tumaco", "Ipiales"] },
+    { "departamento": "Norte de Santander", "ciudades": ["Cúcuta", "Ocaña", "Pamplona"] },
+    { "departamento": "Putumayo", "ciudades": ["Mocoa", "Puerto Asís", "Orito"] },
+    { "departamento": "Quindío", "ciudades": ["Armenia", "Calarcá", "Montenegro"] },
+    { "departamento": "Risaralda", "ciudades": ["Pereira", "Dosquebradas", "Santa Rosa de Cabal"] },
+    { "departamento": "San Andrés y Providencia", "ciudades": ["San Andrés"] },
+    { "departamento": "Santander", "ciudades": ["Bucaramanga", "Floridablanca", "Barrancabermeja", "Girón", "San Gil"] },
+    { "departamento": "Sucre", "ciudades": ["Sincelejo", "Corozal", "Tolú"] },
+    { "departamento": "Tolima", "ciudades": ["Ibagué", "Espinal", "Melgar"] },
+    { "departamento": "Valle del Cauca", "ciudades": ["Cali", "Buenaventura", "Palmira", "Tuluá", "Buga"] },
+    { "departamento": "Vaupés", "ciudades": ["Mitú"] },
+    { "departamento": "Vichada", "ciudades": ["Puerto Carreño"] }
+];

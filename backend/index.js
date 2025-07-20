@@ -63,7 +63,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 *
 // ENDPOINTS DE LA APLICACIÓN
 // -----------------------------------------------------------------------------
 
-app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v2.2 Estable' }));
+app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v2.3 Estable' }));
 
 // --- Endpoint de Registro con Email ---
 app.post('/api/register', async (req, res) => {
@@ -120,7 +120,7 @@ app.post('/api/auth/google', async (req, res) => {
   }
 });
 
-// --- ENDPOINT MODIFICADO: Registro de Mascotas con Hoja de Vida y Ubicación Implícita ---
+// --- ENDPOINT SIMPLIFICADO: Registro Rápido de Mascotas ---
 app.post('/api/pets', async (req, res) => {
   try {
     const idToken = req.headers.authorization?.split('Bearer ')[1];
@@ -128,25 +128,23 @@ app.post('/api/pets', async (req, res) => {
     const decodedToken = await auth.verifyIdToken(idToken);
     const { uid } = decodedToken;
 
-    // Recibimos los nuevos datos del cuerpo de la petición
-    const { name, breed, location, birthDate, gender } = req.body;
+    const { name, breed } = req.body;
 
-    // Validamos los datos requeridos
-    if (!name || !location || !location.city || !location.country) {
-      return res.status(400).json({ message: 'El nombre y la ubicación son requeridos.' });
+    if (!name) {
+      return res.status(400).json({ message: 'El nombre de la mascota es requerido.' });
     }
 
     const petData = { 
       ownerId: uid, 
       name, 
       breed: breed || '',
-      location, // Guardamos la ubicación de la mascota
+      location: { city: '', country: '', department: '' }, // Ubicación vacía por defecto
       createdAt: new Date().toISOString(), 
       petPictureUrl: '',
       gallery: [],
-      healthRecord: { // Creamos la Hoja de Vida inicial
-        birthDate: birthDate || null,
-        gender: gender || 'No especificado',
+      healthRecord: { // Hoja de Vida vacía por defecto
+        birthDate: null,
+        gender: 'No especificado',
         vaccines: [],
         medicalHistory: [],
         allergies: []
@@ -156,17 +154,6 @@ app.post('/api/pets', async (req, res) => {
     
     const petRef = await db.collection('pets').add(petData);
 
-    // --- Lógica de Ubicación Implícita ---
-    const userRef = db.collection('users').doc(uid);
-    const userDoc = await userRef.get();
-    
-    // Verificamos si el usuario ya tiene una ubicación guardada
-    if (userDoc.exists && (!userDoc.data().location || !userDoc.data().location.city)) {
-      // Si no tiene ubicación, actualizamos su perfil con la de su primera mascota
-      await userRef.update({ location: location });
-      console.log(`Ubicación del usuario ${uid} actualizada a ${location.city} a través de su primera mascota.`);
-    }
-
     res.status(201).json({ message: 'Mascota registrada con éxito.', petId: petRef.id });
   } catch (error) {
     console.error('Error en /api/pets (POST):', error);
@@ -174,8 +161,53 @@ app.post('/api/pets', async (req, res) => {
   }
 });
 
+// --- ENDPOINT POTENCIADO: Actualización Completa del Perfil de la Mascota ---
+app.put('/api/pets/:petId', async (req, res) => {
+  try {
+    const idToken = req.headers.authorization?.split('Bearer ')[1];
+    if (!idToken) return res.status(401).json({ message: 'No autenticado.' });
+    const decodedToken = await auth.verifyIdToken(idToken);
+    const { uid } = decodedToken;
 
-// ... (El resto de tus endpoints: /api/profile, GET /api/pets, etc. se mantienen igual)
+    const { petId } = req.params;
+    const updateData = req.body; // Recibimos todos los datos a actualizar
+
+    const petRef = db.collection('pets').doc(petId);
+    const petDoc = await petRef.get();
+
+    if (!petDoc.exists) {
+      return res.status(404).json({ message: 'Mascota no encontrada.' });
+    }
+    if (petDoc.data().ownerId !== uid) {
+      return res.status(403).json({ message: 'No autorizado para modificar esta mascota.' });
+    }
+
+    // Actualizamos la mascota con los nuevos datos
+    await petRef.update(updateData);
+
+    // --- Lógica de Ubicación Implícita ---
+    // Si la actualización incluye una ubicación completa...
+    if (updateData.location && updateData.location.city) {
+      const userRef = db.collection('users').doc(uid);
+      const userDoc = await userRef.get();
+      
+      // ...y si el usuario aún no tiene una ubicación...
+      if (userDoc.exists && (!userDoc.data().location || !userDoc.data().location.city)) {
+        // ...se la asignamos.
+        await userRef.update({ location: updateData.location });
+        console.log(`Ubicación del usuario ${uid} actualizada a ${updateData.location.city}.`);
+      }
+    }
+
+    res.status(200).json({ message: 'Perfil de la mascota actualizado con éxito.' });
+
+  } catch (error) {
+    console.error('Error en /api/pets/:petId (PUT):', error);
+    res.status(500).json({ message: 'Error interno del servidor.' });
+  }
+});
+
+// --- Endpoints de Perfil de Usuario ---
 app.get('/api/profile', async (req, res) => {
   try {
     const idToken = req.headers.authorization?.split('Bearer ')[1];
@@ -245,6 +277,7 @@ app.post('/api/profile/picture', upload.single('profilePicture'), async (req, re
   }
 });
 
+// --- Otros Endpoints de Mascotas ---
 app.get('/api/pets', async (req, res) => {
   try {
     const idToken = req.headers.authorization?.split('Bearer ')[1];
@@ -259,36 +292,7 @@ app.get('/api/pets', async (req, res) => {
   }
 });
 
-app.put('/api/pets/:petId', async (req, res) => {
-  try {
-    const idToken = req.headers.authorization?.split('Bearer ')[1];
-    if (!idToken) return res.status(401).json({ message: 'No autenticado.' });
-    const decodedToken = await auth.verifyIdToken(idToken);
-
-    const { name, breed } = req.body;
-    if (!name) return res.status(400).json({ message: 'El nombre es requerido.' });
-    
-    const { petId } = req.params;
-    const petRef = db.collection('pets').doc(petId);
-    const petDoc = await petRef.get();
-
-    if (!petDoc.exists) {
-      return res.status(404).json({ message: 'Mascota no encontrada.' });
-    }
-    if (petDoc.data().ownerId !== decodedToken.uid) {
-      return res.status(403).json({ message: 'No autorizado para modificar esta mascota.' });
-    }
-
-    await petRef.update({ name, breed: breed || '' });
-    res.status(200).json({ message: 'Mascota actualizada con éxito.' });
-
-  } catch (error) {
-    console.error('Error en /api/pets/:petId (PUT):', error);
-    res.status(500).json({ message: 'Error interno del servidor.' });
-  }
-});
-
-app.post('/api/pets/:petId/picture', async (req, res) => {
+app.post('/api/pets/:petId/picture', upload.single('petPicture'), async (req, res) => {
   try {
     const idToken = req.headers.authorization?.split('Bearer ')[1];
     if (!idToken) return res.status(401).json({ message: 'No autenticado.' });
@@ -339,7 +343,6 @@ app.post('/api/pets/:petId/picture', async (req, res) => {
     res.status(500).json({ message: 'Error interno del servidor.' });
   }
 });
-
 
 app.get('/api/public/pets/:petId', async (req, res) => {
   try {
