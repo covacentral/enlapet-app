@@ -14,21 +14,21 @@ const multer = require('multer');
 // -----------------------------------------------------------------------------
 const serviceAccountBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
 if (!serviceAccountBase64) {
-  console.error('ERROR FATAL: La variable de entorno FIREBASE_SERVICE_ACCOUNT_BASE64 no está definida.');
-  process.exit(1);
+  console.error('ERROR FATAL: La variable de entorno FIREBASE_SERVICE_ACCOUNT_BASE64 no está definida.');
+  process.exit(1);
 }
 const serviceAccountString = Buffer.from(serviceAccountBase64, 'base64').toString('utf8');
 const serviceAccount = JSON.parse(serviceAccountString);
 
 try {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    storageBucket: 'enlapet.firebasestorage.app'
-  });
-  console.log('Firebase Admin SDK inicializado correctamente desde variable de entorno.');
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+    storageBucket: 'enlapet.firebasestorage.app'
+  });
+  console.log('Firebase Admin SDK inicializado correctamente desde variable de entorno.');
 } catch (error) {
-  console.error('ERROR FATAL: No se pudo inicializar Firebase Admin SDK.', error);
-  process.exit(1);
+  console.error('ERROR FATAL: No se pudo inicializar Firebase Admin SDK.', error);
+  process.exit(1);
 }
 
 const db = admin.firestore();
@@ -42,17 +42,17 @@ const PORT = process.env.PORT || 3001;
 // CORS Configuration
 // -----------------------------------------------------------------------------
 const allowedOrigins = new RegExp(
-  /^https?:\/\/((www\.)?covacentral\.shop|localhost:5173|enlapet-app(-[a-z0-9-]+)?\.vercel\.app)$/
+  /^https?:\/\/((www\.)?covacentral\.shop|localhost:5173|enlapet-app(-[a-z0-9-]+)?\.vercel\.app)$/
 );
 const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.test(origin)) {
-      callback(null, true);
-    } else {
-      console.error(`CORS: Origen denegado -> ${origin}`);
-      callback(new Error('Not allowed by CORS'));
-    }
-  }
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.test(origin)) {
+      callback(null, true);
+    } else {
+      console.error(`CORS: Origen denegado -> ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  }
 };
 app.options('*', cors(corsOptions)); 
 app.use(cors(corsOptions));
@@ -67,62 +67,115 @@ app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet
 
 // --- Endpoint de Registro con Email ---
 app.post('/api/register', async (req, res) => {
-  try {
-    const { email, password, name } = req.body;
-    const userRecord = await auth.createUser({ email, password, displayName: name });
-    await db.collection('users').doc(userRecord.uid).set({
-      name,
-      email,
-      createdAt: new Date().toISOString(),
-      bio: '',
-      profilePictureUrl: '',
-      phone: '',
-      userType: 'personal',
-      location: { city: '', country: '' },
-      privacySettings: { profileVisibility: 'public', contactInfoVisibility: 'private' }
-    });
-    res.status(201).json({ message: 'Usuario registrado con éxito', uid: userRecord.uid });
-  } catch (error) {
-    console.error('Error en /api/register:', error);
-    res.status(400).json({ message: error.message });
-  }
+  try {
+    const { email, password, name } = req.body;
+    const userRecord = await auth.createUser({ email, password, displayName: name });
+    await db.collection('users').doc(userRecord.uid).set({
+      name,
+      email,
+      createdAt: new Date().toISOString(),
+      bio: '',
+      profilePictureUrl: '',
+      phone: '',
+      userType: 'personal',
+      location: { city: '', country: '' },
+      privacySettings: { profileVisibility: 'public', contactInfoVisibility: 'private' }
+    });
+    res.status(201).json({ message: 'Usuario registrado con éxito', uid: userRecord.uid });
+  } catch (error) {
+    console.error('Error en /api/register:', error);
+    res.status(400).json({ message: error.message });
+  }
 });
 
-// --- NUEVO ENDPOINT: Autenticación y Registro con Google ---
+// --- Endpoint de Autenticación y Registro con Google ---
 app.post('/api/auth/google', async (req, res) => {
-  try {
-    const { token } = req.body;
-    const decodedToken = await auth.verifyIdToken(token);
-    const { uid, name, email, picture } = decodedToken;
+  try {
+    const { token } = req.body;
+    const decodedToken = await auth.verifyIdToken(token);
+    const { uid, name, email, picture } = decodedToken;
 
-    const userRef = db.collection('users').doc(uid);
-    const userDoc = await userRef.get();
+    const userRef = db.collection('users').doc(uid);
+    const userDoc = await userRef.get();
 
-    // Si el usuario no existe en nuestra base de datos, lo creamos.
-    if (!userDoc.exists) {
-      await userRef.set({
-        name,
-        email,
-        profilePictureUrl: picture || '',
-        createdAt: new Date().toISOString(),
-        bio: '',
-        phone: '',
-        userType: 'personal',
-        location: { city: '', country: '' },
-        privacySettings: { profileVisibility: 'public', contactInfoVisibility: 'private' }
-      });
-      console.log(`Nuevo usuario creado desde Google: ${name} (${uid})`);
-    }
+    if (!userDoc.exists) {
+      await userRef.set({
+        name,
+        email,
+        profilePictureUrl: picture || '',
+        createdAt: new Date().toISOString(),
+        bio: '',
+        phone: '',
+        userType: 'personal',
+        location: { city: '', country: '' },
+        privacySettings: { profileVisibility: 'public', contactInfoVisibility: 'private' }
+      });
+      console.log(`Nuevo usuario creado desde Google: ${name} (${uid})`);
+    }
 
-    res.status(200).json({ message: 'Autenticación con Google exitosa.' });
-  } catch (error) {
-    console.error('Error en /api/auth/google:', error);
-    res.status(401).json({ message: 'Token de Google inválido o expirado.' });
-  }
+    res.status(200).json({ message: 'Autenticación con Google exitosa.' });
+  } catch (error) {
+    console.error('Error en /api/auth/google:', error);
+    res.status(401).json({ message: 'Token de Google inválido o expirado.' });
+  }
+});
+
+// --- ENDPOINT MODIFICADO: Registro de Mascotas con Hoja de Vida y Ubicación Implícita ---
+app.post('/api/pets', async (req, res) => {
+  try {
+    const idToken = req.headers.authorization?.split('Bearer ')[1];
+    if (!idToken) return res.status(401).json({ message: 'No autenticado.' });
+    const decodedToken = await auth.verifyIdToken(idToken);
+    const { uid } = decodedToken;
+
+    // Recibimos los nuevos datos del cuerpo de la petición
+    const { name, breed, location, birthDate, gender } = req.body;
+
+    // Validamos los datos requeridos
+    if (!name || !location || !location.city || !location.country) {
+      return res.status(400).json({ message: 'El nombre y la ubicación son requeridos.' });
+    }
+
+    const petData = { 
+      ownerId: uid, 
+      name, 
+      breed: breed || '',
+      location, // Guardamos la ubicación de la mascota
+      createdAt: new Date().toISOString(), 
+      petPictureUrl: '',
+      gallery: [],
+      healthRecord: { // Creamos la Hoja de Vida inicial
+        birthDate: birthDate || null,
+        gender: gender || 'No especificado',
+        vaccines: [],
+        medicalHistory: [],
+        allergies: []
+      },
+      privacySettings: { healthRecordVisibility: 'private', galleryVisibility: 'public' }
+    };
+    
+    const petRef = await db.collection('pets').add(petData);
+
+    // --- Lógica de Ubicación Implícita ---
+    const userRef = db.collection('users').doc(uid);
+    const userDoc = await userRef.get();
+    
+    // Verificamos si el usuario ya tiene una ubicación guardada
+    if (userDoc.exists && (!userDoc.data().location || !userDoc.data().location.city)) {
+      // Si no tiene ubicación, actualizamos su perfil con la de su primera mascota
+      await userRef.update({ location: location });
+      console.log(`Ubicación del usuario ${uid} actualizada a ${location.city} a través de su primera mascota.`);
+    }
+
+    res.status(201).json({ message: 'Mascota registrada con éxito.', petId: petRef.id });
+  } catch (error) {
+    console.error('Error en /api/pets (POST):', error);
+    res.status(500).json({ message: 'Error interno del servidor.' });
+  }
 });
 
 
-// ... (El resto de tus endpoints: /api/profile, /api/pets, etc. se mantienen exactamente igual)
+// ... (El resto de tus endpoints: /api/profile, GET /api/pets, etc. se mantienen igual)
 app.get('/api/profile', async (req, res) => {
   try {
     const idToken = req.headers.authorization?.split('Bearer ')[1];
@@ -192,28 +245,6 @@ app.post('/api/profile/picture', upload.single('profilePicture'), async (req, re
   }
 });
 
-app.post('/api/pets', async (req, res) => {
-  try {
-    const idToken = req.headers.authorization?.split('Bearer ')[1];
-    if (!idToken) return res.status(401).json({ message: 'No autenticado.' });
-    const decodedToken = await auth.verifyIdToken(idToken);
-    const { name, breed } = req.body;
-    if (!name) return res.status(400).json({ message: 'El nombre es requerido.' });
-    const petData = { 
-        ownerId: decodedToken.uid, 
-        name, 
-        breed: breed || '',
-        createdAt: new Date().toISOString(), 
-        petPictureUrl: '' 
-    };
-    const petRef = await db.collection('pets').add(petData);
-    res.status(201).json({ message: 'Mascota registrada.', petId: petRef.id });
-  } catch (error) {
-    console.error('Error en /api/pets (POST):', error);
-    res.status(500).json({ message: 'Error interno del servidor.' });
-  }
-});
-
 app.get('/api/pets', async (req, res) => {
   try {
     const idToken = req.headers.authorization?.split('Bearer ')[1];
@@ -257,7 +288,7 @@ app.put('/api/pets/:petId', async (req, res) => {
   }
 });
 
-app.post('/api/pets/:petId/picture', upload.single('petPicture'), async (req, res) => {
+app.post('/api/pets/:petId/picture', async (req, res) => {
   try {
     const idToken = req.headers.authorization?.split('Bearer ')[1];
     if (!idToken) return res.status(401).json({ message: 'No autenticado.' });

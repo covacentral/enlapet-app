@@ -2,8 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import './App.css';
 
-// --- CONFIGURACIÓN DE LA URL DE LA API ---
-// Hacemos que la URL del backend sea dinámica usando variables de entorno.
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const EditIcon = () => (
@@ -14,6 +12,7 @@ const EditIcon = () => (
 );
 
 function PetCard({ pet, user, onUpdate }) {
+  // ... (El código del componente PetCard se mantiene exactamente igual)
   const [isEditMode, setIsEditMode] = useState(false);
   const [petName, setPetName] = useState(pet.name);
   const [petBreed, setPetBreed] = useState(pet.breed);
@@ -27,7 +26,6 @@ function PetCard({ pet, user, onUpdate }) {
     setMessage('Guardando...');
     try {
       const idToken = await user.getIdToken();
-      // CORRECCIÓN: Usamos la variable API_URL
       const response = await fetch(`${API_URL}/api/pets/${pet.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
@@ -37,7 +35,7 @@ function PetCard({ pet, user, onUpdate }) {
       if (!response.ok) throw new Error(data.message);
       
       setMessage('¡Guardado!');
-      onUpdate(); // Actualiza la lista de mascotas
+      onUpdate();
       setIsEditMode(false);
     } catch (error) {
       setMessage(`Error: ${error.message}`);
@@ -63,7 +61,6 @@ function PetCard({ pet, user, onUpdate }) {
     formData.append('petPicture', file);
     try {
       const idToken = await user.getIdToken();
-      // CORRECCIÓN: Usamos la variable API_URL
       const response = await fetch(`${API_URL}/api/pets/${pet.id}/picture`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${idToken}` },
@@ -72,7 +69,7 @@ function PetCard({ pet, user, onUpdate }) {
       const data = await response.json();
       if (!response.ok) throw new Error(data.message);
       setMessage('¡Foto actualizada!');
-      onUpdate(); // Actualiza la lista para mostrar la nueva foto
+      onUpdate();
     } catch (error) {
       setMessage(`Error: ${error.message}`);
     } finally {
@@ -91,18 +88,15 @@ function PetCard({ pet, user, onUpdate }) {
           <div className="pet-card-image-placeholder">🐾</div>
         )}
       </div>
-
       <div className="pet-card-info">
         {isEditMode ? (
           <form onSubmit={handleSaveChanges} className="pet-edit-form">
             <input type="text" value={petName} onChange={(e) => setPetName(e.target.value)} required disabled={isLoading} />
             <input type="text" value={petBreed} onChange={(e) => setPetBreed(e.target.value)} placeholder="Raza (Opcional)" disabled={isLoading} />
-            
             <button type="button" className="change-photo-button-edit" onClick={() => fileInputRef.current.click()} disabled={isLoading}>
               {isLoading ? 'Subiendo...' : 'Cambiar Foto'}
             </button>
             <input type="file" ref={fileInputRef} onChange={handleFileChange} style={{ display: 'none' }} accept="image/*" />
-
             <div className="pet-edit-actions">
               <button type="submit" disabled={isLoading}>Guardar</button>
               <button type="button" onClick={handleCancel} disabled={isLoading}>Cancelar</button>
@@ -129,13 +123,31 @@ function PetCard({ pet, user, onUpdate }) {
 function PetsTab({ user, initialPets, onPetsUpdate }) {
   const [pets, setPets] = useState(initialPets);
   const [message, setMessage] = useState('');
-  const [petName, setPetName] = useState('');
-  const [petBreed, setPetBreed] = useState('');
-  const [isAdding, setIsAdding] = useState(false); // Estado para deshabilitar el botón
+  
+  // --- 1. AMPLIAMOS EL ESTADO DEL FORMULARIO ---
+  const [formState, setFormState] = useState({
+    name: '',
+    breed: '',
+    city: '',
+    country: '',
+    birthDate: '',
+    gender: 'Macho'
+  });
+
+  const [isAdding, setIsAdding] = useState(false);
 
   useEffect(() => {
     setPets(initialPets);
   }, [initialPets]);
+
+  // --- 2. ACTUALIZAMOS EL MANEJADOR DE CAMBIOS ---
+  const handleFormChange = (e) => {
+    const { name, value } = e.target;
+    setFormState(prevState => ({
+      ...prevState,
+      [name]: value
+    }));
+  };
 
   const handleAddPet = async (e) => {
     e.preventDefault();
@@ -143,18 +155,31 @@ function PetsTab({ user, initialPets, onPetsUpdate }) {
     setMessage('Registrando mascota...');
     try {
       const idToken = await user.getIdToken(true);
-      // CORRECCIÓN: Usamos la variable API_URL
+      
+      // --- 3. CONSTRUIMOS EL CUERPO DE LA PETICIÓN CON LOS NUEVOS DATOS ---
+      const petPayload = {
+        name: formState.name,
+        breed: formState.breed,
+        location: {
+          city: formState.city,
+          country: formState.country
+        },
+        birthDate: formState.birthDate,
+        gender: formState.gender
+      };
+
       const response = await fetch(`${API_URL}/api/pets`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-        body: JSON.stringify({ name: petName, breed: petBreed }),
+        body: JSON.stringify(petPayload),
       });
+
       const data = await response.json();
       if (!response.ok) throw new Error(data.message);
       
       setMessage('¡Mascota añadida con éxito!');
-      setPetName('');
-      setPetBreed('');
+      // Reseteamos el formulario
+      setFormState({ name: '', breed: '', city: '', country: '', birthDate: '', gender: 'Macho' });
       onPetsUpdate(); // Llama a la función para recargar las mascotas
     } catch (error) {
       setMessage(`Error: ${error.message}`);
@@ -168,14 +193,34 @@ function PetsTab({ user, initialPets, onPetsUpdate }) {
     <div className="pets-tab-container">
       <div className="dashboard-column add-pet-column">
         <h2>Registrar Nueva Mascota</h2>
+        {/* --- 4. ACTUALIZAMOS EL FORMULARIO CON LOS NUEVOS CAMPOS --- */}
         <form onSubmit={handleAddPet} className="register-form">
           <div className="form-group">
-            <label htmlFor="petName">Nombre:</label>
-            <input type="text" id="petName" value={petName} onChange={(e) => setPetName(e.target.value)} required disabled={isAdding} />
+            <label htmlFor="name">Nombre de la Mascota:</label>
+            <input type="text" id="name" name="name" value={formState.name} onChange={handleFormChange} required disabled={isAdding} />
           </div>
           <div className="form-group">
-            <label htmlFor="petBreed">Raza (Opcional):</label>
-            <input type="text" id="petBreed" value={petBreed} onChange={(e) => setPetBreed(e.target.value)} disabled={isAdding} />
+            <label htmlFor="breed">Raza (Opcional):</label>
+            <input type="text" id="breed" name="breed" value={formState.breed} onChange={handleFormChange} disabled={isAdding} />
+          </div>
+          <div className="form-group">
+            <label htmlFor="city">Ciudad de Residencia:</label>
+            <input type="text" id="city" name="city" value={formState.city} onChange={handleFormChange} required disabled={isAdding} />
+          </div>
+          <div className="form-group">
+            <label htmlFor="country">País de Residencia:</label>
+            <input type="text" id="country" name="country" value={formState.country} onChange={handleFormChange} required disabled={isAdding} />
+          </div>
+          <div className="form-group">
+            <label htmlFor="birthDate">Fecha de Nacimiento (Aprox.):</label>
+            <input type="date" id="birthDate" name="birthDate" value={formState.birthDate} onChange={handleFormChange} disabled={isAdding} />
+          </div>
+          <div className="form-group">
+            <label htmlFor="gender">Género:</label>
+            <select id="gender" name="gender" value={formState.gender} onChange={handleFormChange} disabled={isAdding}>
+              <option value="Macho">Macho</option>
+              <option value="Hembra">Hembra</option>
+            </select>
           </div>
           <button type="submit" disabled={isAdding}>
             {isAdding ? 'Añadiendo...' : 'Añadir Mascota'}
