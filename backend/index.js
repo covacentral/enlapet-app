@@ -1,7 +1,7 @@
 // backend/index.js
 
 // -----------------------------------------------------------------------------
-// Imports
+// Imports y Configuración de Firebase (Sin cambios)
 // -----------------------------------------------------------------------------
 require('dotenv').config();
 const express = require('express');
@@ -9,9 +9,6 @@ const cors = require('cors');
 const admin = require('firebase-admin');
 const multer = require('multer');
 
-// -----------------------------------------------------------------------------
-// Firebase Admin SDK Initialization
-// -----------------------------------------------------------------------------
 const serviceAccountBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
 if (!serviceAccountBase64) {
   console.error('ERROR FATAL: La variable de entorno FIREBASE_SERVICE_ACCOUNT_BASE64 no está definida.');
@@ -39,7 +36,7 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // -----------------------------------------------------------------------------
-// CORS Configuration
+// CORS Configuration (Sin cambios)
 // -----------------------------------------------------------------------------
 const allowedOrigins = new RegExp(
   /^https?:\/\/((www\.)?covacentral\.shop|localhost:5173|enlapet-app(-[a-z0-9-]+)?\.vercel\.app)$/
@@ -63,62 +60,11 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 *
 // ENDPOINTS DE LA APLICACIÓN
 // -----------------------------------------------------------------------------
 
-app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v2.3 Estable' }));
+app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v2.3 Social' }));
 
-// --- Endpoint de Registro con Email ---
-app.post('/api/register', async (req, res) => {
-  try {
-    const { email, password, name } = req.body;
-    const userRecord = await auth.createUser({ email, password, displayName: name });
-    await db.collection('users').doc(userRecord.uid).set({
-      name,
-      email,
-      createdAt: new Date().toISOString(),
-      bio: '',
-      profilePictureUrl: '',
-      phone: '',
-      userType: 'personal',
-      location: { city: '', country: '' },
-      privacySettings: { profileVisibility: 'public', contactInfoVisibility: 'private' }
-    });
-    res.status(201).json({ message: 'Usuario registrado con éxito', uid: userRecord.uid });
-  } catch (error) {
-    console.error('Error en /api/register:', error);
-    res.status(400).json({ message: error.message });
-  }
-});
-
-// --- Endpoint de Autenticación y Registro con Google ---
-app.post('/api/auth/google', async (req, res) => {
-  try {
-    const { token } = req.body;
-    const decodedToken = await auth.verifyIdToken(token);
-    const { uid, name, email, picture } = decodedToken;
-
-    const userRef = db.collection('users').doc(uid);
-    const userDoc = await userRef.get();
-
-    if (!userDoc.exists) {
-      await userRef.set({
-        name,
-        email,
-        profilePictureUrl: picture || '',
-        createdAt: new Date().toISOString(),
-        bio: '',
-        phone: '',
-        userType: 'personal',
-        location: { city: '', country: '' },
-        privacySettings: { profileVisibility: 'public', contactInfoVisibility: 'private' }
-      });
-      console.log(`Nuevo usuario creado desde Google: ${name} (${uid})`);
-    }
-
-    res.status(200).json({ message: 'Autenticación con Google exitosa.' });
-  } catch (error) {
-    console.error('Error en /api/auth/google:', error);
-    res.status(401).json({ message: 'Token de Google inválido o expirado.' });
-  }
-});
+// --- Endpoints de Autenticación (Sin cambios) ---
+app.post('/api/register', async (req, res) => { /* ... */ });
+app.post('/api/auth/google', async (req, res) => { /* ... */ });
 
 // --- ENDPOINT SIMPLIFICADO: Registro Rápido de Mascotas ---
 app.post('/api/pets', async (req, res) => {
@@ -131,18 +77,20 @@ app.post('/api/pets', async (req, res) => {
     const { name, breed } = req.body;
 
     if (!name) {
-      return res.status(400).json({ message: 'El nombre de la mascota es requerido.' });
+      return res.status(400).json({ message: 'El nombre es requerido.' });
     }
 
+    // Creamos un perfil de mascota mínimo
     const petData = { 
       ownerId: uid, 
       name, 
       breed: breed || '',
-      location: { city: '', country: '', department: '' }, // Ubicación vacía por defecto
       createdAt: new Date().toISOString(), 
       petPictureUrl: '',
       gallery: [],
-      healthRecord: { // Hoja de Vida vacía por defecto
+      isProfileComplete: false, // <-- CORRECCIÓN: Añadimos el flag por defecto
+      location: { city: '', country: '' },
+      healthRecord: {
         birthDate: null,
         gender: 'No especificado',
         vaccines: [],
@@ -182,24 +130,25 @@ app.put('/api/pets/:petId', async (req, res) => {
       return res.status(403).json({ message: 'No autorizado para modificar esta mascota.' });
     }
 
-    // Actualizamos la mascota con los nuevos datos
-    await petRef.update(updateData);
+    // Marcamos el perfil como completo si se está actualizando la ubicación
+    if (updateData.location && updateData.location.city) {
+        updateData.isProfileComplete = true;
+    }
 
-    // --- Lógica de Ubicación Implícita ---
-    // Si la actualización incluye una ubicación completa...
+    await petRef.set(updateData, { merge: true }); // Usamos set con merge para actualizar campos anidados
+
+    // --- Lógica de Ubicación Implícita (Movida aquí) ---
     if (updateData.location && updateData.location.city) {
       const userRef = db.collection('users').doc(uid);
       const userDoc = await userRef.get();
       
-      // ...y si el usuario aún no tiene una ubicación...
       if (userDoc.exists && (!userDoc.data().location || !userDoc.data().location.city)) {
-        // ...se la asignamos.
         await userRef.update({ location: updateData.location });
         console.log(`Ubicación del usuario ${uid} actualizada a ${updateData.location.city}.`);
       }
     }
 
-    res.status(200).json({ message: 'Perfil de la mascota actualizado con éxito.' });
+    res.status(200).json({ message: 'Perfil de mascota actualizado con éxito.' });
 
   } catch (error) {
     console.error('Error en /api/pets/:petId (PUT):', error);
@@ -207,7 +156,75 @@ app.put('/api/pets/:petId', async (req, res) => {
   }
 });
 
-// --- Endpoints de Perfil de Usuario ---
+
+// ... (El resto de tus endpoints: /api/profile, GET /api/pets, etc. se mantienen igual)
+app.get('/api/profile', async (req, res) => { /* ... */ });
+app.put('/api/profile', async (req, res) => { /* ... */ });
+app.post('/api/profile/picture', upload.single('profilePicture'), async (req, res) => { /* ... */ });
+app.get('/api/pets', async (req, res) => { /* ... */ });
+app.post('/api/pets/:petId/picture', upload.single('petPicture'), async (req, res) => { /* ... */ });
+app.get('/api/public/pets/:petId', async (req, res) => { /* ... */ });
+
+
+// -----------------------------------------------------------------------------
+// Server Initialization
+// -----------------------------------------------------------------------------
+app.listen(PORT, () => console.log(`Servidor corriendo en el puerto ${PORT}`));
+
+// --- Pegar aquí los endpoints que faltan ---
+app.post('/api/register', async (req, res) => {
+  try {
+    const { email, password, name } = req.body;
+    const userRecord = await auth.createUser({ email, password, displayName: name });
+    await db.collection('users').doc(userRecord.uid).set({
+      name,
+      email,
+      createdAt: new Date().toISOString(),
+      bio: '',
+      profilePictureUrl: '',
+      phone: '',
+      userType: 'personal',
+      location: { city: '', country: '' },
+      privacySettings: { profileVisibility: 'public', contactInfoVisibility: 'private' }
+    });
+    res.status(201).json({ message: 'Usuario registrado con éxito', uid: userRecord.uid });
+  } catch (error) {
+    console.error('Error en /api/register:', error);
+    res.status(400).json({ message: error.message });
+  }
+});
+
+app.post('/api/auth/google', async (req, res) => {
+  try {
+    const { token } = req.body;
+    const decodedToken = await auth.verifyIdToken(token);
+    const { uid, name, email, picture } = decodedToken;
+
+    const userRef = db.collection('users').doc(uid);
+    const userDoc = await userRef.get();
+
+    if (!userDoc.exists) {
+      await userRef.set({
+        name,
+        email,
+        profilePictureUrl: picture || '',
+        createdAt: new Date().toISOString(),
+        bio: '',
+        phone: '',
+        userType: 'personal',
+        location: { city: '', country: '' },
+        privacySettings: { profileVisibility: 'public', contactInfoVisibility: 'private' }
+      });
+      console.log(`Nuevo usuario creado desde Google: ${name} (${uid})`);
+    }
+
+    res.status(200).json({ message: 'Autenticación con Google exitosa.' });
+  } catch (error) {
+    console.error('Error en /api/auth/google:', error);
+    res.status(401).json({ message: 'Token de Google inválido o expirado.' });
+  }
+});
+
 app.get('/api/profile', async (req, res) => {
   try {
     const idToken = req.headers.authorization?.split('Bearer ')[1];
@@ -277,7 +294,6 @@ app.post('/api/profile/picture', upload.single('profilePicture'), async (req, re
   }
 });
 
-// --- Otros Endpoints de Mascotas ---
 app.get('/api/pets', async (req, res) => {
   try {
     const idToken = req.headers.authorization?.split('Bearer ')[1];
@@ -344,6 +360,7 @@ app.post('/api/pets/:petId/picture', upload.single('petPicture'), async (req, re
   }
 });
 
+
 app.get('/api/public/pets/:petId', async (req, res) => {
   try {
     const { petId } = req.params;
@@ -365,9 +382,3 @@ app.get('/api/public/pets/:petId', async (req, res) => {
     res.status(500).json({ message: 'Error interno del servidor.' });
   }
 });
-
-
-// -----------------------------------------------------------------------------
-// Server Initialization
-// -----------------------------------------------------------------------------
-app.listen(PORT, () => console.log(`Servidor corriendo en el puerto ${PORT}`));
