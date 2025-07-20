@@ -938,3 +938,73 @@ input::-ms-clear {
     width: 100%;
   }
 }
+
+/* ... (pega esto al final de tu App.css) ... */
+
+/* --- ESTILOS PARA INICIO DE SESIÓN CON GOOGLE --- */
+.google-signin-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px;
+  background-color: #FFFFFF;
+  color: #333333;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.google-signin-button:hover {
+  background-color: #F5F5F5;
+}
+
+.google-signin-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.auth-separator {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: var(--text-secondary);
+  margin: 20px 0;
+}
+
+.auth-separator::before,
+.auth-separator::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.auth-separator:not(:empty)::before {
+  margin-right: .5em;
+}
+
+.auth-separator:not(:empty)::after {
+  margin-left: .5em;
+}
+
+/* Modificación para que los formularios se integren mejor */
+.register-form.no-background {
+    background-color: transparent;
+    padding: 0;
+    border: none;
+    margin-bottom: 0;
+}
+
+.auth-card {
+    background-color: var(--background-light);
+    padding: 30px;
+    border-radius: 15px;
+    width: 100%;
+    max-width: 400px;
+    text-align: left;
+    border: 1px solid var(--border-color);
+}

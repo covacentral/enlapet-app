@@ -10,16 +10,13 @@ const admin = require('firebase-admin');
 const multer = require('multer');
 
 // -----------------------------------------------------------------------------
-// Firebase Admin SDK Initialization (Versión solo para producción)
+// Firebase Admin SDK Initialization
 // -----------------------------------------------------------------------------
 const serviceAccountBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
-
-// Verificación de seguridad: si la variable de entorno no existe, la aplicación no se iniciará.
 if (!serviceAccountBase64) {
   console.error('ERROR FATAL: La variable de entorno FIREBASE_SERVICE_ACCOUNT_BASE64 no está definida.');
-  process.exit(1); // Detiene la aplicación si la clave no está presente.
+  process.exit(1);
 }
-
 const serviceAccountString = Buffer.from(serviceAccountBase64, 'base64').toString('utf8');
 const serviceAccount = JSON.parse(serviceAccountString);
 
@@ -41,13 +38,12 @@ const bucket = admin.storage().bucket();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// --- El resto del archivo (CORS, Endpoints, etc.) se mantiene exactamente igual ---
-
-// ... (El resto de tu código de CORS y endpoints va aquí sin ningún cambio)
+// -----------------------------------------------------------------------------
+// CORS Configuration
+// -----------------------------------------------------------------------------
 const allowedOrigins = new RegExp(
   /^https?:\/\/((www\.)?covacentral\.shop|localhost:5173|enlapet-app(-[a-z0-9-]+)?\.vercel\.app)$/
 );
-
 const corsOptions = {
   origin: function (origin, callback) {
     if (!origin || allowedOrigins.test(origin)) {
@@ -58,28 +54,75 @@ const corsOptions = {
     }
   }
 };
-
 app.options('*', cors(corsOptions)); 
 app.use(cors(corsOptions));
 app.use(express.json());
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
+// -----------------------------------------------------------------------------
+// ENDPOINTS DE LA APLICACIÓN
+// -----------------------------------------------------------------------------
+
 app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v2.2 Estable' }));
 
+// --- Endpoint de Registro con Email ---
 app.post('/api/register', async (req, res) => {
-  try {
-    const { email, password, name } = req.body;
-    const userRecord = await auth.createUser({ email, password, displayName: name });
-    await db.collection('users').doc(userRecord.uid).set({
-      name, email, createdAt: new Date().toISOString(), bio: '', profilePictureUrl: '', phone: ''
-    });
-    res.status(201).json({ message: 'Usuario registrado con éxito', uid: userRecord.uid });
-  } catch (error) {
-    console.error('Error en /api/register:', error);
-    res.status(400).json({ message: error.message });
-  }
+  try {
+    const { email, password, name } = req.body;
+    const userRecord = await auth.createUser({ email, password, displayName: name });
+    await db.collection('users').doc(userRecord.uid).set({
+      name,
+      email,
+      createdAt: new Date().toISOString(),
+      bio: '',
+      profilePictureUrl: '',
+      phone: '',
+      userType: 'personal',
+      location: { city: '', country: '' },
+      privacySettings: { profileVisibility: 'public', contactInfoVisibility: 'private' }
+    });
+    res.status(201).json({ message: 'Usuario registrado con éxito', uid: userRecord.uid });
+  } catch (error) {
+    console.error('Error en /api/register:', error);
+    res.status(400).json({ message: error.message });
+  }
 });
 
+// --- NUEVO ENDPOINT: Autenticación y Registro con Google ---
+app.post('/api/auth/google', async (req, res) => {
+  try {
+    const { token } = req.body;
+    const decodedToken = await auth.verifyIdToken(token);
+    const { uid, name, email, picture } = decodedToken;
+
+    const userRef = db.collection('users').doc(uid);
+    const userDoc = await userRef.get();
+
+    // Si el usuario no existe en nuestra base de datos, lo creamos.
+    if (!userDoc.exists) {
+      await userRef.set({
+        name,
+        email,
+        profilePictureUrl: picture || '',
+        createdAt: new Date().toISOString(),
+        bio: '',
+        phone: '',
+        userType: 'personal',
+        location: { city: '', country: '' },
+        privacySettings: { profileVisibility: 'public', contactInfoVisibility: 'private' }
+      });
+      console.log(`Nuevo usuario creado desde Google: ${name} (${uid})`);
+    }
+
+    res.status(200).json({ message: 'Autenticación con Google exitosa.' });
+  } catch (error) {
+    console.error('Error en /api/auth/google:', error);
+    res.status(401).json({ message: 'Token de Google inválido o expirado.' });
+  }
+});
+
+
+// ... (El resto de tus endpoints: /api/profile, /api/pets, etc. se mantienen exactamente igual)
 app.get('/api/profile', async (req, res) => {
   try {
     const idToken = req.headers.authorization?.split('Bearer ')[1];
@@ -290,4 +333,7 @@ app.get('/api/public/pets/:petId', async (req, res) => {
 });
 
 
+// -----------------------------------------------------------------------------
+// Server Initialization
+// -----------------------------------------------------------------------------
 app.listen(PORT, () => console.log(`Servidor corriendo en el puerto ${PORT}`));
