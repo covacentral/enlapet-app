@@ -1,6 +1,6 @@
 // backend/index.js
-// Versión: 3.0 - Lógica Original Restaurada
-// Restaura el método de guardado explícito y probado del perfil de usuario para garantizar la robustez.
+// Versión: 3.1 - Depuración Intensiva
+// Añade logging exhaustivo al endpoint de actualización de perfil para un diagnóstico definitivo.
 
 require('dotenv').config();
 const express = require('express');
@@ -57,7 +57,7 @@ const authenticateUser = async (req, res, next) => {
   }
 };
 
-app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v3.0 - Lógica Original Restaurada' }));
+app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v3.1 - Depuración Intensiva' }));
 
 // --- Endpoints Públicos (sin cambios) ---
 app.post('/api/register', async (req, res) => {try {const { email, password, name } = req.body;if (!email || !password || !name) {return res.status(400).json({ message: 'Nombre, email y contraseña son requeridos.' });}const userRecord = await auth.createUser({ email, password, displayName: name });const newUser = {name,email,createdAt: new Date().toISOString(),userType: 'personal',profilePictureUrl: '',coverPhotoUrl: '',bio: '',phone: '',location: { country: 'Colombia', department: '', city: '' },privacySettings: { profileVisibility: 'public', showEmail: 'private' }};await db.collection('users').doc(userRecord.uid).set(newUser);res.status(201).json({ message: 'Usuario registrado con éxito', uid: userRecord.uid });} catch (error) {console.error('Error en /api/register:', error);if (error.code === 'auth/email-already-exists') {return res.status(409).json({ message: 'El correo electrónico ya está en uso.' });}if (error.code === 'auth/invalid-password') {return res.status(400).json({ message: 'La contraseña debe tener al menos 6 caracteres.' });}res.status(500).json({ message: 'Error al registrar el usuario.' });}});
@@ -69,36 +69,55 @@ app.use(authenticateUser);
 // --- Endpoints de Perfiles y Mascotas ---
 app.get('/api/profile', async (req, res) => {try{const userDoc = await db.collection('users').doc(req.user.uid).get();if (!userDoc.exists) return res.status(404).json({ message: 'Perfil no encontrado.' });res.status(200).json(userDoc.data());}catch(e){res.status(500).json({ message: 'Error interno del servidor.' })}});
 
-// [LÓGICA ORIGINAL RESTAURADA Y MEJORADA] Actualización de Perfil de Usuario
+// [DEPURACIÓN INTENSIVA] Actualización de Perfil de Usuario
 app.put('/api/profile', async (req, res) => {
-  try {
-    const { uid } = req.user;
-    // Deconstruimos explícitamente los campos que esperamos del frontend.
-    const { name, bio, location, phone } = req.body;
+  const { uid } = req.user;
+  const receivedData = req.body;
 
-    console.log(`[PROFILE_UPDATE_START] User ${uid} is updating their profile.`);
-    console.log('[PROFILE_UPDATE_DATA] Received data:', JSON.stringify(req.body, null, 2));
+  console.log(`--- [PROFILE_UPDATE_DEBUG] START ---`);
+  console.log(`[1] User ID: ${uid}`);
+  console.log(`[2] Raw request body received:`, JSON.stringify(receivedData, null, 2));
+
+  try {
+    const { name, bio, location, phone } = receivedData;
+    
+    console.log(`[3] Deconstructed values:`);
+    console.log(`   - name: ${name} (type: ${typeof name})`);
+    console.log(`   - bio: ${bio} (type: ${typeof bio})`);
+    console.log(`   - phone: ${phone} (type: ${typeof phone})`);
+    console.log(`   - location: ${JSON.stringify(location)} (type: ${typeof location})`);
 
     const dataToSave = {};
-
-    // Construimos el objeto a guardar de forma explícita, como en la versión original que funcionaba.
     if (name !== undefined) dataToSave.name = name;
     if (bio !== undefined) dataToSave.bio = bio;
     if (location !== undefined) dataToSave.location = location;
     if (phone !== undefined) dataToSave.phone = phone;
 
     if (Object.keys(dataToSave).length === 0) {
-        console.log('[PROFILE_UPDATE_FAIL] No valid data provided to save.');
+        console.log('[4] FAIL: No valid data provided to save.');
+        console.log(`--- [PROFILE_UPDATE_DEBUG] END ---`);
         return res.status(400).json({ message: 'No se proporcionaron datos válidos para actualizar.' });
     }
     
-    console.log('[PROFILE_UPDATE_FIRESTORE] Attempting to save:', JSON.stringify(dataToSave, null, 2));
-    await db.collection('users').doc(uid).set(dataToSave, { merge: true });
-    console.log('[PROFILE_UPDATE_SUCCESS] Profile saved successfully.');
+    console.log('[4] SUCCESS: Data to save is prepared:', JSON.stringify(dataToSave, null, 2));
+    
+    const userRef = db.collection('users').doc(uid);
+    
+    await userRef.set(dataToSave, { merge: true })
+      .then(() => {
+        console.log('[5] SUCCESS: Firestore write operation completed successfully.');
+        console.log(`--- [PROFILE_UPDATE_DEBUG] END ---`);
+        res.status(200).json({ message: 'Perfil actualizado con éxito.' });
+      })
+      .catch(firestoreError => {
+        console.error('[5] FAIL: Firestore write operation failed.', firestoreError);
+        console.log(`--- [PROFILE_UPDATE_DEBUG] END ---`);
+        throw firestoreError; // Lanza el error para que sea capturado por el catch principal
+      });
 
-    res.status(200).json({ message: 'Perfil actualizado con éxito.' });
   } catch(e) {
-    console.error('Error en /api/profile (PUT):', e);
+    console.error('[FATAL] An unexpected error occurred in /api/profile (PUT):', e);
+    console.log(`--- [PROFILE_UPDATE_DEBUG] END ---`);
     res.status(500).json({ message: 'Error interno del servidor.' });
   }
 });
