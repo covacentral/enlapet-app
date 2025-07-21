@@ -1,6 +1,6 @@
 // backend/index.js
-// Versión: 2.8 - Consolidado
-// Unifica todas las funcionalidades del Sprint 1 y 2, incluyendo la corrección del guardado del teléfono del usuario.
+// Versión: 2.9 - Guardado Directo
+// Simplifica drásticamente la lógica de guardado del perfil para eliminar cualquier bug sutil.
 
 require('dotenv').config();
 const express = require('express');
@@ -57,9 +57,9 @@ const authenticateUser = async (req, res, next) => {
   }
 };
 
-app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v2.8 - Consolidado' }));
+app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v2.9 - Guardado Directo' }));
 
-// --- Endpoints Públicos ---
+// --- Endpoints Públicos (sin cambios) ---
 app.post('/api/register', async (req, res) => {try {const { email, password, name } = req.body;if (!email || !password || !name) {return res.status(400).json({ message: 'Nombre, email y contraseña son requeridos.' });}const userRecord = await auth.createUser({ email, password, displayName: name });const newUser = {name,email,createdAt: new Date().toISOString(),userType: 'personal',profilePictureUrl: '',coverPhotoUrl: '',bio: '',phone: '',location: { country: 'Colombia', department: '', city: '' },privacySettings: { profileVisibility: 'public', showEmail: 'private' }};await db.collection('users').doc(userRecord.uid).set(newUser);res.status(201).json({ message: 'Usuario registrado con éxito', uid: userRecord.uid });} catch (error) {console.error('Error en /api/register:', error);if (error.code === 'auth/email-already-exists') {return res.status(409).json({ message: 'El correo electrónico ya está en uso.' });}if (error.code === 'auth/invalid-password') {return res.status(400).json({ message: 'La contraseña debe tener al menos 6 caracteres.' });}res.status(500).json({ message: 'Error al registrar el usuario.' });}});
 app.post('/api/auth/google', async (req, res) => {const { idToken } = req.body;if (!idToken) return res.status(400).json({ message: 'Se requiere el idToken de Google.' });try {const decodedToken = await auth.verifyIdToken(idToken);const { uid, name, email, picture } = decodedToken;const userRef = db.collection('users').doc(uid);const userDoc = await userRef.get();if (!userDoc.exists) {const newUser = {name,email,createdAt: new Date().toISOString(),userType: 'personal',profilePictureUrl: picture || '',coverPhotoUrl: '',bio: '',phone: '',location: { country: 'Colombia', department: '', city: '' },privacySettings: { profileVisibility: 'public', showEmail: 'private' }};await userRef.set(newUser);return res.status(201).json({ message: 'Usuario registrado y autenticado con Google.', uid });} else {return res.status(200).json({ message: 'Usuario autenticado con Google.', uid });}} catch (error) {console.error('Error en /api/auth/google:', error);res.status(500).json({ message: 'Error en la autenticación con Google.' });}});
 app.get('/api/public/pets/:petId', async (req, res) => {try {const { petId } = req.params;const petDoc = await db.collection('pets').doc(petId).get();if (!petDoc.exists) return res.status(404).json({ message: 'Mascota no encontrada.' });const petData = petDoc.data();const userDoc = await db.collection('users').doc(petData.ownerId).get();let ownerData = { name: 'Responsable', phone: 'No disponible' };if (userDoc.exists) {const fullOwnerData = userDoc.data();ownerData = {name: fullOwnerData.name,phone: fullOwnerData.phone || 'No proporcionado'};}const publicProfile = {pet: { name: petData.name, breed: petData.breed, petPictureUrl: petData.petPictureUrl },owner: ownerData};res.status(200).json(publicProfile);} catch (error) {console.error('Error en /api/public/pets/:petId:', error);res.status(500).json({ message: 'Error interno del servidor.' });}});
@@ -69,20 +69,34 @@ app.use(authenticateUser);
 // --- Endpoints de Perfiles y Mascotas ---
 app.get('/api/profile', async (req, res) => {try{const userDoc = await db.collection('users').doc(req.user.uid).get();if (!userDoc.exists) return res.status(404).json({ message: 'Perfil no encontrado.' });res.status(200).json(userDoc.data());}catch(e){res.status(500).json({ message: 'Error interno del servidor.' })}});
 
-// [CORREGIDO Y CONSOLIDADO] Actualización de Perfil de Usuario
+// [SIMPLIFICADO Y REFORZADO] Actualización de Perfil de Usuario
 app.put('/api/profile', async (req, res) => {
   try {
     const { uid } = req.user;
-    const { name, bio, location, phone } = req.body; // Se asegura de leer 'phone'
-    const updatedData = {};
-    if (name !== undefined) updatedData.name = name;
-    if (bio !== undefined) updatedData.bio = bio;
-    if (location !== undefined) updatedData.location = location;
-    if (phone !== undefined) updatedData.phone = phone; // Se asegura de añadir 'phone' al objeto a guardar
+    const receivedData = req.body;
 
-    if (Object.keys(updatedData).length === 0) return res.status(400).json({ message: 'No se proporcionaron datos para actualizar.' });
+    console.log(`[PROFILE_UPDATE_START] User ${uid} is updating their profile.`);
+    console.log('[PROFILE_UPDATE_DATA] Received data:', JSON.stringify(receivedData, null, 2));
+
+    // Sanitización: solo permitimos los campos que conocemos para evitar datos no deseados.
+    const allowedFields = ['name', 'bio', 'location', 'phone'];
+    const dataToSave = {};
+
+    Object.keys(receivedData).forEach(key => {
+      if (allowedFields.includes(key)) {
+        dataToSave[key] = receivedData[key];
+      }
+    });
+
+    if (Object.keys(dataToSave).length === 0) {
+        console.log('[PROFILE_UPDATE_FAIL] No valid data provided to save.');
+        return res.status(400).json({ message: 'No se proporcionaron datos válidos para actualizar.' });
+    }
     
-    await db.collection('users').doc(uid).set(updatedData, { merge: true });
+    console.log('[PROFILE_UPDATE_FIRESTORE] Attempting to save:', JSON.stringify(dataToSave, null, 2));
+    await db.collection('users').doc(uid).set(dataToSave, { merge: true });
+    console.log('[PROFILE_UPDATE_SUCCESS] Profile saved successfully.');
+
     res.status(200).json({ message: 'Perfil actualizado con éxito.' });
   } catch(e) {
     console.error('Error en /api/profile (PUT):', e);
