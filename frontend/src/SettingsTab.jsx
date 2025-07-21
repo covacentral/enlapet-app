@@ -1,14 +1,21 @@
+// frontend/src/SettingsTab.jsx
+// Versión: 2.1 - Estado Unificado
+// Refactoriza el manejo del estado del formulario a un único objeto para mayor robustez y corregir el bug de guardado.
+
 import { useState, useEffect, useRef } from 'react';
 import './App.css';
 
-// --- Lee la URL base de la API desde las variables de entorno ---
-const API_URL = import.meta.env.VITE_API_BASE_URL;
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 function SettingsTab({ user, userProfile, onProfileUpdate }) {
   const [isEditMode, setIsEditMode] = useState(false);
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [bio, setBio] = useState('');
+  
+  const [formData, setFormData] = useState({
+    name: '',
+    phone: '',
+    bio: ''
+  });
+
   const [message, setMessage] = useState({ text: '', isError: false });
   const [isUpdating, setIsUpdating] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -16,9 +23,11 @@ function SettingsTab({ user, userProfile, onProfileUpdate }) {
 
   const populateFields = () => {
     if (userProfile) {
-      setName(userProfile.name || '');
-      setPhone(userProfile.phone || '');
-      setBio(userProfile.bio || '');
+      setFormData({
+        name: userProfile.name || '',
+        phone: userProfile.phone || '',
+        bio: userProfile.bio || ''
+      });
     }
   };
 
@@ -26,16 +35,24 @@ function SettingsTab({ user, userProfile, onProfileUpdate }) {
     populateFields();
   }, [userProfile]);
 
+  const handleChange = (e) => {
+    const { id, value } = e.target;
+    setFormData(prevFormData => ({
+      ...prevFormData,
+      [id]: value
+    }));
+  };
+
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     setIsUpdating(true);
     setMessage({ text: 'Guardando cambios...', isError: false });
     try {
       const idToken = await user.getIdToken();
-      const response = await fetch(`${API_URL}/profile`, {
+      const response = await fetch(`${API_URL}/api/profile`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-        body: JSON.stringify({ name, phone, bio }),
+        body: JSON.stringify(formData),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message);
@@ -54,14 +71,14 @@ function SettingsTab({ user, userProfile, onProfileUpdate }) {
     if (!file) return;
     setIsUploading(true);
     setMessage({ text: 'Subiendo foto...', isError: false });
-    const formData = new FormData();
-    formData.append('profilePicture', file);
+    const formPayload = new FormData();
+    formPayload.append('profilePicture', file);
     try {
       const idToken = await user.getIdToken();
-      const response = await fetch(`${API_URL}/profile/picture`, {
+      const response = await fetch(`${API_URL}/api/profile/picture`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${idToken}` },
-        body: formData,
+        body: formPayload,
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message);
@@ -104,22 +121,22 @@ function SettingsTab({ user, userProfile, onProfileUpdate }) {
         <form onSubmit={handleUpdateProfile} className="register-form">
           <div className="form-group">
             <label htmlFor="name">Nombre:</label>
-            <input type="text" id="name" value={name} onChange={(e) => setName(e.target.value)} required />
+            <input type="text" id="name" value={formData.name} onChange={handleChange} required />
           </div>
           <div className="form-group">
             <label htmlFor="phone">Teléfono de Contacto:</label>
-            <input type="tel" id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Ej: 573001234567" />
+            <input type="tel" id="phone" value={formData.phone} onChange={handleChange} placeholder="Ej: 573001234567" />
           </div>
           <div className="form-group">
             <label htmlFor="bio">Biografía (máx. 70 caracteres):</label>
             <textarea 
               id="bio" 
-              value={bio} 
-              onChange={(e) => setBio(e.target.value)} 
+              value={formData.bio} 
+              onChange={handleChange} 
               rows="3"
               maxLength="70"
             ></textarea>
-            <small className="char-counter">{bio.length} / 70</small>
+            <small className="char-counter">{formData.bio.length} / 70</small>
           </div>
           <div className="form-actions">
             <button type="submit" disabled={isUpdating}>
