@@ -1,6 +1,6 @@
 // frontend/src/SettingsTab.jsx
-// Versión: 2.1 - Estado Unificado
-// Refactoriza el manejo del estado del formulario a un único objeto para mayor robustez y corregir el bug de guardado.
+// Versión: 2.2 - Diagnóstico
+// Añade logs de consola para rastrear el estado del formulario y depurar el bug de guardado.
 
 import { useState, useEffect, useRef } from 'react';
 import './App.css';
@@ -10,7 +10,6 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 function SettingsTab({ user, userProfile, onProfileUpdate }) {
   const [isEditMode, setIsEditMode] = useState(false);
   
-  // [REFACTORIZADO] Usamos un único objeto de estado para todo el formulario.
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -36,25 +35,29 @@ function SettingsTab({ user, userProfile, onProfileUpdate }) {
     populateFields();
   }, [userProfile]);
 
-  // [REFACTORIZADO] Un único manejador de cambios para todos los campos.
   const handleChange = (e) => {
     const { id, value } = e.target;
-    setFormData(prevFormData => ({
-      ...prevFormData,
-      [id]: value
-    }));
+    const updatedFormData = { ...formData, [id]: value };
+    
+    // [LOG DE DIAGNÓSTICO 1] Muestra el estado del formulario en cada cambio.
+    console.log('Form data changed:', updatedFormData);
+    
+    setFormData(updatedFormData);
   };
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     setIsUpdating(true);
     setMessage({ text: 'Guardando cambios...', isError: false });
+    
+    // [LOG DE DIAGNÓSTICO 2] Muestra los datos EXACTOS que se van a enviar.
+    console.log('Submitting the following data to backend:', formData);
+
     try {
       const idToken = await user.getIdToken();
       const response = await fetch(`${API_URL}/api/profile`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-        // [REFACTORIZADO] Enviamos el objeto de estado completo.
         body: JSON.stringify(formData),
       });
       const data = await response.json();
@@ -63,6 +66,7 @@ function SettingsTab({ user, userProfile, onProfileUpdate }) {
       onProfileUpdate();
       setIsEditMode(false);
     } catch (error) {
+      console.error('Error saving profile:', error);
       setMessage({ text: error.message, isError: true });
     } finally {
       setIsUpdating(false);
