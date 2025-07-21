@@ -73,7 +73,7 @@ const authenticateUser = async (req, res, next) => {
   }
   try {
     const decodedToken = await auth.verifyIdToken(idToken);
-    req.user = decodedToken; // Adjunta la información del usuario decodificada al request
+    req.user = decodedToken;
     next();
   } catch (error) {
     console.error('Error de autenticación de token:', error);
@@ -85,94 +85,49 @@ const authenticateUser = async (req, res, next) => {
 // -----------------------------------------------------------------------------
 // Endpoints Públicos
 // -----------------------------------------------------------------------------
-app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v2.3 Social Foundation' }));
+app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v2.4 Pet Profiles' }));
 
-// [MODIFICADO] Endpoint de Registro con Correo - Tarea 1.1
 app.post('/api/register', async (req, res) => {
   try {
     const { email, password, name } = req.body;
     if (!email || !password || !name) {
         return res.status(400).json({ message: 'Nombre, email y contraseña son requeridos.' });
     }
-
     const userRecord = await auth.createUser({ email, password, displayName: name });
-    
-    // Nueva estructura de documento de usuario
     const newUser = {
-      name,
-      email,
-      createdAt: new Date().toISOString(),
-      userType: 'personal', // 'personal' o 'business'
-      profilePictureUrl: '',
-      coverPhotoUrl: '',
-      bio: '',
-      location: {
-        country: 'Colombia',
-        department: '',
-        city: ''
-      },
-      privacySettings: {
-        profileVisibility: 'public', // 'public' o 'followers_only'
-        showEmail: 'private'       // 'public', 'followers_only', o 'private'
-      }
+      name, email, createdAt: new Date().toISOString(), userType: 'personal',
+      profilePictureUrl: '', coverPhotoUrl: '', bio: '',
+      location: { country: 'Colombia', department: '', city: '' },
+      privacySettings: { profileVisibility: 'public', showEmail: 'private' }
     };
-
     await db.collection('users').doc(userRecord.uid).set(newUser);
-    
     res.status(201).json({ message: 'Usuario registrado con éxito', uid: userRecord.uid });
   } catch (error) {
     console.error('Error en /api/register:', error);
-    // Códigos de error comunes de Firebase
-    if (error.code === 'auth/email-already-exists') {
-        return res.status(409).json({ message: 'El correo electrónico ya está en uso.' });
-    }
-    if (error.code === 'auth/invalid-password') {
-        return res.status(400).json({ message: 'La contraseña debe tener al menos 6 caracteres.' });
-    }
+    if (error.code === 'auth/email-already-exists') return res.status(409).json({ message: 'El correo electrónico ya está en uso.' });
+    if (error.code === 'auth/invalid-password') return res.status(400).json({ message: 'La contraseña debe tener al menos 6 caracteres.' });
     res.status(500).json({ message: 'Error al registrar el usuario.' });
   }
 });
 
-// [NUEVO] Endpoint de Autenticación con Google - Tarea 1.2
 app.post('/api/auth/google', async (req, res) => {
     const { idToken } = req.body;
-    if (!idToken) {
-        return res.status(400).json({ message: 'Se requiere el idToken de Google.' });
-    }
-
+    if (!idToken) return res.status(400).json({ message: 'Se requiere el idToken de Google.' });
     try {
         const decodedToken = await auth.verifyIdToken(idToken);
         const { uid, name, email, picture } = decodedToken;
-
         const userRef = db.collection('users').doc(uid);
         const userDoc = await userRef.get();
-
         if (!userDoc.exists) {
-            // Si el usuario no existe, lo creamos en Firestore
             const newUser = {
-                name,
-                email,
-                createdAt: new Date().toISOString(),
-                userType: 'personal',
-                profilePictureUrl: picture || '', // Usamos la foto de perfil de Google si existe
-                coverPhotoUrl: '',
-                bio: '',
-                location: {
-                    country: 'Colombia',
-                    department: '',
-                    city: ''
-                },
-                privacySettings: {
-                    profileVisibility: 'public',
-                    showEmail: 'private'
-                }
+                name, email, createdAt: new Date().toISOString(), userType: 'personal',
+                profilePictureUrl: picture || '', coverPhotoUrl: '', bio: '',
+                location: { country: 'Colombia', department: '', city: '' },
+                privacySettings: { profileVisibility: 'public', showEmail: 'private' }
             };
             await userRef.set(newUser);
-            console.log(`Nuevo usuario creado con Google: ${name} (${uid})`);
             return res.status(201).json({ message: 'Usuario registrado y autenticado con Google.', uid });
         } else {
-            // Si el usuario ya existe, simplemente lo autenticamos
-            console.log(`Usuario autenticado con Google: ${name} (${uid})`);
             return res.status(200).json({ message: 'Usuario autenticado con Google.', uid });
         }
     } catch (error) {
@@ -181,35 +136,20 @@ app.post('/api/auth/google', async (req, res) => {
     }
 });
 
-
-// [MODIFICADO] Perfil Público de Mascota - Mejora de Privacidad
 app.get('/api/public/pets/:petId', async (req, res) => {
   try {
     const { petId } = req.params;
     const petDoc = await db.collection('pets').doc(petId).get();
     if (!petDoc.exists) return res.status(404).json({ message: 'Mascota no encontrada.' });
-    
     const petData = petDoc.data();
     const userDoc = await db.collection('users').doc(petData.ownerId).get();
-    
-    // Por defecto, los datos del dueño son anónimos para proteger la privacidad
     let ownerPublicData = { name: 'Responsable', profilePictureUrl: '' };
-
     if (userDoc.exists) {
         const ownerData = userDoc.data();
-        // Solo exponemos datos públicos y seguros. El teléfono ya no se comparte aquí.
-        ownerPublicData = {
-            name: ownerData.name,
-            profilePictureUrl: ownerData.profilePictureUrl || ''
-        };
+        ownerPublicData = { name: ownerData.name, profilePictureUrl: ownerData.profilePictureUrl || '' };
     }
-    
     const publicProfile = {
-      pet: { 
-        name: petData.name, 
-        breed: petData.breed, 
-        petPictureUrl: petData.petPictureUrl 
-      },
+      pet: { name: petData.name, breed: petData.breed, petPictureUrl: petData.petPictureUrl },
       owner: ownerPublicData
     };
     res.status(200).json(publicProfile);
@@ -222,8 +162,9 @@ app.get('/api/public/pets/:petId', async (req, res) => {
 // -----------------------------------------------------------------------------
 // Endpoints Privados (Requieren Autenticación)
 // -----------------------------------------------------------------------------
-app.use(authenticateUser); // Todas las rutas debajo de esta línea requerirán un token válido
+app.use(authenticateUser);
 
+// --- Endpoints de USUARIOS ---
 app.get('/api/profile', async (req, res) => {
   try {
     const userDoc = await db.collection('users').doc(req.user.uid).get();
@@ -235,22 +176,15 @@ app.get('/api/profile', async (req, res) => {
   }
 });
 
-// [MODIFICADO] Actualización de Perfil de Usuario
 app.put('/api/profile', async (req, res) => {
   try {
     const { uid } = req.user;
-    // Campos que el usuario puede actualizar
     const { name, bio, location } = req.body;
-    
     const updatedData = {};
     if (name !== undefined) updatedData.name = name;
     if (bio !== undefined) updatedData.bio = bio;
-    if (location !== undefined) updatedData.location = location; // Permite actualizar el objeto de ubicación completo
-
-    if (Object.keys(updatedData).length === 0) {
-        return res.status(400).json({ message: 'No se proporcionaron datos para actualizar.' });
-    }
-
+    if (location !== undefined) updatedData.location = location;
+    if (Object.keys(updatedData).length === 0) return res.status(400).json({ message: 'No se proporcionaron datos para actualizar.' });
     await db.collection('users').doc(uid).set(updatedData, { merge: true });
     res.status(200).json({ message: 'Perfil actualizado con éxito.' });
   } catch (error) {
@@ -259,23 +193,15 @@ app.put('/api/profile', async (req, res) => {
   }
 });
 
-// Subida de foto de perfil de usuario
 app.post('/api/profile/picture', upload.single('profilePicture'), async (req, res) => {
+  // (Este endpoint se mantiene sin cambios)
   try {
     const { uid } = req.user;
     if (!req.file) return res.status(400).json({ message: 'No se subió ningún archivo.' });
-
     const filePath = `profile-pictures/${uid}/${Date.now()}-${req.file.originalname}`;
     const fileUpload = bucket.file(filePath);
-    const blobStream = fileUpload.createWriteStream({
-      metadata: { contentType: req.file.mimetype },
-    });
-
-    blobStream.on('error', (error) => { 
-      console.error("Error en blobStream:", error);
-      res.status(500).json({ message: 'Error durante la subida del archivo.' });
-    });
-
+    const blobStream = fileUpload.createWriteStream({ metadata: { contentType: req.file.mimetype } });
+    blobStream.on('error', (error) => res.status(500).json({ message: 'Error durante la subida del archivo.' }));
     blobStream.on('finish', async () => {
       try {
         await fileUpload.makePublic();
@@ -283,31 +209,40 @@ app.post('/api/profile/picture', upload.single('profilePicture'), async (req, re
         await db.collection('users').doc(uid).set({ profilePictureUrl: publicUrl }, { merge: true });
         res.status(200).json({ message: 'Foto actualizada.', profilePictureUrl: publicUrl });
       } catch (error) {
-        console.error("Error al hacer público el archivo o al guardar en DB:", error);
         res.status(500).json({ message: 'Error al procesar el archivo después de subirlo.' });
       }
     });
-
     blobStream.end(req.file.buffer);
   } catch (error) {
-    console.error('Error en /api/profile/picture:', error);
     res.status(500).json({ message: 'Error interno del servidor.' });
   }
 });
 
-// --- Endpoints de Mascotas (sin cambios mayores, pero ahora bajo autenticación) ---
+// --- Endpoints de MASCOTAS ---
 
+// [MODIFICADO] Registro de Mascota - Tarea 1.4
 app.post('/api/pets', async (req, res) => {
   try {
     const { uid } = req.user;
     const { name, breed } = req.body;
     if (!name) return res.status(400).json({ message: 'El nombre es requerido.' });
+    
+    // Nueva estructura completa para la mascota
     const petData = { 
         ownerId: uid, 
         name, 
         breed: breed || '',
         createdAt: new Date().toISOString(), 
-        petPictureUrl: '' 
+        petPictureUrl: '',
+        location: {
+            country: 'Colombia',
+            department: '',
+            city: ''
+        },
+        healthRecord: {
+            birthDate: '',
+            gender: '',
+        }
     };
     const petRef = await db.collection('pets').add(petData);
     res.status(201).json({ message: 'Mascota registrada.', petId: petRef.id });
@@ -329,59 +264,102 @@ app.get('/api/pets', async (req, res) => {
   }
 });
 
+// [MODIFICADO] Actualización de Mascota y Lógica de Ubicación Implícita - Tarea 1.5
 app.put('/api/pets/:petId', async (req, res) => {
   try {
     const { uid } = req.user;
-    const { name, breed } = req.body;
-    if (!name) return res.status(400).json({ message: 'El nombre es requerido.' });
-    
     const { petId } = req.params;
+    const updateData = req.body; // Recibimos todos los datos a actualizar
+
+    if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ message: 'No se proporcionaron datos para actualizar.' });
+    }
+    
     const petRef = db.collection('pets').doc(petId);
     const petDoc = await petRef.get();
 
-    if (!petDoc.exists) {
-      return res.status(404).json({ message: 'Mascota no encontrada.' });
-    }
-    if (petDoc.data().ownerId !== uid) {
-      return res.status(403).json({ message: 'No autorizado para modificar esta mascota.' });
+    if (!petDoc.exists) return res.status(404).json({ message: 'Mascota no encontrada.' });
+    if (petDoc.data().ownerId !== uid) return res.status(403).json({ message: 'No autorizado para modificar esta mascota.' });
+
+    // Usamos set con merge para actualizar campos anidados de forma segura
+    await petRef.set(updateData, { merge: true });
+
+    // --- Lógica de Ubicación Implícita ---
+    if (updateData.location && updateData.location.city) {
+        const userRef = db.collection('users').doc(uid);
+        const userDoc = await userRef.get();
+        if (userDoc.exists) {
+            const userData = userDoc.data();
+            // Si el usuario no tiene una ciudad, se la asignamos
+            if (!userData.location || !userData.location.city) {
+                await userRef.set({ location: updateData.location }, { merge: true });
+                console.log(`Ubicación implícita actualizada para el usuario ${uid} a ${updateData.location.city}`);
+            }
+        }
     }
 
-    await petRef.update({ name, breed: breed || '' });
     res.status(200).json({ message: 'Mascota actualizada con éxito.' });
-
   } catch (error) {
     console.error('Error en /api/pets/:petId (PUT):', error);
     res.status(500).json({ message: 'Error interno del servidor.' });
   }
 });
 
+// [NUEVO] Endpoints dedicados para la Hoja de Vida
+app.get('/api/pets/:petId/health-record', async (req, res) => {
+    try {
+        const { uid } = req.user;
+        const { petId } = req.params;
+        const petRef = db.collection('pets').doc(petId);
+        const petDoc = await petRef.get();
+
+        if (!petDoc.exists) return res.status(404).json({ message: 'Mascota no encontrada.' });
+        if (petDoc.data().ownerId !== uid) return res.status(403).json({ message: 'No autorizado.' });
+
+        res.status(200).json(petDoc.data().healthRecord || {});
+    } catch (error) {
+        console.error('Error en /api/pets/:petId/health-record (GET):', error);
+        res.status(500).json({ message: 'Error interno del servidor.' });
+    }
+});
+
+app.put('/api/pets/:petId/health-record', async (req, res) => {
+    try {
+        const { uid } = req.user;
+        const { petId } = req.params;
+        const healthRecordData = req.body;
+
+        const petRef = db.collection('pets').doc(petId);
+        const petDoc = await petRef.get();
+
+        if (!petDoc.exists) return res.status(404).json({ message: 'Mascota no encontrada.' });
+        if (petDoc.data().ownerId !== uid) return res.status(403).json({ message: 'No autorizado.' });
+        
+        // Actualizamos solo el campo healthRecord
+        await petRef.set({ healthRecord: healthRecordData }, { merge: true });
+
+        res.status(200).json({ message: 'Hoja de vida actualizada con éxito.' });
+    } catch (error) {
+        console.error('Error en /api/pets/:petId/health-record (PUT):', error);
+        res.status(500).json({ message: 'Error interno del servidor.' });
+    }
+});
+
+
 app.post('/api/pets/:petId/picture', upload.single('petPicture'), async (req, res) => {
+  // (Este endpoint se mantiene sin cambios)
   try {
     const { uid } = req.user;
     if (!req.file) return res.status(400).json({ message: 'No se subió ningún archivo.' });
-
     const { petId } = req.params;
     const petRef = db.collection('pets').doc(petId);
     const petDoc = await petRef.get();
-
-    if (!petDoc.exists) {
-      return res.status(404).json({ message: 'Mascota no encontrada.' });
-    }
-    if (petDoc.data().ownerId !== uid) {
-      return res.status(403).json({ message: 'No autorizado para modificar esta mascota.' });
-    }
-
+    if (!petDoc.exists) return res.status(404).json({ message: 'Mascota no encontrada.' });
+    if (petDoc.data().ownerId !== uid) return res.status(403).json({ message: 'No autorizado.' });
     const filePath = `pets-pictures/${petId}/${Date.now()}-${req.file.originalname}`;
     const fileUpload = bucket.file(filePath);
-    const blobStream = fileUpload.createWriteStream({
-      metadata: { contentType: req.file.mimetype },
-    });
-
-    blobStream.on('error', (error) => { 
-        console.error("Error en blobStream (mascota):", error);
-        res.status(500).json({ message: 'Error durante la subida del archivo.' });
-    });
-
+    const blobStream = fileUpload.createWriteStream({ metadata: { contentType: req.file.mimetype } });
+    blobStream.on('error', (error) => res.status(500).json({ message: 'Error durante la subida del archivo.' }));
     blobStream.on('finish', async () => {
       try {
         await fileUpload.makePublic();
@@ -389,14 +367,11 @@ app.post('/api/pets/:petId/picture', upload.single('petPicture'), async (req, re
         await petRef.update({ petPictureUrl: publicUrl });
         res.status(200).json({ message: 'Foto de mascota actualizada.', petPictureUrl: publicUrl });
       } catch (error) {
-        console.error("Error al procesar foto de mascota:", error);
         res.status(500).json({ message: 'Error al procesar el archivo después de subirlo.' });
       }
     });
-
     blobStream.end(req.file.buffer);
   } catch (error) {
-    console.error('Error en /api/pets/:petId/picture:', error);
     res.status(500).json({ message: 'Error interno del servidor.' });
   }
 });
