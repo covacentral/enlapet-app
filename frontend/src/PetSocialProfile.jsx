@@ -1,6 +1,6 @@
 // frontend/src/PetSocialProfile.jsx
-// Versión: 1.3 - Sistema de Seguimiento
-// Implementa el botón y la lógica para seguir/dejar de seguir a una mascota.
+// Versión: 1.4 - Sistema de Likes
+// Implementa la lógica y la UI para dar "Pata Arriba" (like) a las publicaciones.
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
@@ -18,14 +18,31 @@ const PlusIcon = () => (
         <line x1="5" y1="12" x2="19" y2="12"></line>
     </svg>
 );
-const HeartIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+const HeartIcon = ({ isLiked }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" 
+        fill={isLiked ? 'currentColor' : 'none'} 
+        stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+        className={isLiked ? 'liked' : ''}>
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+    </svg>
 );
 const CommentIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
 );
 
-const PostCard = ({ post }) => {
+
+// --- Componente PostCard con lógica de Like ---
+const PostCard = ({ post, isLikedInitially, onLikeToggle }) => {
+    const [isLiked, setIsLiked] = useState(isLikedInitially);
+    const [likesCount, setLikesCount] = useState(post.likesCount);
+
+    const handleLike = () => {
+        const newIsLiked = !isLiked;
+        setIsLiked(newIsLiked);
+        setLikesCount(newIsLiked ? likesCount + 1 : likesCount - 1);
+        onLikeToggle(post.id, newIsLiked);
+    };
+
     return (
         <div className="post-card">
             <img src={post.imageUrl} alt={post.caption} className="post-image" />
@@ -34,13 +51,16 @@ const PostCard = ({ post }) => {
                     <strong>{post.authorName}</strong> {post.caption}
                 </p>
                 <div className="post-actions">
-                    <button className="action-button"><HeartIcon /> <span>{post.likesCount}</span></button>
+                    <button className="action-button" onClick={handleLike}>
+                        <HeartIcon isLiked={isLiked} /> <span>{likesCount}</span>
+                    </button>
                     <button className="action-button"><CommentIcon /> <span>{post.commentsCount}</span></button>
                 </div>
             </div>
         </div>
     );
 };
+
 
 function PetSocialProfile() {
     const { petId } = useParams();
@@ -50,10 +70,10 @@ function PetSocialProfile() {
     const [error, setError] = useState('');
     const [isOwner, setIsOwner] = useState(false);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    
-    // --- Nuevos estados para el sistema de seguimiento ---
     const [isFollowing, setIsFollowing] = useState(false);
     const [followLoading, setFollowLoading] = useState(false);
+    // --- Nuevo estado para los likes ---
+    const [likedStatuses, setLikedStatuses] = useState({});
 
     const fetchData = async () => {
         if (!petProfile) setIsLoading(true);
@@ -78,17 +98,26 @@ function PetSocialProfile() {
             const followStatusData = await followStatusResponse.json();
 
             setPetProfile({
-                id: petId,
-                name: profileData.pet.name,
-                breed: profileData.pet.breed,
-                petPictureUrl: profileData.pet.petPictureUrl,
-                ownerId: profileData.owner.id
+                id: petId, name: profileData.pet.name, breed: profileData.pet.breed,
+                petPictureUrl: profileData.pet.petPictureUrl, ownerId: profileData.owner.id
             });
             setPosts(postsData);
             setIsFollowing(followStatusData.isFollowing);
-            
-            // Verificamos si el usuario actual es el dueño
             setIsOwner(user.uid === profileData.owner.id);
+
+            // --- Obtenemos el estado de los likes para los posts cargados ---
+            if (postsData.length > 0) {
+                const postIds = postsData.map(p => p.id);
+                const likeStatusResponse = await fetch(`${API_URL}/api/posts/like-statuses`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+                    body: JSON.stringify({ postIds })
+                });
+                if (likeStatusResponse.ok) {
+                    const statuses = await likeStatusResponse.json();
+                    setLikedStatuses(statuses);
+                }
+            }
 
         } catch (err) {
             setError(err.message);
@@ -101,53 +130,51 @@ function PetSocialProfile() {
         fetchData();
     }, [petId]);
 
-    // --- Nueva función para manejar el seguimiento ---
     const handleFollowToggle = async () => {
         setFollowLoading(true);
         const user = auth.currentUser;
         if (!user) return;
-
-        const endpoint = isFollowing 
-            ? `${API_URL}/api/profiles/${petId}/unfollow`
-            : `${API_URL}/api/profiles/${petId}/follow`;
-        
+        const endpoint = isFollowing ? `${API_URL}/api/profiles/${petId}/unfollow` : `${API_URL}/api/profiles/${petId}/follow`;
         const method = isFollowing ? 'DELETE' : 'POST';
-
         try {
             const idToken = await user.getIdToken();
-            const response = await fetch(endpoint, {
-                method: method,
-                headers: { 'Authorization': `Bearer ${idToken}` }
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'La acción no se pudo completar.');
-            }
-
-            // Actualizamos el estado localmente para una respuesta instantánea
+            const response = await fetch(endpoint, { method, headers: { 'Authorization': `Bearer ${idToken}` } });
+            if (!response.ok) throw new Error('La acción no se pudo completar.');
             setIsFollowing(!isFollowing);
-
         } catch (err) {
             console.error("Error toggling follow:", err);
-            // Opcional: mostrar un mensaje de error al usuario
         } finally {
             setFollowLoading(false);
         }
     };
 
+    // --- Nueva función para manejar los likes ---
+    const handleLikeToggle = async (postId, shouldLike) => {
+        const user = auth.currentUser;
+        if (!user) return;
 
-    if (isLoading) {
-        return <LoadingComponent text="Cargando perfil de la mascota..." />;
-    }
+        const endpoint = shouldLike 
+            ? `${API_URL}/api/posts/${postId}/like`
+            : `${API_URL}/api/posts/${postId}/unlike`;
+        
+        const method = shouldLike ? 'POST' : 'DELETE';
 
-    if (error) {
-        return <div className="error-message">{error}</div>;
-    }
+        try {
+            const idToken = await user.getIdToken();
+            await fetch(endpoint, {
+                method: method,
+                headers: { 'Authorization': `Bearer ${idToken}` }
+            });
+            // El estado visual ya se actualizó, aquí solo enviamos la petición.
+        } catch (err) {
+            console.error("Error toggling like:", err);
+            // Opcional: revertir el estado visual si la petición falla
+        }
+    };
 
-    if (!petProfile) {
-        return <div>No se encontró el perfil de la mascota.</div>;
-    }
+    if (isLoading) return <LoadingComponent text="Cargando perfil de la mascota..." />;
+    if (error) return <div className="error-message">{error}</div>;
+    if (!petProfile) return <div>No se encontró el perfil de la mascota.</div>;
 
     return (
         <>
@@ -156,26 +183,13 @@ function PetSocialProfile() {
                     <div className="cover-photo"></div>
                     <div className="profile-details">
                         <div className="profile-picture-container">
-                            <img 
-                                src={petProfile.petPictureUrl || 'https://via.placeholder.com/150'} 
-                                alt={petProfile.name} 
-                                className="profile-picture"
-                                onError={(e) => { e.target.onerror = null; e.target.src='https://via.placeholder.com/150'; }}
-                            />
+                            <img src={petProfile.petPictureUrl || 'https://via.placeholder.com/150'} alt={petProfile.name} className="profile-picture" onError={(e) => { e.target.onerror = null; e.target.src='https://via.placeholder.com/150'; }}/>
                         </div>
                         <h1>{petProfile.name}</h1>
                         <p>{petProfile.breed}</p>
-                        
-                        {/* --- Nuevo Botón de Seguir/Editar --- */}
                         <div className="profile-actions">
-                            {isOwner ? (
-                                <button className="profile-action-button edit">Editar Perfil</button>
-                            ) : (
-                                <button 
-                                    className={`profile-action-button ${isFollowing ? 'following' : 'follow'}`}
-                                    onClick={handleFollowToggle}
-                                    disabled={followLoading}
-                                >
+                            {isOwner ? ( <button className="profile-action-button edit">Editar Perfil</button> ) : (
+                                <button className={`profile-action-button ${isFollowing ? 'following' : 'follow'}`} onClick={handleFollowToggle} disabled={followLoading}>
                                     {followLoading ? '...' : (isFollowing ? 'Siguiendo' : 'Seguir')}
                                 </button>
                             )}
@@ -186,11 +200,16 @@ function PetSocialProfile() {
                 <main className="profile-content">
                     <div className="timeline">
                         {posts.length > 0 ? (
-                            posts.map(post => <PostCard key={post.id} post={post} />)
+                            posts.map(post => (
+                                <PostCard 
+                                    key={post.id} 
+                                    post={post} 
+                                    isLikedInitially={likedStatuses[post.id] || false}
+                                    onLikeToggle={handleLikeToggle}
+                                />
+                            ))
                         ) : (
-                            <p className="no-posts-message">
-                                ¡{petProfile.name} todavía no ha compartido ningún momento!
-                            </p>
+                            <p className="no-posts-message">¡{petProfile.name} todavía no ha compartido ningún momento!</p>
                         )}
                     </div>
                 </main>
