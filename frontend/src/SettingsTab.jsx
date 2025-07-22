@@ -1,6 +1,6 @@
 // frontend/src/SettingsTab.jsx
-// Versión: 2.1 - Estado Unificado
-// Refactoriza el manejo del estado del formulario a un único objeto para mayor robustez y corregir el bug de guardado.
+// Versión: 2.2 - Subida de Foto Corregida
+// Corrige el bug que impedía la subida de la foto de perfil del usuario.
 
 import { useState, useEffect, useRef } from 'react';
 import './App.css';
