@@ -1,16 +1,16 @@
 // frontend/src/PetSocialProfile.jsx
-// Versión: 1.0 - Base
-// Componente inicial para el perfil social de la mascota dentro de la aplicación.
+// Versión: 1.1 - Integración de Modal
+// Integra el modal CreatePostModal y la lógica para abrirlo.
 
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { auth } from './firebase';
 import LoadingComponent from './LoadingComponent';
+import CreatePostModal from './CreatePostModal'; // 1. Importamos el nuevo modal
 import './App.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-// Icono para el botón de "Crear Momento"
 const PlusIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
         <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -24,42 +24,50 @@ function PetSocialProfile() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
     const [isOwner, setIsOwner] = useState(false);
+    
+    // 2. Añadimos estado para controlar la visibilidad del modal
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+    const fetchPetProfile = async () => {
+        // La primera vez que carga, mostramos el spinner
+        if (!petProfile) setIsLoading(true);
+        try {
+            const user = auth.currentUser;
+            if (!user) throw new Error("Usuario no autenticado.");
+            
+            const idToken = await user.getIdToken();
+            const response = await fetch(`${API_URL}/api/public/pets/${petId}`, {
+                headers: { 'Authorization': `Bearer ${idToken}` }
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'No se pudo cargar el perfil de la mascota.');
+            }
+            
+            const data = await response.json();
+            // Creamos un objeto de perfil más completo para el modal
+            const profileData = {
+                id: petId,
+                name: data.pet.name,
+                breed: data.pet.breed,
+                petPictureUrl: data.pet.petPictureUrl,
+                ownerId: data.owner.id // Suponiendo que el backend lo envíe en el futuro
+            };
+            setPetProfile(profileData);
+
+            // Verificamos si el usuario actual es el dueño
+            // Esta lógica es temporal y se mejorará
+            // setIsOwner(user.uid === data.owner.id);
+
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchPetProfile = async () => {
-            setIsLoading(true);
-            try {
-                const user = auth.currentUser;
-                if (!user) {
-                    throw new Error("Usuario no autenticado.");
-                }
-                const idToken = await user.getIdToken();
-                
-                // Usamos el endpoint público para cargar los datos básicos.
-                const response = await fetch(`${API_URL}/api/public/pets/${petId}`, {
-                    headers: { 'Authorization': `Bearer ${idToken}` }
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || 'No se pudo cargar el perfil de la mascota.');
-                }
-                
-                const data = await response.json();
-                setPetProfile(data);
-
-                // Aquí verificaremos si el usuario es el dueño.
-                // Esta lógica se mejorará cuando tengamos un endpoint privado para perfiles.
-                // Por ahora, asumimos que si puede ver este perfil, es el dueño.
-                // setIsOwner(user.uid === data.owner.id);
-
-            } catch (err) {
-                setError(err.message);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
         fetchPetProfile();
     }, [petId]);
 
@@ -76,36 +84,48 @@ function PetSocialProfile() {
     }
 
     return (
-        <div className="pet-social-profile-container">
-            <header className="profile-header">
-                <div className="cover-photo">
-                    {/* Espacio para la foto de portada */}
-                </div>
-                <div className="profile-details">
-                    <div className="profile-picture-container">
-                        <img 
-                            src={petProfile.pet.petPictureUrl || 'https://via.placeholder.com/150'} 
-                            alt={petProfile.pet.name} 
-                            className="profile-picture"
-                            onError={(e) => { e.target.onerror = null; e.target.src='https://via.placeholder.com/150'; }}
-                        />
+        <>
+            <div className="pet-social-profile-container">
+                <header className="profile-header">
+                    <div className="cover-photo"></div>
+                    <div className="profile-details">
+                        <div className="profile-picture-container">
+                            <img 
+                                src={petProfile.petPictureUrl || 'https://via.placeholder.com/150'} 
+                                alt={petProfile.name} 
+                                className="profile-picture"
+                                onError={(e) => { e.target.onerror = null; e.target.src='https://via.placeholder.com/150'; }}
+                            />
+                        </div>
+                        <h1>{petProfile.name}</h1>
+                        <p>{petProfile.breed}</p>
                     </div>
-                    <h1>{petProfile.pet.name}</h1>
-                    <p>{petProfile.pet.breed}</p>
-                    {/* Espacio para botones de Seguir/Editar */}
-                </div>
-            </header>
+                </header>
 
-            <main className="profile-content">
-                {/* Espacio para las pestañas de Momentos, Galería, etc. */}
-                <p>Próximamente: ¡El timeline de momentos de {petProfile.pet.name}!</p>
-            </main>
+                <main className="profile-content">
+                    <p>Próximamente: ¡El timeline de momentos de {petProfile.name}!</p>
+                </main>
 
-            {/* Botón flotante para crear una nueva publicación */}
-            <button className="create-post-fab" title="Crear Momento">
-                <PlusIcon />
-            </button>
-        </div>
+                {/* 3. El botón ahora abre el modal */}
+                <button className="create-post-fab" title="Crear Momento" onClick={() => setIsCreateModalOpen(true)}>
+                    <PlusIcon />
+                </button>
+            </div>
+
+            {/* 4. Renderizamos el modal si isCreateModalOpen es true */}
+            {isCreateModalOpen && (
+                <CreatePostModal 
+                    user={auth.currentUser}
+                    petProfile={petProfile}
+                    onClose={() => setIsCreateModalOpen(false)}
+                    onPostCreated={() => {
+                        // Aquí refrescaremos la lista de posts en el futuro
+                        console.log('Post creado, refrescando timeline...');
+                        fetchPetProfile(); // Refresca los datos del perfil por si acaso
+                    }}
+                />
+            )}
+        </>
     );
 }
 
