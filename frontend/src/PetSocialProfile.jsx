@@ -1,6 +1,6 @@
 // frontend/src/PetSocialProfile.jsx
-// Versión: 1.4 - Sistema de Likes
-// Implementa la lógica y la UI para dar "Pata Arriba" (like) a las publicaciones.
+// Versión: 1.5 - Sistema de Comentarios
+// Implementa la sección de comentarios debajo de cada publicación.
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
@@ -12,35 +12,88 @@ import './App.css';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 // --- Iconos ---
-const PlusIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="12" y1="5" x2="12" y2="19"></line>
-        <line x1="5" y1="12" x2="19" y2="12"></line>
-    </svg>
-);
-const HeartIcon = ({ isLiked }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" 
-        fill={isLiked ? 'currentColor' : 'none'} 
-        stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-        className={isLiked ? 'liked' : ''}>
-        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-    </svg>
-);
-const CommentIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+const PlusIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> );
+const HeartIcon = ({ isLiked }) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill={isLiked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={isLiked ? 'liked' : ''}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg> );
+const CommentIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg> );
+
+// --- Componente para un solo comentario ---
+const Comment = ({ comment }) => (
+    <div className="comment">
+        <img src={comment.authorProfilePic || 'https://via.placeholder.com/32'} alt={comment.authorName} className="comment-author-pic" />
+        <div className="comment-content">
+            <p>
+                <strong>{comment.authorName}</strong>
+                <span>{comment.text}</span>
+            </p>
+        </div>
+    </div>
 );
 
-
-// --- Componente PostCard con lógica de Like ---
+// --- Componente PostCard con lógica de Comentarios ---
 const PostCard = ({ post, isLikedInitially, onLikeToggle }) => {
     const [isLiked, setIsLiked] = useState(isLikedInitially);
     const [likesCount, setLikesCount] = useState(post.likesCount);
+    const [comments, setComments] = useState([]);
+    const [commentsCount, setCommentsCount] = useState(post.commentsCount);
+    const [showComments, setShowComments] = useState(false);
+    const [newComment, setNewComment] = useState('');
+    const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 
     const handleLike = () => {
         const newIsLiked = !isLiked;
         setIsLiked(newIsLiked);
         setLikesCount(newIsLiked ? likesCount + 1 : likesCount - 1);
         onLikeToggle(post.id, newIsLiked);
+    };
+
+    const fetchComments = async () => {
+        if (comments.length > 0) return; // No volver a cargar si ya los tenemos
+        try {
+            const user = auth.currentUser;
+            const idToken = await user.getIdToken();
+            const response = await fetch(`${API_URL}/api/posts/${post.id}/comments`, {
+                headers: { 'Authorization': `Bearer ${idToken}` }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setComments(data);
+            }
+        } catch (error) {
+            console.error("Error fetching comments:", error);
+        }
+    };
+
+    const handleToggleComments = () => {
+        const newShowComments = !showComments;
+        setShowComments(newShowComments);
+        if (newShowComments) {
+            fetchComments();
+        }
+    };
+
+    const handleCommentSubmit = async (e) => {
+        e.preventDefault();
+        if (!newComment.trim()) return;
+        setIsSubmittingComment(true);
+        try {
+            const user = auth.currentUser;
+            const idToken = await user.getIdToken();
+            const response = await fetch(`${API_URL}/api/posts/${post.id}/comment`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+                body: JSON.stringify({ text: newComment })
+            });
+            if (response.ok) {
+                const addedComment = await response.json();
+                setComments([...comments, addedComment]);
+                setCommentsCount(commentsCount + 1);
+                setNewComment('');
+            }
+        } catch (error) {
+            console.error("Error submitting comment:", error);
+        } finally {
+            setIsSubmittingComment(false);
+        }
     };
 
     return (
@@ -54,8 +107,29 @@ const PostCard = ({ post, isLikedInitially, onLikeToggle }) => {
                     <button className="action-button" onClick={handleLike}>
                         <HeartIcon isLiked={isLiked} /> <span>{likesCount}</span>
                     </button>
-                    <button className="action-button"><CommentIcon /> <span>{post.commentsCount}</span></button>
+                    <button className="action-button" onClick={handleToggleComments}>
+                        <CommentIcon /> <span>{commentsCount}</span>
+                    </button>
                 </div>
+                {showComments && (
+                    <div className="comments-section">
+                        <div className="comments-list">
+                            {comments.map(comment => <Comment key={comment.id} comment={comment} />)}
+                        </div>
+                        <form onSubmit={handleCommentSubmit} className="comment-form">
+                            <input 
+                                type="text"
+                                value={newComment}
+                                onChange={(e) => setNewComment(e.target.value)}
+                                placeholder="Añade un comentario..."
+                                disabled={isSubmittingComment}
+                            />
+                            <button type="submit" disabled={isSubmittingComment}>
+                                {isSubmittingComment ? '...' : 'Publicar'}
+                            </button>
+                        </form>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -72,7 +146,6 @@ function PetSocialProfile() {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isFollowing, setIsFollowing] = useState(false);
     const [followLoading, setFollowLoading] = useState(false);
-    // --- Nuevo estado para los likes ---
     const [likedStatuses, setLikedStatuses] = useState({});
 
     const fetchData = async () => {
@@ -105,7 +178,6 @@ function PetSocialProfile() {
             setIsFollowing(followStatusData.isFollowing);
             setIsOwner(user.uid === profileData.owner.id);
 
-            // --- Obtenemos el estado de los likes para los posts cargados ---
             if (postsData.length > 0) {
                 const postIds = postsData.map(p => p.id);
                 const likeStatusResponse = await fetch(`${API_URL}/api/posts/like-statuses`, {
@@ -148,27 +220,19 @@ function PetSocialProfile() {
         }
     };
 
-    // --- Nueva función para manejar los likes ---
     const handleLikeToggle = async (postId, shouldLike) => {
         const user = auth.currentUser;
         if (!user) return;
-
-        const endpoint = shouldLike 
-            ? `${API_URL}/api/posts/${postId}/like`
-            : `${API_URL}/api/posts/${postId}/unlike`;
-        
+        const endpoint = shouldLike ? `${API_URL}/api/posts/${postId}/like` : `${API_URL}/api/posts/${postId}/unlike`;
         const method = shouldLike ? 'POST' : 'DELETE';
-
         try {
             const idToken = await user.getIdToken();
             await fetch(endpoint, {
                 method: method,
                 headers: { 'Authorization': `Bearer ${idToken}` }
             });
-            // El estado visual ya se actualizó, aquí solo enviamos la petición.
         } catch (err) {
             console.error("Error toggling like:", err);
-            // Opcional: revertir el estado visual si la petición falla
         }
     };
 
