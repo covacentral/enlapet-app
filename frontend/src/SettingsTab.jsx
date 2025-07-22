@@ -1,6 +1,6 @@
 // frontend/src/SettingsTab.jsx
-// Versión: 2.1 - Estado Unificado
-// Refactoriza el manejo del estado del formulario a un único objeto para mayor robustez y corregir el bug de guardado.
+// Versión: 2.3 - Ruta de Prueba
+// Apunta temporalmente el guardado del perfil al endpoint /api/profile-test para diagnóstico.
 
 import { useState, useEffect, useRef } from 'react';
 import './App.css';
@@ -46,21 +46,24 @@ function SettingsTab({ user, userProfile, onProfileUpdate }) {
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     setIsUpdating(true);
-    setMessage({ text: 'Guardando cambios...', isError: false });
+    setMessage({ text: 'Ejecutando prueba de guardado...', isError: false });
     try {
       const idToken = await user.getIdToken();
-      const response = await fetch(`${API_URL}/api/profile`, {
+      // [PRUEBA] Apuntamos al nuevo endpoint de diagnóstico
+      const response = await fetch(`${API_URL}/api/profile-test`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
         body: JSON.stringify(formData),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message);
-      setMessage({ text: 'Perfil guardado con éxito.', isError: false });
-      onProfileUpdate();
-      setIsEditMode(false);
+
+      // En esta prueba, no actualizamos el perfil, solo confirmamos que la petición llegó.
+      setMessage({ text: 'Prueba exitosa: El servidor recibió los datos.', isError: false });
+      // No cerramos el modo de edición para poder seguir probando.
+
     } catch (error) {
-      setMessage({ text: error.message, isError: true });
+      setMessage({ text: `Error en la prueba: ${error.message}`, isError: true });
     } finally {
       setIsUpdating(false);
     }
@@ -140,7 +143,7 @@ function SettingsTab({ user, userProfile, onProfileUpdate }) {
           </div>
           <div className="form-actions">
             <button type="submit" disabled={isUpdating}>
-              {isUpdating ? 'Guardando...' : 'Guardar Cambios'}
+              {isUpdating ? 'Probando...' : 'Probar Guardado'}
             </button>
             <button type="button" className="cancel-button" onClick={handleCancelEdit} disabled={isUpdating}>
               Cancelar
