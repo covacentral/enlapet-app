@@ -1,3 +1,7 @@
+// frontend/src/App.jsx
+// Versión: 2.3 - Rutas Anidadas
+// Habilita las rutas anidadas para el dashboard.
+
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { auth } from './firebase';
@@ -9,25 +13,30 @@ import ProfileLayout from './ProfileLayout.jsx';
 import PetProfile from './PetProfile.jsx';
 import LoadingComponent from './LoadingComponent.jsx';
 
-function ProtectedRoute({ user, children }) {
-  if (!user) return <Navigate to="/" replace />;
+function ProtectedRoute({ user, isLoading, children }) {
+  if (isLoading) {
+    return <LoadingComponent text="Verificando sesión..." />;
+  }
+  if (!user) {
+    return <Navigate to="/" replace />;
+  }
   return children;
 }
 
 function App() {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      setLoading(false);
+      setIsAuthLoading(false);
     });
     return () => unsubscribe();
   }, []);
 
-  if (loading) {
-    return <LoadingComponent text="Cargando EnlaPet..." />;
+  if (isAuthLoading) {
+    return <LoadingComponent text="Iniciando EnlaPet..." />;
   }
 
   return (
@@ -35,10 +44,11 @@ function App() {
       <Routes>
         <Route path="/pet/:petId" element={<PetProfile />} />
         
+        {/* [MODIFICADO] La ruta del dashboard ahora acepta sub-rutas con "/*" */}
         <Route 
-          path="/dashboard" 
+          path="/dashboard/*" 
           element={
-            <ProtectedRoute user={user}>
+            <ProtectedRoute user={user} isLoading={isAuthLoading}>
               <ProfileLayout user={user} />
             </ProtectedRoute>
           } 

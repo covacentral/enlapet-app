@@ -1,6 +1,6 @@
 // backend/index.js
-// Versión: 4.0 - Producción Estable
-// Versión consolidada y auditada con lógica de guardado explícita y configuración de CORS robusta.
+// Versión: 4.1 - Timeline de Posts
+// Añade el endpoint para obtener todas las publicaciones de un autor específico.
 
 require('dotenv').config();
 const express = require('express');
@@ -66,7 +66,7 @@ const authenticateUser = async (req, res, next) => {
   }
 };
 
-app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v4.0 - Producción Estable' }));
+app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v4.1 - Timeline de Posts' }));
 
 // --- Endpoints ---
 app.post('/api/register', async (req, res) => {try {const { email, password, name } = req.body;if (!email || !password || !name) {return res.status(400).json({ message: 'Nombre, email y contraseña son requeridos.' });}const userRecord = await auth.createUser({ email, password, displayName: name });const newUser = {name,email,createdAt: new Date().toISOString(),userType: 'personal',profilePictureUrl: '',coverPhotoUrl: '',bio: '',phone: '',location: { country: 'Colombia', department: '', city: '' },privacySettings: { profileVisibility: 'public', showEmail: 'private' }};await db.collection('users').doc(userRecord.uid).set(newUser);res.status(201).json({ message: 'Usuario registrado con éxito', uid: userRecord.uid });} catch (error) {console.error('Error en /api/register:', error);if (error.code === 'auth/email-already-exists') {return res.status(409).json({ message: 'El correo electrónico ya está en uso.' });}if (error.code === 'auth/invalid-password') {return res.status(400).json({ message: 'La contraseña debe tener al menos 6 caracteres.' });}res.status(500).json({ message: 'Error al registrar el usuario.' });}});
@@ -154,5 +154,28 @@ app.post('/api/posts', upload.single('postImage'), async (req, res) => {
     });
     blobStream.end(req.file.buffer);
 });
+
+// [NUEVO] Endpoint para obtener los posts de un autor
+app.get('/api/posts/by-author/:authorId', async (req, res) => {
+    try {
+        const { authorId } = req.params;
+        
+        // NOTA: Esta consulta requiere un índice compuesto en Firestore.
+        // Firestore te dará un enlace en los logs de la consola para crearlo la primera vez que se ejecute.
+        const postsQuery = await db.collection('posts')
+            .where('authorId', '==', authorId)
+            .orderBy('createdAt', 'desc')
+            .get();
+
+        const posts = postsQuery.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        res.status(200).json(posts);
+
+    } catch (error) {
+        console.error(`Error fetching posts for author ${req.params.authorId}:`, error);
+        res.status(500).json({ message: 'Error al obtener las publicaciones.' });
+    }
+});
+
 
 app.listen(PORT, () => console.log(`Servidor corriendo en el puerto ${PORT}`));
