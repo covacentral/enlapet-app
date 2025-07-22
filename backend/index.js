@@ -1,6 +1,6 @@
 // backend/index.js
-// Versión: 3.3 - CORS Definitivo
-// Implementa una configuración de CORS explícita y robusta para solucionar el bloqueo de peticiones PUT.
+// Versión: 3.4 - CORS Abierto para Diagnóstico
+// Desactiva temporalmente las restricciones de CORS para una prueba definitiva. ¡NO USAR EN PRODUCCIÓN!
 
 require('dotenv').config();
 const express = require('express');
@@ -32,28 +32,9 @@ const bucket = admin.storage().bucket();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// [CORRECCIÓN DEFINITIVA] Configuración de CORS explícita y a prueba de fallos.
-const allowedOrigins = [
-    'https://covacentral.shop',
-    'https://www.covacentral.shop',
-    'http://localhost:5173'
-];
+// [DIAGNÓSTICO] Se abre CORS completamente para la prueba.
+app.use(cors()); 
 
-const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.vercel.app')) {
-      callback(null, true);
-    } else {
-      console.error(`CORS Blocked Origin: ${origin}`);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
-};
-
-app.use(cors(corsOptions));
 app.use(express.json());
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
@@ -68,7 +49,7 @@ const authenticateUser = async (req, res, next) => {
   }
 };
 
-app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v3.3 - CORS Definitivo' }));
+app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v3.4 - CORS Abierto para Diagnóstico' }));
 
 // --- Endpoints (sin cambios en la lógica interna) ---
 app.post('/api/register', async (req, res) => {try {const { email, password, name } = req.body;if (!email || !password || !name) {return res.status(400).json({ message: 'Nombre, email y contraseña son requeridos.' });}const userRecord = await auth.createUser({ email, password, displayName: name });const newUser = {name,email,createdAt: new Date().toISOString(),userType: 'personal',profilePictureUrl: '',coverPhotoUrl: '',bio: '',phone: '',location: { country: 'Colombia', department: '', city: '' },privacySettings: { profileVisibility: 'public', showEmail: 'private' }};await db.collection('users').doc(userRecord.uid).set(newUser);res.status(201).json({ message: 'Usuario registrado con éxito', uid: userRecord.uid });} catch (error) {console.error('Error en /api/register:', error);if (error.code === 'auth/email-already-exists') {return res.status(409).json({ message: 'El correo electrónico ya está en uso.' });}if (error.code === 'auth/invalid-password') {return res.status(400).json({ message: 'La contraseña debe tener al menos 6 caracteres.' });}res.status(500).json({ message: 'Error al registrar el usuario.' });}});
