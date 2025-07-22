@@ -1,17 +1,24 @@
+// frontend/src/ProfileLayout.jsx
+// Versión: 2.0 - Navegación Integrada
+// Convierte las pestañas y las burbujas de mascotas en enlaces de navegación.
+
 import { useState, useEffect } from 'react';
+import { NavLink, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { signOut } from "firebase/auth";
 import { auth } from './firebase';
 import './App.css';
 import SettingsTab from './SettingsTab.jsx';
 import PetsTab from './PetsTab.jsx';
+import PetSocialProfile from './PetSocialProfile.jsx'; // Importamos el nuevo componente
 import LoadingComponent from './LoadingComponent.jsx';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
+// [MODIFICADO] La burbuja ahora es un enlace
 const PetBubble = ({ pet }) => (
-  <div className="pet-bubble" title={pet.name}>
+  <Link to={`/dashboard/pet/${pet.id}`} className="pet-bubble" title={pet.name}>
     {pet.petPictureUrl ? <img src={pet.petPictureUrl} alt={pet.name} /> : <span>🐾</span>}
-  </div>
+  </Link>
 );
 
 const LogoutIcon = () => (
@@ -40,7 +47,6 @@ const ConfirmLogoutModal = ({ onConfirm, onCancel }) => (
 function ProfileLayout({ user }) {
   const [userProfile, setUserProfile] = useState(null);
   const [pets, setPets] = useState([]);
-  const [activeTab, setActiveTab] = useState('pets');
   const [loading, setLoading] = useState(true);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
@@ -48,25 +54,16 @@ function ProfileLayout({ user }) {
     if (!user) return;
     try {
       const idToken = await user.getIdToken();
-      
       const [profileResponse, petsResponse] = await Promise.all([
-        fetch(`${API_URL}/api/profile`, {
-          headers: { 'Authorization': `Bearer ${idToken}` },
-        }),
-        fetch(`${API_URL}/api/pets`, {
-          headers: { 'Authorization': `Bearer ${idToken}` },
-        }),
+        fetch(`${API_URL}/api/profile`, { headers: { 'Authorization': `Bearer ${idToken}` } }),
+        fetch(`${API_URL}/api/pets`, { headers: { 'Authorization': `Bearer ${idToken}` } }),
       ]);
-
       const profileData = await profileResponse.json();
       const petsData = await petsResponse.json();
-
       if (!profileResponse.ok) throw new Error(profileData.message);
       if (!petsResponse.ok) throw new Error(petsData.message);
-
       setUserProfile(profileData);
       setPets(petsData);
-
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -119,21 +116,28 @@ function ProfileLayout({ user }) {
         </div>
       </header>
 
+      {/* [MODIFICADO] Las pestañas ahora son NavLinks para la navegación */}
       <nav className="profile-tabs">
-        <button onClick={() => setActiveTab('gallery')} className={activeTab === 'gallery' ? 'active' : ''}>Mi Galería</button>
-        <button onClick={() => setActiveTab('pets')} className={activeTab === 'pets' ? 'active' : ''}>Mascotas</button>
+        <NavLink to="/dashboard/gallery" className={({ isActive }) => isActive ? 'active' : ''}>Mi Galería</NavLink>
+        <NavLink to="/dashboard/pets" className={({ isActive }) => isActive ? 'active' : ''}>Mascotas</NavLink>
         <div className="profile-tab-wrapper">
-          <button onClick={() => setActiveTab('settings')} className={`profile-main-button ${activeTab === 'settings' ? 'active' : ''}`}>Perfil</button>
+          <NavLink to="/dashboard/settings" className={({ isActive }) => `profile-main-button ${isActive ? 'active' : ''}`}>Perfil</NavLink>
           <button onClick={() => setShowLogoutConfirm(true)} className="logout-icon-button" title="Cerrar sesión">
             <LogoutIcon />
           </button>
         </div>
       </nav>
 
+      {/* [MODIFICADO] El contenido ahora se renderiza mediante rutas anidadas */}
       <main className="tab-content">
-        {activeTab === 'gallery' && <GalleryTab />}
-        {activeTab === 'pets' && <PetsTab user={user} initialPets={pets} onPetsUpdate={fetchAllData} />}
-        {activeTab === 'settings' && <SettingsTab user={user} userProfile={userProfile} onProfileUpdate={fetchAllData} />}
+        <Routes>
+          <Route path="gallery" element={<GalleryTab />} />
+          <Route path="pets" element={<PetsTab user={user} initialPets={pets} onPetsUpdate={fetchAllData} />} />
+          <Route path="settings" element={<SettingsTab user={user} userProfile={userProfile} onProfileUpdate={fetchAllData} />} />
+          <Route path="pet/:petId" element={<PetSocialProfile />} />
+          {/* Redirige la ruta base del dashboard a la pestaña de mascotas */}
+          <Route index element={<Navigate to="pets" replace />} />
+        </Routes>
       </main>
     </div>
   );
