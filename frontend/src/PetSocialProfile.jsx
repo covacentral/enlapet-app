@@ -1,6 +1,6 @@
 // frontend/src/PetSocialProfile.jsx
-// Versión: 1.5 - Sistema de Comentarios
-// Implementa la sección de comentarios debajo de cada publicación.
+// Versión: 1.6 - Renderizado Condicional
+// Evita el bucle de errores al mostrar un placeholder si no hay imagen de perfil.
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
@@ -16,10 +16,14 @@ const PlusIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" heig
 const HeartIcon = ({ isLiked }) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill={isLiked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={isLiked ? 'liked' : ''}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg> );
 const CommentIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg> );
 
-// --- Componente para un solo comentario ---
+// --- Componente para un solo comentario (con renderizado condicional) ---
 const Comment = ({ comment }) => (
     <div className="comment">
-        <img src={comment.authorProfilePic || 'https://via.placeholder.com/32'} alt={comment.authorName} className="comment-author-pic" />
+        {comment.authorProfilePic ? (
+            <img src={comment.authorProfilePic} alt={comment.authorName} className="comment-author-pic" />
+        ) : (
+            <div className="comment-author-pic-placeholder">👤</div>
+        )}
         <div className="comment-content">
             <p>
                 <strong>{comment.authorName}</strong>
@@ -29,7 +33,7 @@ const Comment = ({ comment }) => (
     </div>
 );
 
-// --- Componente PostCard con lógica de Comentarios ---
+// --- Componente PostCard (sin cambios) ---
 const PostCard = ({ post, isLikedInitially, onLikeToggle }) => {
     const [isLiked, setIsLiked] = useState(isLikedInitially);
     const [likesCount, setLikesCount] = useState(post.likesCount);
@@ -47,7 +51,7 @@ const PostCard = ({ post, isLikedInitially, onLikeToggle }) => {
     };
 
     const fetchComments = async () => {
-        if (comments.length > 0) return; // No volver a cargar si ya los tenemos
+        if (comments.length > 0) return;
         try {
             const user = auth.currentUser;
             const idToken = await user.getIdToken();
@@ -247,7 +251,11 @@ function PetSocialProfile() {
                     <div className="cover-photo"></div>
                     <div className="profile-details">
                         <div className="profile-picture-container">
-                            <img src={petProfile.petPictureUrl || 'https://via.placeholder.com/150'} alt={petProfile.name} className="profile-picture" onError={(e) => { e.target.onerror = null; e.target.src='https://via.placeholder.com/150'; }}/>
+                            {petProfile.petPictureUrl ? (
+                                <img src={petProfile.petPictureUrl} alt={petProfile.name} className="profile-picture" />
+                            ) : (
+                                <div className="profile-picture-placeholder">🐾</div>
+                            )}
                         </div>
                         <h1>{petProfile.name}</h1>
                         <p>{petProfile.breed}</p>
