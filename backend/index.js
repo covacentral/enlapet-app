@@ -1,6 +1,6 @@
 // backend/index.js
-// Versión: 4.5 - Sistema de Comentarios
-// Añade endpoints para crear y obtener comentarios en las publicaciones.
+// Versión: 4.6 - Foto de Comentario Corregida
+// Obtiene la foto de perfil del comentarista desde Firestore en lugar del token de autenticación.
 
 require('dotenv').config();
 const express = require('express');
@@ -67,7 +67,7 @@ const authenticateUser = async (req, res, next) => {
   }
 };
 
-app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v4.5 - Sistema de Comentarios' }));
+app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v4.6 - Foto de Comentario Corregida' }));
 
 // --- Endpoints ---
 app.post('/api/register', async (req, res) => {try {const { email, password, name } = req.body;if (!email || !password || !name) {return res.status(400).json({ message: 'Nombre, email y contraseña son requeridos.' });}const userRecord = await auth.createUser({ email, password, displayName: name });const newUser = {name,email,createdAt: new Date().toISOString(),userType: 'personal',profilePictureUrl: '',coverPhotoUrl: '',bio: '',phone: '',location: { country: 'Colombia', department: '', city: '' },privacySettings: { profileVisibility: 'public', showEmail: 'private' }};await db.collection('users').doc(userRecord.uid).set(newUser);res.status(201).json({ message: 'Usuario registrado con éxito', uid: userRecord.uid });} catch (error) {console.error('Error en /api/register:', error);if (error.code === 'auth/email-already-exists') {return res.status(409).json({ message: 'El correo electrónico ya está en uso.' });}if (error.code === 'auth/invalid-password') {return res.status(400).json({ message: 'La contraseña debe tener al menos 6 caracteres.' });}res.status(500).json({ message: 'Error al registrar el usuario.' });}});
@@ -274,9 +274,9 @@ app.post('/api/posts/like-statuses', async (req, res) => {
     }
 });
 
-// [NUEVO] Endpoints para Comentarios
+// [CORREGIDO] Endpoint para crear comentarios
 app.post('/api/posts/:postId/comment', async (req, res) => {
-    const { uid, name, picture } = req.user;
+    const { uid, name } = req.user; // Tomamos el nombre del token por eficiencia
     const { postId } = req.params;
     const { text } = req.body;
 
@@ -286,23 +286,33 @@ app.post('/api/posts/:postId/comment', async (req, res) => {
 
     const postRef = db.collection('posts').doc(postId);
     const commentRef = postRef.collection('comments').doc();
+    const userRef = db.collection('users').doc(uid);
 
     try {
-        const newComment = {
-            id: commentRef.id,
-            authorId: uid,
-            authorName: name,
-            authorProfilePic: picture || '',
-            text,
-            createdAt: new Date().toISOString()
-        };
-
         await db.runTransaction(async (t) => {
+            const userDoc = await t.get(userRef);
+            if (!userDoc.exists) {
+                throw new Error("El usuario que comenta no existe.");
+            }
+            const userData = userDoc.data();
+
+            const newComment = {
+                id: commentRef.id,
+                authorId: uid,
+                authorName: userData.name, // Usamos el nombre de Firestore
+                authorProfilePic: userData.profilePictureUrl || '', // [CORRECCIÓN] Se obtiene de Firestore
+                text,
+                createdAt: new Date().toISOString()
+            };
+            
             t.set(commentRef, newComment);
             t.update(postRef, { commentsCount: admin.firestore.FieldValue.increment(1) });
         });
 
-        res.status(201).json(newComment);
+        // Devolvemos el comentario completo para que el frontend lo pueda renderizar
+        const createdComment = (await commentRef.get()).data();
+        res.status(201).json(createdComment);
+
     } catch (error) {
         console.error('Error al añadir comentario:', error);
         res.status(500).json({ message: 'No se pudo añadir el comentario.' });
