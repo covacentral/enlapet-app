@@ -1,8 +1,8 @@
 // frontend/src/PetEditModal.jsx
-// Versión: 2.2 - Formulario Unificado
-// Combina Info General y Hoja de Vida en un solo formulario para una mejor UX y robustez.
+// Versión: 2.3 - Subida de Foto de Mascota
+// Reintroduce la funcionalidad para actualizar la foto de perfil de la mascota.
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { colombiaData, departments } from './utils/colombiaData';
 import './App.css';
 
@@ -17,7 +17,9 @@ function PetEditModal({ pet, user, onClose, onUpdate }) {
   });
   const [cities, setCities] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [message, setMessage] = useState('');
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (pet) {
@@ -53,7 +55,6 @@ function PetEditModal({ pet, user, onClose, onUpdate }) {
     e.preventDefault();
     setIsLoading(true);
     setMessage('Guardando cambios...');
-
     try {
       const idToken = await user.getIdToken();
       const endpoint = `${API_URL}/api/pets/${pet.id}`;
@@ -63,13 +64,11 @@ function PetEditModal({ pet, user, onClose, onUpdate }) {
         location: formData.location,
         healthRecord: formData.healthRecord,
       };
-
       const response = await fetch(endpoint, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
         body: JSON.stringify(payload),
       });
-
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || 'Error al guardar.');
       
@@ -78,7 +77,6 @@ function PetEditModal({ pet, user, onClose, onUpdate }) {
       setTimeout(() => {
         onClose();
       }, 1500);
-
     } catch (error) {
       setMessage(`Error: ${error.message}`);
     } finally {
@@ -86,35 +84,52 @@ function PetEditModal({ pet, user, onClose, onUpdate }) {
     }
   };
 
+  const handleFileChange = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    setIsUploading(true);
+    setMessage('Subiendo foto...');
+    const formPayload = new FormData();
+    formPayload.append('petPicture', file);
+    try {
+        const idToken = await user.getIdToken();
+        const response = await fetch(`${API_URL}/api/pets/${pet.id}/picture`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${idToken}` },
+            body: formPayload,
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message);
+        setMessage('¡Foto actualizada!');
+        onUpdate();
+    } catch (error) {
+        setMessage(`Error: ${error.message}`);
+    } finally {
+        setIsUploading(false);
+        if (fileInputRef.current) fileInputRef.current.value = null;
+    }
+  };
+
   if (!pet) return null;
 
   return (
-    <>
-    <style>{`
-      .modal-backdrop {
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background-color: rgba(0, 0, 0, 0.7); display: flex;
-        justify-content: center; align-items: center; z-index: 1000;
-      }
-      .modal-content {
-        background-color: #2d343f; padding: 1.5rem; border-radius: 12px;
-        width: 90%; max-width: 500px; max-height: 90vh;
-        overflow-y: auto; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-      }
-      .form-section-title {
-        color: #61dafb; border-bottom: 1px solid #444; padding-bottom: 8px; margin-bottom: 1rem; margin-top: 1.5rem; font-size: 1.1rem;
-      }
-    `}</style>
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-content" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <h2>Editar Perfil de {pet.name}</h2>
-          <button onClick={onClose} className="close-button" disabled={isLoading}>×</button>
+          <button onClick={onClose} className="close-button" disabled={isLoading || isUploading}>×</button>
         </div>
         
         <form onSubmit={handleSaveChanges}>
           <div className="modal-body">
             <h3 className="form-section-title">Información General</h3>
+            <div className="form-group">
+                <label>Foto de Perfil:</label>
+                <button type="button" onClick={() => fileInputRef.current.click()} className="upload-button-secondary" disabled={isUploading}>
+                    {isUploading ? 'Subiendo...' : 'Cambiar Foto'}
+                </button>
+                <input type="file" ref={fileInputRef} onChange={handleFileChange} style={{ display: 'none' }} accept="image/*" />
+            </div>
             <div className="form-group"><label>Nombre:</label><input type="text" name="name" value={formData.name} onChange={handleChange} required disabled={isLoading} /></div>
             <div className="form-group"><label>Raza:</label><input type="text" name="breed" value={formData.breed} onChange={handleChange} disabled={isLoading} /></div>
             <div className="form-group">
@@ -144,12 +159,11 @@ function PetEditModal({ pet, user, onClose, onUpdate }) {
 
           <div className="modal-footer">
             {message && <p className="response-message">{message}</p>}
-            <button type="submit" disabled={isLoading}>{isLoading ? 'Guardando...' : 'Guardar Cambios'}</button>
+            <button type="submit" disabled={isLoading || isUploading}>{isLoading ? 'Guardando...' : 'Guardar Cambios'}</button>
           </div>
         </form>
       </div>
     </div>
-    </>
   );
 }
 
