@@ -1,6 +1,6 @@
 // backend/index.js
-// Versión: 4.1 - Timeline de Posts
-// Añade el endpoint para obtener todas las publicaciones de un autor específico.
+// Versión: 4.3 - Estado de Seguimiento
+// Añade un endpoint para verificar si un usuario sigue a un perfil.
 
 require('dotenv').config();
 const express = require('express');
@@ -32,7 +32,6 @@ const bucket = admin.storage().bucket();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Configuración de CORS explícita y robusta.
 const allowedOrigins = [
     'https://covacentral.shop',
     'https://www.covacentral.shop',
@@ -66,12 +65,12 @@ const authenticateUser = async (req, res, next) => {
   }
 };
 
-app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v4.1 - Timeline de Posts' }));
+app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v4.3 - Estado de Seguimiento' }));
 
 // --- Endpoints ---
 app.post('/api/register', async (req, res) => {try {const { email, password, name } = req.body;if (!email || !password || !name) {return res.status(400).json({ message: 'Nombre, email y contraseña son requeridos.' });}const userRecord = await auth.createUser({ email, password, displayName: name });const newUser = {name,email,createdAt: new Date().toISOString(),userType: 'personal',profilePictureUrl: '',coverPhotoUrl: '',bio: '',phone: '',location: { country: 'Colombia', department: '', city: '' },privacySettings: { profileVisibility: 'public', showEmail: 'private' }};await db.collection('users').doc(userRecord.uid).set(newUser);res.status(201).json({ message: 'Usuario registrado con éxito', uid: userRecord.uid });} catch (error) {console.error('Error en /api/register:', error);if (error.code === 'auth/email-already-exists') {return res.status(409).json({ message: 'El correo electrónico ya está en uso.' });}if (error.code === 'auth/invalid-password') {return res.status(400).json({ message: 'La contraseña debe tener al menos 6 caracteres.' });}res.status(500).json({ message: 'Error al registrar el usuario.' });}});
 app.post('/api/auth/google', async (req, res) => {const { idToken } = req.body;if (!idToken) return res.status(400).json({ message: 'Se requiere el idToken de Google.' });try {const decodedToken = await auth.verifyIdToken(idToken);const { uid, name, email, picture } = decodedToken;const userRef = db.collection('users').doc(uid);const userDoc = await userRef.get();if (!userDoc.exists) {const newUser = {name,email,createdAt: new Date().toISOString(),userType: 'personal',profilePictureUrl: picture || '',coverPhotoUrl: '',bio: '',phone: '',location: { country: 'Colombia', department: '', city: '' },privacySettings: { profileVisibility: 'public', showEmail: 'private' }};await userRef.set(newUser);return res.status(201).json({ message: 'Usuario registrado y autenticado con Google.', uid });} else {return res.status(200).json({ message: 'Usuario autenticado con Google.', uid });}} catch (error) {console.error('Error en /api/auth/google:', error);res.status(500).json({ message: 'Error en la autenticación con Google.' });}});
-app.get('/api/public/pets/:petId', async (req, res) => {try {const { petId } = req.params;const petDoc = await db.collection('pets').doc(petId).get();if (!petDoc.exists) return res.status(404).json({ message: 'Mascota no encontrada.' });const petData = petDoc.data();const userDoc = await db.collection('users').doc(petData.ownerId).get();let ownerData = { name: 'Responsable', phone: 'No disponible' };if (userDoc.exists) {const fullOwnerData = userDoc.data();ownerData = {name: fullOwnerData.name,phone: fullOwnerData.phone || 'No proporcionado'};}const publicProfile = {pet: { name: petData.name, breed: petData.breed, petPictureUrl: petData.petPictureUrl },owner: ownerData};res.status(200).json(publicProfile);} catch (error) {console.error('Error en /api/public/pets/:petId:', error);res.status(500).json({ message: 'Error interno del servidor.' });}});
+app.get('/api/public/pets/:petId', async (req, res) => {try {const { petId } = req.params;const petDoc = await db.collection('pets').doc(petId).get();if (!petDoc.exists) return res.status(404).json({ message: 'Mascota no encontrada.' });const petData = petDoc.data();const userDoc = await db.collection('users').doc(petData.ownerId).get();let ownerData = { id: petData.ownerId, name: 'Responsable', phone: 'No disponible' };if (userDoc.exists) {const fullOwnerData = userDoc.data();ownerData = {id: petData.ownerId, name: fullOwnerData.name,phone: fullOwnerData.phone || 'No proporcionado'};}const publicProfile = {pet: { ...petData }, owner: ownerData};res.status(200).json(publicProfile);} catch (error) {console.error('Error en /api/public/pets/:petId:', error);res.status(500).json({ message: 'Error interno del servidor.' });}});
 
 app.use(authenticateUser);
 
@@ -154,28 +153,70 @@ app.post('/api/posts', upload.single('postImage'), async (req, res) => {
     });
     blobStream.end(req.file.buffer);
 });
-
-// [NUEVO] Endpoint para obtener los posts de un autor
 app.get('/api/posts/by-author/:authorId', async (req, res) => {
     try {
         const { authorId } = req.params;
-        
-        // NOTA: Esta consulta requiere un índice compuesto en Firestore.
-        // Firestore te dará un enlace en los logs de la consola para crearlo la primera vez que se ejecute.
         const postsQuery = await db.collection('posts')
             .where('authorId', '==', authorId)
             .orderBy('createdAt', 'desc')
             .get();
-
         const posts = postsQuery.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        
         res.status(200).json(posts);
-
     } catch (error) {
         console.error(`Error fetching posts for author ${req.params.authorId}:`, error);
         res.status(500).json({ message: 'Error al obtener las publicaciones.' });
     }
 });
 
+// --- Endpoints de Seguimiento ---
+app.post('/api/profiles/:profileId/follow', async (req, res) => {
+    const { uid } = req.user;
+    const { profileId } = req.params;
+    if (uid === profileId) return res.status(400).json({ message: 'No puedes seguirte a ti mismo.' });
+    const currentUserRef = db.collection('users').doc(uid);
+    const followedPetRef = db.collection('pets').doc(profileId);
+    try {
+        await db.runTransaction(async (t) => {
+            const petDoc = await t.get(followedPetRef);
+            if (!petDoc.exists) throw new Error("La mascota que intentas seguir no existe.");
+            t.set(currentUserRef.collection('following').doc(profileId), { followedAt: new Date() });
+            t.set(followedPetRef.collection('followers').doc(uid), { followedAt: new Date() });
+        });
+        res.status(200).json({ message: 'Ahora sigues a este perfil.' });
+    } catch (error) {
+        console.error('Error al seguir al perfil:', error);
+        res.status(500).json({ message: error.message || 'No se pudo completar la acción.' });
+    }
+});
+
+app.delete('/api/profiles/:profileId/unfollow', async (req, res) => {
+    const { uid } = req.user;
+    const { profileId } = req.params;
+    const currentUserRef = db.collection('users').doc(uid);
+    const followedPetRef = db.collection('pets').doc(profileId);
+    try {
+        await db.runTransaction(async (t) => {
+            t.delete(currentUserRef.collection('following').doc(profileId));
+            t.delete(followedPetRef.collection('followers').doc(uid));
+        });
+        res.status(200).json({ message: 'Has dejado de seguir a este perfil.' });
+    } catch (error) {
+        console.error('Error al dejar de seguir al perfil:', error);
+        res.status(500).json({ message: 'No se pudo completar la acción.' });
+    }
+});
+
+// [NUEVO] Endpoint para verificar el estado de seguimiento
+app.get('/api/profiles/:profileId/follow-status', async (req, res) => {
+    const { uid } = req.user;
+    const { profileId } = req.params;
+    try {
+        const followDoc = await db.collection('users').doc(uid).collection('following').doc(profileId).get();
+        res.status(200).json({ isFollowing: followDoc.exists });
+    } catch (error) {
+        console.error('Error al verificar el estado de seguimiento:', error);
+        res.status(500).json({ message: 'No se pudo verificar el estado de seguimiento.' });
+    }
+});
 
 app.listen(PORT, () => console.log(`Servidor corriendo en el puerto ${PORT}`));

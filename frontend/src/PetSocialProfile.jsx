@@ -1,6 +1,6 @@
 // frontend/src/PetSocialProfile.jsx
-// Versión: 1.2 - Timeline de Posts
-// Carga y muestra las publicaciones de la mascota en un timeline.
+// Versión: 1.3 - Sistema de Seguimiento
+// Implementa el botón y la lógica para seguir/dejar de seguir a una mascota.
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
@@ -25,8 +25,6 @@ const CommentIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
 );
 
-
-// --- Nuevo Componente para cada Post ---
 const PostCard = ({ post }) => {
     return (
         <div className="post-card">
@@ -44,50 +42,53 @@ const PostCard = ({ post }) => {
     );
 };
 
-
 function PetSocialProfile() {
     const { petId } = useParams();
     const [petProfile, setPetProfile] = useState(null);
-    const [posts, setPosts] = useState([]); // Estado para guardar los posts
+    const [posts, setPosts] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
     const [isOwner, setIsOwner] = useState(false);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    
+    // --- Nuevos estados para el sistema de seguimiento ---
+    const [isFollowing, setIsFollowing] = useState(false);
+    const [followLoading, setFollowLoading] = useState(false);
 
     const fetchData = async () => {
-        if (!petProfile) setIsLoading(true); // Spinner solo en la carga inicial
+        if (!petProfile) setIsLoading(true);
         try {
             const user = auth.currentUser;
             if (!user) throw new Error("Usuario no autenticado.");
             
             const idToken = await user.getIdToken();
             
-            // Hacemos las dos peticiones en paralelo para más eficiencia
-            const [profileResponse, postsResponse] = await Promise.all([
+            const [profileResponse, postsResponse, followStatusResponse] = await Promise.all([
                 fetch(`${API_URL}/api/public/pets/${petId}`, { headers: { 'Authorization': `Bearer ${idToken}` } }),
-                fetch(`${API_URL}/api/posts/by-author/${petId}`, { headers: { 'Authorization': `Bearer ${idToken}` } })
+                fetch(`${API_URL}/api/posts/by-author/${petId}`, { headers: { 'Authorization': `Bearer ${idToken}` } }),
+                fetch(`${API_URL}/api/profiles/${petId}/follow-status`, { headers: { 'Authorization': `Bearer ${idToken}` } })
             ]);
 
             if (!profileResponse.ok) throw new Error('No se pudo cargar el perfil de la mascota.');
             if (!postsResponse.ok) throw new Error('No se pudieron cargar las publicaciones.');
+            if (!followStatusResponse.ok) throw new Error('No se pudo verificar el estado de seguimiento.');
             
             const profileData = await profileResponse.json();
             const postsData = await postsResponse.json();
+            const followStatusData = await followStatusResponse.json();
 
-            // Guardamos los datos en el estado
             setPetProfile({
                 id: petId,
                 name: profileData.pet.name,
                 breed: profileData.pet.breed,
                 petPictureUrl: profileData.pet.petPictureUrl,
-                ownerId: profileData.owner.id // Asumimos que el backend lo enviará
+                ownerId: profileData.owner.id
             });
             setPosts(postsData);
+            setIsFollowing(followStatusData.isFollowing);
             
-            // Verificamos si el usuario es el dueño
-            // setIsOwner(user.uid === profileData.owner.id);
-            // Temporalmente, asumimos que es el dueño para poder ver el botón
-            setIsOwner(true); 
+            // Verificamos si el usuario actual es el dueño
+            setIsOwner(user.uid === profileData.owner.id);
 
         } catch (err) {
             setError(err.message);
@@ -99,6 +100,42 @@ function PetSocialProfile() {
     useEffect(() => {
         fetchData();
     }, [petId]);
+
+    // --- Nueva función para manejar el seguimiento ---
+    const handleFollowToggle = async () => {
+        setFollowLoading(true);
+        const user = auth.currentUser;
+        if (!user) return;
+
+        const endpoint = isFollowing 
+            ? `${API_URL}/api/profiles/${petId}/unfollow`
+            : `${API_URL}/api/profiles/${petId}/follow`;
+        
+        const method = isFollowing ? 'DELETE' : 'POST';
+
+        try {
+            const idToken = await user.getIdToken();
+            const response = await fetch(endpoint, {
+                method: method,
+                headers: { 'Authorization': `Bearer ${idToken}` }
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'La acción no se pudo completar.');
+            }
+
+            // Actualizamos el estado localmente para una respuesta instantánea
+            setIsFollowing(!isFollowing);
+
+        } catch (err) {
+            console.error("Error toggling follow:", err);
+            // Opcional: mostrar un mensaje de error al usuario
+        } finally {
+            setFollowLoading(false);
+        }
+    };
+
 
     if (isLoading) {
         return <LoadingComponent text="Cargando perfil de la mascota..." />;
@@ -128,6 +165,21 @@ function PetSocialProfile() {
                         </div>
                         <h1>{petProfile.name}</h1>
                         <p>{petProfile.breed}</p>
+                        
+                        {/* --- Nuevo Botón de Seguir/Editar --- */}
+                        <div className="profile-actions">
+                            {isOwner ? (
+                                <button className="profile-action-button edit">Editar Perfil</button>
+                            ) : (
+                                <button 
+                                    className={`profile-action-button ${isFollowing ? 'following' : 'follow'}`}
+                                    onClick={handleFollowToggle}
+                                    disabled={followLoading}
+                                >
+                                    {followLoading ? '...' : (isFollowing ? 'Siguiendo' : 'Seguir')}
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </header>
 
@@ -157,7 +209,7 @@ function PetSocialProfile() {
                     onClose={() => setIsCreateModalOpen(false)}
                     onPostCreated={() => {
                         console.log('Post creado, refrescando timeline...');
-                        fetchData(); // Refresca tanto el perfil como los posts
+                        fetchData();
                     }}
                 />
             )}
