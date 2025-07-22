@@ -1,6 +1,6 @@
 // backend/index.js
-// Versión: 4.3 - Estado de Seguimiento
-// Añade un endpoint para verificar si un usuario sigue a un perfil.
+// Versión: 4.4 - Sistema de Likes
+// Añade endpoints para dar like, quitar like y verificar el estado de los likes.
 
 require('dotenv').config();
 const express = require('express');
@@ -22,8 +22,10 @@ try {
   });
   console.log('Firebase Admin SDK inicializado correctamente.');
 } catch (error) {
-  console.error('ERROR FATAL: No se pudo inicializar Firebase Admin SDK.', error);
-  process.exit(1);
+  if (error.code !== 'app/duplicate-app') {
+    console.error('ERROR FATAL: No se pudo inicializar Firebase Admin SDK.', error);
+    process.exit(1);
+  }
 }
 
 const db = admin.firestore();
@@ -65,7 +67,7 @@ const authenticateUser = async (req, res, next) => {
   }
 };
 
-app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v4.3 - Estado de Seguimiento' }));
+app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v4.4 - Sistema de Likes' }));
 
 // --- Endpoints ---
 app.post('/api/register', async (req, res) => {try {const { email, password, name } = req.body;if (!email || !password || !name) {return res.status(400).json({ message: 'Nombre, email y contraseña son requeridos.' });}const userRecord = await auth.createUser({ email, password, displayName: name });const newUser = {name,email,createdAt: new Date().toISOString(),userType: 'personal',profilePictureUrl: '',coverPhotoUrl: '',bio: '',phone: '',location: { country: 'Colombia', department: '', city: '' },privacySettings: { profileVisibility: 'public', showEmail: 'private' }};await db.collection('users').doc(userRecord.uid).set(newUser);res.status(201).json({ message: 'Usuario registrado con éxito', uid: userRecord.uid });} catch (error) {console.error('Error en /api/register:', error);if (error.code === 'auth/email-already-exists') {return res.status(409).json({ message: 'El correo electrónico ya está en uso.' });}if (error.code === 'auth/invalid-password') {return res.status(400).json({ message: 'La contraseña debe tener al menos 6 caracteres.' });}res.status(500).json({ message: 'Error al registrar el usuario.' });}});
@@ -167,8 +169,6 @@ app.get('/api/posts/by-author/:authorId', async (req, res) => {
         res.status(500).json({ message: 'Error al obtener las publicaciones.' });
     }
 });
-
-// --- Endpoints de Seguimiento ---
 app.post('/api/profiles/:profileId/follow', async (req, res) => {
     const { uid } = req.user;
     const { profileId } = req.params;
@@ -188,7 +188,6 @@ app.post('/api/profiles/:profileId/follow', async (req, res) => {
         res.status(500).json({ message: error.message || 'No se pudo completar la acción.' });
     }
 });
-
 app.delete('/api/profiles/:profileId/unfollow', async (req, res) => {
     const { uid } = req.user;
     const { profileId } = req.params;
@@ -205,8 +204,6 @@ app.delete('/api/profiles/:profileId/unfollow', async (req, res) => {
         res.status(500).json({ message: 'No se pudo completar la acción.' });
     }
 });
-
-// [NUEVO] Endpoint para verificar el estado de seguimiento
 app.get('/api/profiles/:profileId/follow-status', async (req, res) => {
     const { uid } = req.user;
     const { profileId } = req.params;
@@ -218,5 +215,81 @@ app.get('/api/profiles/:profileId/follow-status', async (req, res) => {
         res.status(500).json({ message: 'No se pudo verificar el estado de seguimiento.' });
     }
 });
+
+// [NUEVO] Endpoints para Likes
+app.post('/api/posts/:postId/like', async (req, res) => {
+    const { uid } = req.user;
+    const { postId } = req.params;
+    const postRef = db.collection('posts').doc(postId);
+    const likeRef = postRef.collection('likes').doc(uid);
+
+    try {
+        await db.runTransaction(async (t) => {
+            const likeDoc = await t.get(likeRef);
+            if (likeDoc.exists) {
+                // El usuario ya ha dado like, no hacemos nada.
+                return;
+            }
+            t.set(likeRef, { likedAt: new Date() });
+            t.update(postRef, { likesCount: admin.firestore.FieldValue.increment(1) });
+        });
+        res.status(200).json({ message: 'Like añadido.' });
+    } catch (error) {
+        console.error('Error al dar like:', error);
+        res.status(500).json({ message: 'No se pudo añadir el like.' });
+    }
+});
+
+app.delete('/api/posts/:postId/unlike', async (req, res) => {
+    const { uid } = req.user;
+    const { postId } = req.params;
+    const postRef = db.collection('posts').doc(postId);
+    const likeRef = postRef.collection('likes').doc(uid);
+
+    try {
+        await db.runTransaction(async (t) => {
+            const likeDoc = await t.get(likeRef);
+            if (!likeDoc.exists) {
+                // El usuario no ha dado like, no hacemos nada.
+                return;
+            }
+            t.delete(likeRef);
+            t.update(postRef, { likesCount: admin.firestore.FieldValue.increment(-1) });
+        });
+        res.status(200).json({ message: 'Like eliminado.' });
+    } catch (error) {
+        console.error('Error al quitar like:', error);
+        res.status(500).json({ message: 'No se pudo quitar el like.' });
+    }
+});
+
+// [NUEVO] Endpoint eficiente para verificar likes en múltiples posts
+app.post('/api/posts/like-statuses', async (req, res) => {
+    const { uid } = req.user;
+    const { postIds } = req.body; // Esperamos un array de postIds
+
+    if (!Array.isArray(postIds) || postIds.length === 0) {
+        return res.status(200).json({});
+    }
+
+    try {
+        const likePromises = postIds.map(postId => 
+            db.collection('posts').doc(postId).collection('likes').doc(uid).get()
+        );
+        const likeSnapshots = await Promise.all(likePromises);
+        
+        const statuses = {};
+        likeSnapshots.forEach((doc, index) => {
+            const postId = postIds[index];
+            statuses[postId] = doc.exists;
+        });
+
+        res.status(200).json(statuses);
+    } catch (error) {
+        console.error('Error al verificar estados de likes:', error);
+        res.status(500).json({ message: 'No se pudieron verificar los likes.' });
+    }
+});
+
 
 app.listen(PORT, () => console.log(`Servidor corriendo en el puerto ${PORT}`));
