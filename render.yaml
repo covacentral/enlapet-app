@@ -1,0 +1,20 @@
+# render.yaml
+# Versión: 1.0
+# Plano maestro para que Render entienda cómo construir y previsualizar nuestro backend.
+
+services:
+  # Define nuestro servicio de backend
+  - type: web
+    name: enlapet-api
+    env: node
+    # Directorio donde vive el código del backend
+    rootDir: backend
+    # Comandos para construir y ejecutar el servicio
+    buildCommand: "npm install"
+    startCommand: "node index.js"
+    # Variables de entorno que nuestro servicio necesita.
+    # 'sync: false' es una medida de seguridad: le dice a Render que el valor
+    # de esta variable se configurará manualmente en el dashboard y no aquí.
+    envVars:
+      - key: FIREBASE_SERVICE_ACCOUNT_BASE64
+        sync: false
