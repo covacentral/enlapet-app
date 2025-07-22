@@ -1,6 +1,6 @@
 // backend/index.js
-// Versión: 3.6 - Versión Definitiva
-// Combina la lógica de guardado explícita, la depuración intensiva y la configuración de CORS robusta.
+// Versión: 3.7 - Ruta de Prueba
+// Añade un endpoint de prueba /api/profile-test para aislar el bug de guardado.
 
 require('dotenv').config();
 const express = require('express');
@@ -32,7 +32,6 @@ const bucket = admin.storage().bucket();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Configuración de CORS explícita y robusta.
 const allowedOrigins = [
     'https://covacentral.shop',
     'https://www.covacentral.shop',
@@ -66,7 +65,7 @@ const authenticateUser = async (req, res, next) => {
   }
 };
 
-app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v3.6 - Versión Definitiva' }));
+app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v3.7 - Ruta de Prueba' }));
 
 // --- Endpoints ---
 app.post('/api/register', async (req, res) => {try {const { email, password, name } = req.body;if (!email || !password || !name) {return res.status(400).json({ message: 'Nombre, email y contraseña son requeridos.' });}const userRecord = await auth.createUser({ email, password, displayName: name });const newUser = {name,email,createdAt: new Date().toISOString(),userType: 'personal',profilePictureUrl: '',coverPhotoUrl: '',bio: '',phone: '',location: { country: 'Colombia', department: '', city: '' },privacySettings: { profileVisibility: 'public', showEmail: 'private' }};await db.collection('users').doc(userRecord.uid).set(newUser);res.status(201).json({ message: 'Usuario registrado con éxito', uid: userRecord.uid });} catch (error) {console.error('Error en /api/register:', error);if (error.code === 'auth/email-already-exists') {return res.status(409).json({ message: 'El correo electrónico ya está en uso.' });}if (error.code === 'auth/invalid-password') {return res.status(400).json({ message: 'La contraseña debe tener al menos 6 caracteres.' });}res.status(500).json({ message: 'Error al registrar el usuario.' });}});
@@ -75,46 +74,32 @@ app.get('/api/public/pets/:petId', async (req, res) => {try {const { petId } = r
 
 app.use(authenticateUser);
 
+// [NUEVO ENDPOINT DE PRUEBA]
+app.put('/api/profile-test', (req, res) => {
+    console.log(`--- [PROFILE_TEST_ENDPOINT] RECEIVED REQUEST ---`);
+    console.log(`[TEST] User ID: ${req.user.uid}`);
+    console.log(`[TEST] Request body:`, JSON.stringify(req.body, null, 2));
+    console.log(`--- [PROFILE_TEST_ENDPOINT] END ---`);
+    res.status(200).json({ message: 'Test endpoint received data successfully.' });
+});
+
 app.get('/api/profile', async (req, res) => {try{const userDoc = await db.collection('users').doc(req.user.uid).get();if (!userDoc.exists) return res.status(404).json({ message: 'Perfil no encontrado.' });res.status(200).json(userDoc.data());}catch(e){res.status(500).json({ message: 'Error interno del servidor.' })}});
 app.put('/api/profile', async (req, res) => {
-  const { uid } = req.user;
-  const receivedData = req.body;
-  console.log(`--- [PROFILE_UPDATE_DEBUG] START ---`);
-  console.log(`[1] User ID: ${uid}`);
-  console.log(`[2] Raw request body received:`, JSON.stringify(receivedData, null, 2));
   try {
-    const { name, bio, location, phone } = receivedData;
-    console.log(`[3] Deconstructed values:`);
-    console.log(`   - name: ${name} (type: ${typeof name})`);
-    console.log(`   - bio: ${bio} (type: ${typeof bio})`);
-    console.log(`   - phone: ${phone} (type: ${typeof phone})`);
-    console.log(`   - location: ${JSON.stringify(location)} (type: ${typeof location})`);
+    const { uid } = req.user;
+    const { name, bio, location, phone } = req.body;
     const dataToSave = {};
     if (name !== undefined) dataToSave.name = name;
     if (bio !== undefined) dataToSave.bio = bio;
     if (location !== undefined) dataToSave.location = location;
     if (phone !== undefined) dataToSave.phone = phone;
     if (Object.keys(dataToSave).length === 0) {
-        console.log('[4] FAIL: No valid data provided to save.');
-        console.log(`--- [PROFILE_UPDATE_DEBUG] END ---`);
         return res.status(400).json({ message: 'No se proporcionaron datos válidos para actualizar.' });
     }
-    console.log('[4] SUCCESS: Data to save is prepared:', JSON.stringify(dataToSave, null, 2));
-    const userRef = db.collection('users').doc(uid);
-    await userRef.set(dataToSave, { merge: true })
-      .then(() => {
-        console.log('[5] SUCCESS: Firestore write operation completed successfully.');
-        console.log(`--- [PROFILE_UPDATE_DEBUG] END ---`);
-        res.status(200).json({ message: 'Perfil actualizado con éxito.' });
-      })
-      .catch(firestoreError => {
-        console.error('[5] FAIL: Firestore write operation failed.', firestoreError);
-        console.log(`--- [PROFILE_UPDATE_DEBUG] END ---`);
-        throw firestoreError;
-      });
+    await db.collection('users').doc(uid).set(dataToSave, { merge: true });
+    res.status(200).json({ message: 'Perfil actualizado con éxito.' });
   } catch(e) {
-    console.error('[FATAL] An unexpected error occurred in /api/profile (PUT):', e);
-    console.log(`--- [PROFILE_UPDATE_DEBUG] END ---`);
+    console.error('Error en /api/profile (PUT):', e);
     res.status(500).json({ message: 'Error interno del servidor.' });
   }
 });
