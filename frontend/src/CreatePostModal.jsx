@@ -1,13 +1,14 @@
 // frontend/src/CreatePostModal.jsx
-// Versión: 1.0 - Base
-// Modal con el formulario para crear una nueva publicación ("Momento").
+// Versión: 1.1 - Previsualización de Imagen Corregida
+// Utiliza nuevas clases de CSS para contener la imagen de previsualización.
 
 import { useState, useRef } from 'react';
-import './App.css';
+import { X, UploadCloud } from 'lucide-react';
+import { auth } from './firebase';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-function CreatePostModal({ user, petProfile, onClose, onPostCreated }) {
+function CreatePostModal({ petProfile, onClose, onPostCreated }) {
     const [caption, setCaption] = useState('');
     const [postImage, setPostImage] = useState(null);
     const [previewImage, setPreviewImage] = useState(null);
@@ -19,7 +20,6 @@ function CreatePostModal({ user, petProfile, onClose, onPostCreated }) {
         const file = e.target.files[0];
         if (file) {
             setPostImage(file);
-            // Creamos una URL local para la previsualización de la imagen
             setPreviewImage(URL.createObjectURL(file));
         }
     };
@@ -36,10 +36,12 @@ function CreatePostModal({ user, petProfile, onClose, onPostCreated }) {
         const formData = new FormData();
         formData.append('postImage', postImage);
         formData.append('caption', caption);
-        formData.append('authorId', petProfile.id); // El ID de la mascota es el autor
+        formData.append('authorId', petProfile.id);
         formData.append('authorType', 'pet');
 
         try {
+            const user = auth.currentUser;
+            if (!user) throw new Error("No autenticado");
             const idToken = await user.getIdToken();
             const response = await fetch(`${API_URL}/api/posts`, {
                 method: 'POST',
@@ -53,9 +55,9 @@ function CreatePostModal({ user, petProfile, onClose, onPostCreated }) {
             }
 
             setMessage('¡Momento publicado con éxito!');
-            onPostCreated(); // Llama a la función para refrescar el timeline
+            onPostCreated(); 
             setTimeout(() => {
-                onClose(); // Cierra el modal después de un breve retraso
+                onClose();
             }, 1500);
 
         } catch (error) {
@@ -67,12 +69,14 @@ function CreatePostModal({ user, petProfile, onClose, onPostCreated }) {
 
     return (
         <div className="modal-backdrop" onClick={onClose}>
-            <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="create-post-modal-content" onClick={e => e.stopPropagation()}>
                 <div className="modal-header">
                     <h2>Crear un nuevo Momento</h2>
-                    <button onClick={onClose} className="close-button" disabled={isLoading}>×</button>
+                    <button onClick={onClose} className="close-button" disabled={isLoading}>
+                        <X size={24} />
+                    </button>
                 </div>
-                <form onSubmit={handleSubmit}>
+                <form onSubmit={handleSubmit} className="create-post-form">
                     <div className="modal-body">
                         <div 
                             className="image-upload-area" 
@@ -81,7 +85,10 @@ function CreatePostModal({ user, petProfile, onClose, onPostCreated }) {
                             {previewImage ? (
                                 <img src={previewImage} alt="Previsualización" className="image-preview" />
                             ) : (
-                                <p>Haz clic aquí para seleccionar una foto</p>
+                                <div className="upload-prompt-content">
+                                    <UploadCloud size={48} />
+                                    <p>Haz clic aquí para seleccionar una foto</p>
+                                </div>
                             )}
                         </div>
                         <input 
@@ -92,7 +99,6 @@ function CreatePostModal({ user, petProfile, onClose, onPostCreated }) {
                             style={{ display: 'none' }} 
                         />
                         <div className="form-group">
-                            <label htmlFor="caption">Describe este momento:</label>
                             <textarea
                                 id="caption"
                                 value={caption}
@@ -107,7 +113,7 @@ function CreatePostModal({ user, petProfile, onClose, onPostCreated }) {
                     </div>
                     <div className="modal-footer">
                         {message && <p className="response-message">{message}</p>}
-                        <button type="submit" disabled={isLoading}>
+                        <button type="submit" className="publish-button" disabled={isLoading}>
                             {isLoading ? 'Publicando...' : 'Publicar Momento'}
                         </button>
                     </div>
