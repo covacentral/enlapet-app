@@ -1,6 +1,6 @@
 // frontend/src/PetEditModal.jsx
-// Versión: 2.3 - Subida de Foto de Mascota
-// Reintroduce la funcionalidad para actualizar la foto de perfil de la mascota.
+// Versión: 2.4 - Correcciones Completas
+// Reintroduce la subida de foto de mascota y restaura los estilos del modal.
 
 import { useState, useEffect, useRef } from 'react';
 import { colombiaData, departments } from './utils/colombiaData';
@@ -113,57 +113,71 @@ function PetEditModal({ pet, user, onClose, onUpdate }) {
   if (!pet) return null;
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-content" onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>Editar Perfil de {pet.name}</h2>
-          <button onClick={onClose} className="close-button" disabled={isLoading || isUploading}>×</button>
+    <>
+      <style>{`
+        .modal-backdrop {
+          position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+          background-color: rgba(0, 0, 0, 0.7); display: flex;
+          justify-content: center; align-items: center; z-index: 1000;
+        }
+        .modal-content {
+          background-color: #2d343f; padding: 1.5rem; border-radius: 12px;
+          width: 90%; max-width: 500px; max-height: 90vh;
+          overflow-y: auto; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+      `}</style>
+      <div className="modal-backdrop" onClick={onClose}>
+        <div className="modal-content" onClick={e => e.stopPropagation()}>
+          <div className="modal-header">
+            <h2>Editar Perfil de {pet.name}</h2>
+            <button onClick={onClose} className="close-button" disabled={isLoading || isUploading}>×</button>
+          </div>
+          
+          <form onSubmit={handleSaveChanges}>
+            <div className="modal-body">
+              <h3 className="form-section-title">Información General</h3>
+              <div className="form-group">
+                  <label>Foto de Perfil:</label>
+                  <button type="button" onClick={() => fileInputRef.current.click()} className="upload-button-secondary" disabled={isUploading}>
+                      {isUploading ? 'Subiendo...' : 'Cambiar Foto'}
+                  </button>
+                  <input type="file" ref={fileInputRef} onChange={handleFileChange} style={{ display: 'none' }} accept="image/*" />
+              </div>
+              <div className="form-group"><label>Nombre:</label><input type="text" name="name" value={formData.name} onChange={handleChange} required disabled={isLoading} /></div>
+              <div className="form-group"><label>Raza:</label><input type="text" name="breed" value={formData.breed} onChange={handleChange} disabled={isLoading} /></div>
+              <div className="form-group">
+                <label>Departamento:</label>
+                <select name="location.department" value={formData.location.department} onChange={handleChange} disabled={isLoading}>
+                  <option value="">Selecciona un departamento</option>
+                  {departments.map(dep => <option key={dep} value={dep}>{dep}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Ciudad:</label>
+                <select name="location.city" value={formData.location.city} onChange={handleChange} disabled={isLoading || !formData.location.department}>
+                  <option value="">Selecciona una ciudad</option>
+                  {cities.map(city => <option key={city} value={city}>{city}</option>)}
+                </select>
+              </div>
+
+              <h3 className="form-section-title">Hoja de Vida</h3>
+              <div className="form-group"><label>Fecha de Nacimiento:</label><input type="date" name="healthRecord.birthDate" value={formData.healthRecord.birthDate} onChange={handleChange} disabled={isLoading} /></div>
+              <div className="form-group">
+                <label>Género:</label>
+                <select name="healthRecord.gender" value={formData.healthRecord.gender} onChange={handleChange} disabled={isLoading}>
+                  <option value="">No especificado</option><option value="Macho">Macho</option><option value="Hembra">Hembra</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              {message && <p className="response-message">{message}</p>}
+              <button type="submit" disabled={isLoading || isUploading}>{isLoading ? 'Guardando...' : 'Guardar Cambios'}</button>
+            </div>
+          </form>
         </div>
-        
-        <form onSubmit={handleSaveChanges}>
-          <div className="modal-body">
-            <h3 className="form-section-title">Información General</h3>
-            <div className="form-group">
-                <label>Foto de Perfil:</label>
-                <button type="button" onClick={() => fileInputRef.current.click()} className="upload-button-secondary" disabled={isUploading}>
-                    {isUploading ? 'Subiendo...' : 'Cambiar Foto'}
-                </button>
-                <input type="file" ref={fileInputRef} onChange={handleFileChange} style={{ display: 'none' }} accept="image/*" />
-            </div>
-            <div className="form-group"><label>Nombre:</label><input type="text" name="name" value={formData.name} onChange={handleChange} required disabled={isLoading} /></div>
-            <div className="form-group"><label>Raza:</label><input type="text" name="breed" value={formData.breed} onChange={handleChange} disabled={isLoading} /></div>
-            <div className="form-group">
-              <label>Departamento:</label>
-              <select name="location.department" value={formData.location.department} onChange={handleChange} disabled={isLoading}>
-                <option value="">Selecciona un departamento</option>
-                {departments.map(dep => <option key={dep} value={dep}>{dep}</option>)}
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Ciudad:</label>
-              <select name="location.city" value={formData.location.city} onChange={handleChange} disabled={isLoading || !formData.location.department}>
-                <option value="">Selecciona una ciudad</option>
-                {cities.map(city => <option key={city} value={city}>{city}</option>)}
-              </select>
-            </div>
-
-            <h3 className="form-section-title">Hoja de Vida</h3>
-            <div className="form-group"><label>Fecha de Nacimiento:</label><input type="date" name="healthRecord.birthDate" value={formData.healthRecord.birthDate} onChange={handleChange} disabled={isLoading} /></div>
-            <div className="form-group">
-              <label>Género:</label>
-              <select name="healthRecord.gender" value={formData.healthRecord.gender} onChange={handleChange} disabled={isLoading}>
-                <option value="">No especificado</option><option value="Macho">Macho</option><option value="Hembra">Hembra</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="modal-footer">
-            {message && <p className="response-message">{message}</p>}
-            <button type="submit" disabled={isLoading || isUploading}>{isLoading ? 'Guardando...' : 'Guardar Cambios'}</button>
-          </div>
-        </form>
       </div>
-    </div>
+    </>
   );
 }
 
