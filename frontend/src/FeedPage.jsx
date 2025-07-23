@@ -1,5 +1,5 @@
 // frontend/src/FeedPage.jsx
-// Versión: 1.3 - Gestión de Estado de Guardado
+// Versión: 1.3 - Gestión de Estado de Guardado (Completo y Corregido)
 // Implementa la lógica para guardar y quitar publicaciones de forma optimista.
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -77,8 +77,47 @@ function FeedPage() {
     fetchFeed({ followedCursor: null, discoveryCursor: null });
   }, [fetchFeed]);
 
-  const handleLikeToggle = async (postId) => { /* ...código existente sin cambios... */ };
-  const handleCommentAdded = (postId) => { /* ...código existente sin cambios... */ };
+  const handleLikeToggle = async (postId) => {
+    const isCurrentlyLiked = !!likedStatuses[postId];
+    setLikedStatuses(prev => ({ ...prev, [postId]: !isCurrentlyLiked }));
+    setPosts(prevPosts => prevPosts.map(p => {
+        if (p.id === postId) {
+            return { ...p, likesCount: p.likesCount + (isCurrentlyLiked ? -1 : 1) };
+        }
+        return p;
+    }));
+
+    try {
+        const user = auth.currentUser;
+        if (!user) return;
+        const idToken = await user.getIdToken();
+        const endpoint = isCurrentlyLiked ? `/api/posts/${postId}/unlike` : `/api/posts/${postId}/like`;
+        const method = isCurrentlyLiked ? 'DELETE' : 'POST';
+
+        await fetch(`${API_URL}${endpoint}`, {
+            method,
+            headers: { 'Authorization': `Bearer ${idToken}` }
+        });
+    } catch (error) {
+        console.error("Error en el toggle de like:", error);
+        setLikedStatuses(prev => ({ ...prev, [postId]: isCurrentlyLiked }));
+        setPosts(prevPosts => prevPosts.map(p => {
+            if (p.id === postId) {
+                return { ...p, likesCount: p.likesCount + (isCurrentlyLiked ? 1 : -1) };
+            }
+            return p;
+        }));
+    }
+  };
+
+  const handleCommentAdded = (postId) => {
+    setPosts(prevPosts => prevPosts.map(p => {
+        if (p.id === postId) {
+            return { ...p, commentsCount: p.commentsCount + 1 };
+        }
+        return p;
+    }));
+  };
 
   const handleSaveToggle = async (postId) => {
     const isCurrentlySaved = !!savedStatuses[postId];
@@ -112,15 +151,41 @@ function FeedPage() {
               key={post.id} 
               post={post}
               isLiked={!!likedStatuses[post.id]}
-              isSaved={!!savedStatuses[post.id]} // Pasamos el estado de guardado
+              isSaved={!!savedStatuses[post.id]}
               onLikeToggle={handleLikeToggle}
-              onSaveToggle={handleSaveToggle} // Pasamos el nuevo manejador
+              onSaveToggle={handleSaveToggle}
               onCommentAdded={handleCommentAdded}
             />
           ))}
         </div>
-      ) : ( /* ...código existente sin cambios... */ )}
-      {/* ...resto del JSX sin cambios... */}
+      ) : (
+        !isLoading && (
+          <div className="text-center text-gray-500 py-16">
+            <h2 className="text-2xl font-bold mb-2">¡Bienvenido a EnlaPet!</h2>
+            <p>Tu feed de inicio está un poco vacío.</p>
+            <p>Empieza a seguir a otras mascotas para no perderte sus momentos.</p>
+          </div>
+        )
+      )}
+
+      {isLoading && <LoadingComponent text="Buscando nuevos momentos..." />}
+      
+      {error && <p className="text-center text-red-500 font-bold my-4">{error}</p>}
+
+      {!isLoading && hasMore && posts.length > 0 && (
+        <div className="text-center mt-8">
+          <button 
+            onClick={handleLoadMore}
+            className="load-more-button"
+          >
+            Ver más momentos
+          </button>
+        </div>
+      )}
+
+      {!isLoading && !hasMore && (
+        <p className="text-center text-gray-400 mt-10">Has llegado al final. ¡Sigue a más mascotas para descubrir contenido nuevo!</p>
+      )}
     </div>
   );
 }
