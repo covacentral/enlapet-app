@@ -1,7 +1,6 @@
 // frontend/src/FeedPage.jsx
-// Versión: 1.0 - Página del Feed Principal
-// Obtiene y muestra el feed híbrido de publicaciones con paginación.
-// Creado para el Sprint 3: Comunidad.
+// Versión: 1.1 - Gestión de Estado de Likes
+// Implementa la lógica para dar "like" y "unlike" de forma optimista.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { auth } from './firebase';
@@ -12,12 +11,27 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 function FeedPage() {
   const [posts, setPosts] = useState([]);
+  const [likedStatuses, setLikedStatuses] = useState({}); // ¡NUEVO! Para guardar el estado de los likes
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [nextCursors, setNextCursors] = useState({ followedCursor: null, discoveryCursor: null });
   const [hasMore, setHasMore] = useState(true);
 
-  // Usamos useCallback para memorizar la función y evitar re-creaciones innecesarias.
+  const fetchLikeStatuses = async (postIds, idToken) => {
+    try {
+        const response = await fetch(`${API_URL}/api/posts/like-statuses`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+            body: JSON.stringify({ postIds }),
+        });
+        if (!response.ok) return {};
+        return await response.json();
+    } catch (error) {
+        console.error("Error fetching like statuses:", error);
+        return {};
+    }
+  };
+
   const fetchFeed = useCallback(async (cursors) => {
     setIsLoading(true);
     setError(null);
@@ -25,7 +39,6 @@ function FeedPage() {
     try {
       const user = auth.currentUser;
       if (!user) throw new Error("Usuario no autenticado.");
-      
       const idToken = await user.getIdToken();
       
       const queryParams = new URLSearchParams();
@@ -43,13 +56,18 @@ function FeedPage() {
 
       const data = await response.json();
       
-      // Añadimos nuevos posts a la lista existente para el scroll infinito.
       setPosts(prevPosts => [...prevPosts, ...data.posts]);
       setNextCursors(data.nextCursors);
 
-      // Si la respuesta no trae nuevos cursores, significa que no hay más posts.
       if (!data.nextCursors.followedCursor && !data.nextCursors.discoveryCursor) {
         setHasMore(false);
+      }
+
+      // Después de obtener los posts, obtenemos el estado de los likes
+      if (data.posts.length > 0) {
+        const postIds = data.posts.map(p => p.id);
+        const statuses = await fetchLikeStatuses(postIds, idToken);
+        setLikedStatuses(prevStatuses => ({ ...prevStatuses, ...statuses }));
       }
 
     } catch (err) {
@@ -60,10 +78,46 @@ function FeedPage() {
     }
   }, []);
 
-  // Carga inicial del feed cuando el componente se monta.
   useEffect(() => {
     fetchFeed({ followedCursor: null, discoveryCursor: null });
   }, [fetchFeed]);
+
+  const handleLikeToggle = async (postId) => {
+    const isCurrentlyLiked = !!likedStatuses[postId];
+    
+    // Actualización optimista de la UI
+    setLikedStatuses(prev => ({ ...prev, [postId]: !isCurrentlyLiked }));
+    setPosts(prevPosts => prevPosts.map(p => {
+        if (p.id === postId) {
+            return { ...p, likesCount: p.likesCount + (isCurrentlyLiked ? -1 : 1) };
+        }
+        return p;
+    }));
+
+    // Llamada a la API en segundo plano
+    try {
+        const user = auth.currentUser;
+        if (!user) return;
+        const idToken = await user.getIdToken();
+        const endpoint = isCurrentlyLiked ? `/api/posts/${postId}/unlike` : `/api/posts/${postId}/like`;
+        const method = isCurrentlyLiked ? 'DELETE' : 'POST';
+
+        await fetch(`${API_URL}${endpoint}`, {
+            method,
+            headers: { 'Authorization': `Bearer ${idToken}` }
+        });
+    } catch (error) {
+        console.error("Error en el toggle de like:", error);
+        // Si la API falla, revertimos el cambio en la UI para mantener la consistencia
+        setLikedStatuses(prev => ({ ...prev, [postId]: isCurrentlyLiked }));
+        setPosts(prevPosts => prevPosts.map(p => {
+            if (p.id === postId) {
+                return { ...p, likesCount: p.likesCount + (isCurrentlyLiked ? 1 : -1) };
+            }
+            return p;
+        }));
+    }
+  };
 
   const handleLoadMore = () => {
     if (hasMore) {
@@ -76,7 +130,12 @@ function FeedPage() {
       {posts.length > 0 ? (
         <div>
           {posts.map((post) => (
-            <PostCard key={post.id} post={post} />
+            <PostCard 
+              key={post.id} 
+              post={post}
+              isLiked={!!likedStatuses[post.id]} // Pasamos el estado del like
+              onLikeToggle={handleLikeToggle}   // Pasamos la función para manejar el clic
+            />
           ))}
         </div>
       ) : (
