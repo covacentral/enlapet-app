@@ -1,13 +1,13 @@
 // frontend/src/PostCard.jsx
-// Versión: 1.3 - Estilizado con App.css
-// Utiliza clases CSS del archivo principal para un diseño cohesivo.
+// Versión: 1.4 - Funcionalidad de Guardar
+// Añade el ícono y la lógica para guardar/quitar una publicación.
 
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, MessageCircle } from 'lucide-react';
+import { Heart, MessageCircle, Bookmark } from 'lucide-react';
 import CommentsModal from './CommentsModal';
 
-function PostCard({ post, isLiked, onLikeToggle, onCommentAdded }) {
+function PostCard({ post, isLiked, isSaved, onLikeToggle, onSaveToggle, onCommentAdded }) {
   const [isCommentsModalOpen, setIsCommentsModalOpen] = useState(false);
 
   if (!post || !post.author) return null;
@@ -23,6 +23,12 @@ function PostCard({ post, isLiked, onLikeToggle, onCommentAdded }) {
     e.stopPropagation();
     onLikeToggle(post.id);
   };
+  
+  const handleSaveClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onSaveToggle(post.id);
+  };
 
   return (
     <>
@@ -36,19 +42,12 @@ function PostCard({ post, isLiked, onLikeToggle, onCommentAdded }) {
 
       <div className="post-card-container">
         <Link to={authorProfileLink} className="post-card-header">
-          <img
-            src={profilePic}
-            alt={post.author.name}
-            className="post-author-pic"
-            onError={(e) => { e.target.onerror = null; e.target.src='https://placehold.co/100x100/E2E8F0/4A5568?text=:)' }}
-          />
+          <img src={profilePic} alt={post.author.name} className="post-author-pic"/>
           <span className="post-author-name">{post.author.name}</span>
         </Link>
-
         <div className="post-image-wrapper">
           <img src={post.imageUrl} alt={post.caption} />
         </div>
-
         <div className="post-card-body">
           <div className="post-actions">
             <button onClick={handleLikeClick} className={`action-button ${isLiked ? 'liked' : ''}`} aria-label="Dar Me Gusta">
@@ -58,6 +57,9 @@ function PostCard({ post, isLiked, onLikeToggle, onCommentAdded }) {
             <button onClick={() => setIsCommentsModalOpen(true)} className="action-button" aria-label="Comentar">
               <MessageCircle size={20} />
               <span>{post.commentsCount}</span>
+            </button>
+            <button onClick={handleSaveClick} className={`action-button save-button ${isSaved ? 'saved' : ''}`} aria-label="Guardar">
+              <Bookmark size={20} fill={isSaved ? 'currentColor' : 'none'} />
             </button>
           </div>
           <p className="post-caption">{post.caption}</p>
