@@ -1,7 +1,7 @@
 // frontend/src/PetSocialProfile.jsx
-// Versión: 2.2 - Diseño y Botón Corregidos
-// Separa el header del timeline para corregir el layout visual.
-// Repara la funcionalidad del botón "Seguir" añadiendo la API_URL.
+// Versión: 2.1 - Timeline Restaurado y Unificado
+// Corrige el bug que impedía mostrar los posts en el perfil.
+// Enriquece los datos de los posts localmente para que coincidan con la estructura que espera PostCard.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
@@ -26,8 +26,7 @@ function PetSocialProfile() {
     const [followLoading, setFollowLoading] = useState(false);
 
     const fetchData = useCallback(async () => {
-        // No reiniciar el loading si ya tenemos datos, para una recarga más suave.
-        if (!petProfile) setIsLoading(true);
+        setIsLoading(true);
         try {
             const user = auth.currentUser;
             if (!user) throw new Error("Usuario no autenticado.");
@@ -46,7 +45,9 @@ function PetSocialProfile() {
 
             if (!postsRes.ok) throw new Error('No se pudieron cargar las publicaciones.');
             let postsData = await postsRes.json();
-            
+
+            // *** LA CORRECCIÓN CLAVE ESTÁ AQUÍ ***
+            // Añadimos manualmente el objeto 'author' a cada post, ya que la API no lo hace.
             const enrichedPosts = postsData.map(post => ({
                 ...post,
                 author: {
@@ -75,14 +76,14 @@ function PetSocialProfile() {
         } finally {
             setIsLoading(false);
         }
-    }, [petId, petProfile]);
+    }, [petId]);
 
     useEffect(() => {
         fetchData();
-    }, [petId]); // Dependencia simplificada para evitar bucles
+    }, [fetchData]);
 
+    // El resto de los manejadores (handleLikeToggle, handleCommentAdded, etc.) no necesitan cambios
     const handleLikeToggle = async (postId) => {
-        // Lógica sin cambios
         const isCurrentlyLiked = !!likedStatuses[postId];
         setLikedStatuses(prev => ({ ...prev, [postId]: !isCurrentlyLiked }));
         setPosts(prevPosts => prevPosts.map(p => 
@@ -104,7 +105,6 @@ function PetSocialProfile() {
     };
 
     const handleCommentAdded = (postId) => {
-        // Lógica sin cambios
         setPosts(prevPosts => prevPosts.map(p => 
             p.id === postId ? { ...p, commentsCount: p.commentsCount + 1 } : p
         ));
@@ -114,12 +114,7 @@ function PetSocialProfile() {
         setFollowLoading(true);
         const user = auth.currentUser;
         if (!user) return;
-        
-        // *** CORRECCIÓN CLAVE: Añadido API_URL al endpoint ***
-        const endpoint = isFollowing 
-            ? `${API_URL}/api/profiles/${petId}/unfollow` 
-            : `${API_URL}/api/profiles/${petId}/follow`;
-        
+        const endpoint = isFollowing ? `/api/profiles/${petId}/unfollow` : `/api/profiles/${petId}/follow`;
         const method = isFollowing ? 'DELETE' : 'POST';
         try {
             const idToken = await user.getIdToken();
@@ -139,10 +134,9 @@ function PetSocialProfile() {
 
     return (
         <>
-            {/* *** CORRECCIÓN ESTRUCTURAL: El div contenedor se ha eliminado *** */}
-            <header className="pet-social-profile-container">
-                <div className="profile-cover-photo"></div>
-                <div className="social-profile-header">
+            <div className="pet-social-profile-container">
+                <header className="social-profile-header">
+                    <div className="profile-cover-photo"></div>
                     <div className="social-profile-details">
                         <div className="social-profile-picture-wrapper">
                             <img 
@@ -169,26 +163,26 @@ function PetSocialProfile() {
                             </button>
                         )}
                     </div>
-                </div>
-            </header>
+                </header>
 
-            <main className="profile-timeline">
-                {posts.length > 0 ? (
-                    posts.map(post => (
-                        <PostCard 
-                            key={post.id} 
-                            post={post} 
-                            isLiked={!!likedStatuses[post.id]}
-                            onLikeToggle={handleLikeToggle}
-                            onCommentAdded={handleCommentAdded}
-                        />
-                    ))
-                ) : (
-                    <p className="no-posts-message" style={{padding: '4rem 1rem'}}>
-                        ¡{petProfile.name} todavía no ha compartido ningún momento!
-                    </p>
-                )}
-            </main>
+                <main className="profile-timeline">
+                    {posts.length > 0 ? (
+                        posts.map(post => (
+                            <PostCard 
+                                key={post.id} 
+                                post={post} 
+                                isLiked={!!likedStatuses[post.id]}
+                                onLikeToggle={handleLikeToggle}
+                                onCommentAdded={handleCommentAdded}
+                            />
+                        ))
+                    ) : (
+                        <p className="no-posts-message" style={{padding: '4rem 1rem'}}>
+                            ¡{petProfile.name} todavía no ha compartido ningún momento!
+                        </p>
+                    )}
+                </main>
+            </div>
 
             {isOwner && (
                 <button className="create-post-fab" title="Crear Momento" onClick={() => setIsCreateModalOpen(true)}>
