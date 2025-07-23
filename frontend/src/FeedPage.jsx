@@ -1,6 +1,6 @@
 // frontend/src/FeedPage.jsx
-// Versión: 1.1 - Gestión de Estado de Likes
-// Implementa la lógica para dar "like" y "unlike" de forma optimista.
+// Versión: 1.2 - Gestión de Estado de Comentarios
+// Actualiza el contador de comentarios en la UI cuando se añade uno nuevo.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { auth } from './firebase';
@@ -11,7 +11,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 function FeedPage() {
   const [posts, setPosts] = useState([]);
-  const [likedStatuses, setLikedStatuses] = useState({}); // ¡NUEVO! Para guardar el estado de los likes
+  const [likedStatuses, setLikedStatuses] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [nextCursors, setNextCursors] = useState({ followedCursor: null, discoveryCursor: null });
@@ -63,7 +63,6 @@ function FeedPage() {
         setHasMore(false);
       }
 
-      // Después de obtener los posts, obtenemos el estado de los likes
       if (data.posts.length > 0) {
         const postIds = data.posts.map(p => p.id);
         const statuses = await fetchLikeStatuses(postIds, idToken);
@@ -79,13 +78,13 @@ function FeedPage() {
   }, []);
 
   useEffect(() => {
+    // Limpiamos los posts al montar para evitar duplicados en desarrollo con HMR
+    setPosts([]); 
     fetchFeed({ followedCursor: null, discoveryCursor: null });
   }, [fetchFeed]);
 
   const handleLikeToggle = async (postId) => {
     const isCurrentlyLiked = !!likedStatuses[postId];
-    
-    // Actualización optimista de la UI
     setLikedStatuses(prev => ({ ...prev, [postId]: !isCurrentlyLiked }));
     setPosts(prevPosts => prevPosts.map(p => {
         if (p.id === postId) {
@@ -94,7 +93,6 @@ function FeedPage() {
         return p;
     }));
 
-    // Llamada a la API en segundo plano
     try {
         const user = auth.currentUser;
         if (!user) return;
@@ -108,7 +106,6 @@ function FeedPage() {
         });
     } catch (error) {
         console.error("Error en el toggle de like:", error);
-        // Si la API falla, revertimos el cambio en la UI para mantener la consistencia
         setLikedStatuses(prev => ({ ...prev, [postId]: isCurrentlyLiked }));
         setPosts(prevPosts => prevPosts.map(p => {
             if (p.id === postId) {
@@ -117,6 +114,16 @@ function FeedPage() {
             return p;
         }));
     }
+  };
+
+  // ¡NUEVO! Manejador para actualizar el contador de comentarios
+  const handleCommentAdded = (postId) => {
+    setPosts(prevPosts => prevPosts.map(p => {
+        if (p.id === postId) {
+            return { ...p, commentsCount: p.commentsCount + 1 };
+        }
+        return p;
+    }));
   };
 
   const handleLoadMore = () => {
@@ -133,8 +140,9 @@ function FeedPage() {
             <PostCard 
               key={post.id} 
               post={post}
-              isLiked={!!likedStatuses[post.id]} // Pasamos el estado del like
-              onLikeToggle={handleLikeToggle}   // Pasamos la función para manejar el clic
+              isLiked={!!likedStatuses[post.id]}
+              onLikeToggle={handleLikeToggle}
+              onCommentAdded={handleCommentAdded} // Pasamos la nueva función
             />
           ))}
         </div>
