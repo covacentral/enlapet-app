@@ -1,20 +1,23 @@
 // frontend/src/ProfileLayout.jsx
-// Versión: 2.0 - Navegación Integrada
-// Convierte las pestañas y las burbujas de mascotas en enlaces de navegación.
+// Versión: 2.1 - Feed de Inicio Integrado
+// Añade la pestaña "Inicio" que muestra el FeedPage como vista principal por defecto,
+// manteniendo la cabecera y la navegación de pestañas existentes.
 
 import { useState, useEffect } from 'react';
 import { NavLink, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { signOut } from "firebase/auth";
 import { auth } from './firebase';
 import './App.css';
+
+// Componentes de las vistas
+import FeedPage from './FeedPage.jsx'; // ¡NUEVO!
 import SettingsTab from './SettingsTab.jsx';
 import PetsTab from './PetsTab.jsx';
-import PetSocialProfile from './PetSocialProfile.jsx'; // Importamos el nuevo componente
+import PetSocialProfile from './PetSocialProfile.jsx';
 import LoadingComponent from './LoadingComponent.jsx';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-// [MODIFICADO] La burbuja ahora es un enlace
 const PetBubble = ({ pet }) => (
   <Link to={`/dashboard/pet/${pet.id}`} className="pet-bubble" title={pet.name}>
     {pet.petPictureUrl ? <img src={pet.petPictureUrl} alt={pet.name} /> : <span>🐾</span>}
@@ -29,7 +32,7 @@ const LogoutIcon = () => (
   </svg>
 );
 
-const GalleryTab = () => <h2>Mi Galería (En construcción)</h2>;
+const GalleryTab = () => <h2 style={{padding: '2rem', textAlign: 'center'}}>Mi Galería (En construcción)</h2>;
 
 const ConfirmLogoutModal = ({ onConfirm, onCancel }) => (
   <div className="modal-overlay">
@@ -52,6 +55,7 @@ function ProfileLayout({ user }) {
 
   const fetchAllData = async () => {
     if (!user) return;
+    setLoading(true); // Aseguramos que muestre el loader en cada recarga de datos
     try {
       const idToken = await user.getIdToken();
       const [profileResponse, petsResponse] = await Promise.all([
@@ -67,7 +71,7 @@ function ProfileLayout({ user }) {
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
-      if (loading) setLoading(false);
+      setLoading(false);
     }
   };
 
@@ -80,7 +84,7 @@ function ProfileLayout({ user }) {
   };
 
   if (loading) {
-    return <LoadingComponent text="Cargando tu perfil..." />;
+    return <LoadingComponent text="Cargando tu universo EnlaPet..." />;
   }
 
   return (
@@ -92,6 +96,7 @@ function ProfileLayout({ user }) {
         />
       )}
 
+      {/* El header se mantiene intacto y siempre visible */}
       <header className="main-header">
         <div className="user-profile-section">
           <h2>{userProfile?.name}</h2>
@@ -116,8 +121,9 @@ function ProfileLayout({ user }) {
         </div>
       </header>
 
-      {/* [MODIFICADO] Las pestañas ahora son NavLinks para la navegación */}
+      {/* La barra de pestañas ahora incluye "Inicio" */}
       <nav className="profile-tabs">
+        <NavLink to="/dashboard" end className={({ isActive }) => isActive ? 'active' : ''}>Inicio</NavLink>
         <NavLink to="/dashboard/gallery" className={({ isActive }) => isActive ? 'active' : ''}>Mi Galería</NavLink>
         <NavLink to="/dashboard/pets" className={({ isActive }) => isActive ? 'active' : ''}>Mascotas</NavLink>
         <div className="profile-tab-wrapper">
@@ -128,15 +134,14 @@ function ProfileLayout({ user }) {
         </div>
       </nav>
 
-      {/* [MODIFICADO] El contenido ahora se renderiza mediante rutas anidadas */}
+      {/* El contenido ahora renderiza el FeedPage por defecto */}
       <main className="tab-content">
         <Routes>
+          <Route index element={<FeedPage />} />
           <Route path="gallery" element={<GalleryTab />} />
           <Route path="pets" element={<PetsTab user={user} initialPets={pets} onPetsUpdate={fetchAllData} />} />
           <Route path="settings" element={<SettingsTab user={user} userProfile={userProfile} onProfileUpdate={fetchAllData} />} />
           <Route path="pet/:petId" element={<PetSocialProfile />} />
-          {/* Redirige la ruta base del dashboard a la pestaña de mascotas */}
-          <Route index element={<Navigate to="pets" replace />} />
         </Routes>
       </main>
     </div>
