@@ -678,6 +678,75 @@ input::-ms-clear {
 .comment-form button:hover { background-color: var(--primary-accent-hover); }
 .comment-form button:disabled { opacity: 0.5; cursor: not-allowed; }
 
+/* --- Añadidos para el Modal de Creación de Posts --- */
+.create-post-modal-content {
+  background-color: var(--background-light);
+  border: 1px solid var(--border-color);
+  border-radius: 15px;
+  width: 90%;
+  max-width: 550px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.create-post-form {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.image-upload-area {
+  width: 100%;
+  height: 300px;
+  background-color: var(--background-dark);
+  border-radius: 8px;
+  border: 2px dashed var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  margin-bottom: 16px;
+  overflow: hidden; /* Clave para contener la imagen */
+}
+
+.image-upload-area:hover {
+  border-color: var(--primary-accent);
+}
+
+.upload-prompt-content {
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.image-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Clave para que la imagen no se deforme */
+}
+
+.publish-button {
+  background-color: var(--primary-accent);
+  color: var(--brand-cream);
+  border: none;
+  border-radius: 8px;
+  padding: 12px 20px;
+  font-weight: bold;
+  cursor: pointer;
+  width: 100%;
+  transition: background-color 0.2s;
+}
+.publish-button:hover {
+  background-color: var(--primary-accent-hover);
+}
+.publish-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+
+
 /* --- PESTAÑA DE MASCOTAS --- */
 .pets-tab-container {
   display: grid;

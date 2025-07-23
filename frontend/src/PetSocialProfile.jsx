@@ -1,13 +1,14 @@
 // frontend/src/PetSocialProfile.jsx
-// Versión: 2.0 - Rediseñado y Unificado Visualmente
-// Adopta el diseño del ProfileLayout y utiliza componentes estandarizados.
+// Versión: 2.1 - Timeline Restaurado y Unificado
+// Corrige el bug que impedía mostrar los posts en el perfil.
+// Enriquece los datos de los posts localmente para que coincidan con la estructura que espera PostCard.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { auth } from './firebase';
 import LoadingComponent from './LoadingComponent';
 import CreatePostModal from './CreatePostModal';
-import PostCard from './PostCard'; // ¡IMPORTANTE! Usamos el PostCard estandarizado
+import PostCard from './PostCard';
 import { Plus } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -43,8 +44,19 @@ function PetSocialProfile() {
             setIsOwner(user.uid === profileData.pet.ownerId);
 
             if (!postsRes.ok) throw new Error('No se pudieron cargar las publicaciones.');
-            const postsData = await postsRes.json();
-            setPosts(postsData);
+            let postsData = await postsRes.json();
+
+            // *** LA CORRECCIÓN CLAVE ESTÁ AQUÍ ***
+            // Añadimos manualmente el objeto 'author' a cada post, ya que la API no lo hace.
+            const enrichedPosts = postsData.map(post => ({
+                ...post,
+                author: {
+                    id: profileData.pet.id,
+                    name: profileData.pet.name,
+                    profilePictureUrl: profileData.pet.petPictureUrl
+                }
+            }));
+            setPosts(enrichedPosts);
 
             if (!followStatusRes.ok) throw new Error('Error al verificar seguimiento.');
             const followStatusData = await followStatusRes.json();
@@ -70,13 +82,13 @@ function PetSocialProfile() {
         fetchData();
     }, [fetchData]);
 
+    // El resto de los manejadores (handleLikeToggle, handleCommentAdded, etc.) no necesitan cambios
     const handleLikeToggle = async (postId) => {
         const isCurrentlyLiked = !!likedStatuses[postId];
         setLikedStatuses(prev => ({ ...prev, [postId]: !isCurrentlyLiked }));
         setPosts(prevPosts => prevPosts.map(p => 
             p.id === postId ? { ...p, likesCount: p.likesCount + (isCurrentlyLiked ? -1 : 1) } : p
         ));
-
         try {
             const user = auth.currentUser;
             if (!user) return;
@@ -85,7 +97,6 @@ function PetSocialProfile() {
             const method = isCurrentlyLiked ? 'DELETE' : 'POST';
             await fetch(`${API_URL}${endpoint}`, { method, headers: { 'Authorization': `Bearer ${idToken}` } });
         } catch (error) {
-            // Revertir en caso de error
             setLikedStatuses(prev => ({ ...prev, [postId]: isCurrentlyLiked }));
             setPosts(prevPosts => prevPosts.map(p => 
                 p.id === postId ? { ...p, likesCount: p.likesCount + (isCurrentlyLiked ? 1 : -1) } : p
