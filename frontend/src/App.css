@@ -611,6 +611,33 @@ input::-ms-clear {
   background-color: var(--primary-accent-hover); transform: scale(1.05);
 }
 
+.action-button.save-button {
+  margin-left: auto; /* Empuja el botón de guardar a la derecha */
+}
+
+.action-button.saved {
+  color: var(--primary-accent);
+}
+
+.action-button.saved:hover {
+  color: var(--primary-accent-hover);
+}
+
+.saved-posts-container .tab-title {
+    text-align: left;
+    font-size: 1.8rem;
+    font-weight: 800;
+    margin-bottom: 2rem;
+}
+
+.empty-state-message {
+    text-align: center;
+    color: var(--text-secondary);
+    padding: 4rem 1rem;
+    font-size: 1.1rem;
+}
+
+
 /* --- ESTILOS DE MODALES --- */
 .modal-backdrop {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
