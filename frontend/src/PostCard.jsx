@@ -1,32 +1,33 @@
 // frontend/src/PostCard.jsx
-// Versión: 1.0 - Componente de Tarjeta de Publicación
-// Muestra una publicación individual con imagen, autor, texto y contadores.
-// Creado para el Sprint 3: Comunidad.
+// Versión: 1.1 - Componente Interactivo
+// Recibe y gestiona el estado de 'like' y notifica las interacciones.
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, MessageCircle } from 'lucide-react'; // Iconos para interacción
+import { Heart, MessageCircle } from 'lucide-react';
 
-function PostCard({ post }) {
-  // Medida de seguridad: no renderizar nada si el post o el autor no son válidos.
+// El componente ahora recibe propiedades adicionales para la interactividad
+function PostCard({ post, isLiked, onLikeToggle }) {
   if (!post || !post.author) {
     return null;
   }
 
-  // Fallback para la foto de perfil del autor si no existe.
   const profilePic = post.author.profilePictureUrl || 'https://placehold.co/100x100/E2E8F0/4A5568?text=:)';
-  
-  // Formatear la fecha para que sea más legible para el usuario.
   const postDate = new Date(post.createdAt).toLocaleDateString('es-ES', {
     year: 'numeric', month: 'long', day: 'numeric'
   });
+  const authorProfileLink = `/dashboard/pet/${post.author.id}`;
 
-  // Determinar la ruta al perfil del autor (mascota o usuario)
-  const authorProfileLink = `/dashboard/pet/${post.author.id}`; // Asumimos que por ahora todos los autores son mascotas
+  const handleLikeClick = (e) => {
+    // Detenemos la propagación para evitar que el clic active otros elementos, como la navegación.
+    e.preventDefault();
+    e.stopPropagation();
+    // Llamamos a la función que nos pasó el componente padre (FeedPage)
+    onLikeToggle(post.id);
+  };
 
   return (
     <div className="post-card-container bg-white border border-gray-200 rounded-lg shadow-sm mb-6 max-w-xl mx-auto">
-      {/* Cabecera de la Tarjeta con enlace al perfil del autor */}
       <Link to={authorProfileLink} className="flex items-center p-4 hover:bg-gray-50 rounded-t-lg">
         <img
           src={profilePic}
@@ -37,7 +38,6 @@ function PostCard({ post }) {
         <span className="font-bold text-gray-800">{post.author.name}</span>
       </Link>
 
-      {/* Imagen de la Publicación */}
       <div className="post-image-wrapper">
         <img
           src={post.imageUrl}
@@ -47,17 +47,20 @@ function PostCard({ post }) {
         />
       </div>
 
-      {/* Cuerpo y Acciones */}
       <div className="p-4">
         <div className="flex items-center text-gray-500 mb-2">
-          {/* Botón de Like (Pata Arriba) - Funcionalidad a conectar en futuro sprint */}
-          <button className="flex items-center mr-6 hover:text-red-500 transition-colors">
-            <Heart size={20} className="mr-2" />
+          {/* El botón de Like ahora es dinámico */}
+          <button 
+            onClick={handleLikeClick}
+            className={`flex items-center mr-6 transition-colors ${isLiked ? 'text-red-500' : 'hover:text-red-500'}`}
+            aria-label="Dar Me Gusta"
+          >
+            <Heart size={20} className={`mr-2 ${isLiked ? 'fill-current' : ''}`} />
+            {/* El contador de likes se actualiza en tiempo real */}
             <span>{post.likesCount}</span>
           </button>
           
-          {/* Botón de Comentarios - Funcionalidad a conectar en futuro sprint */}
-          <button className="flex items-center hover:text-blue-500 transition-colors">
+          <button className="flex items-center hover:text-blue-500 transition-colors" aria-label="Comentar">
             <MessageCircle size={20} className="mr-2" />
             <span>{post.commentsCount}</span>
           </button>
