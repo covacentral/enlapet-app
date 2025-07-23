@@ -1,6 +1,6 @@
 // frontend/src/CommentsModal.jsx
-// Versión: 1.0 - Modal de Comentarios
-// Componente para visualizar y añadir comentarios a una publicación.
+// Versión: 1.1 - Estilo Corregido
+// Utiliza las clases CSS correctas para funcionar como un modal flotante.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { auth } from './firebase';
@@ -56,7 +56,7 @@ function CommentsModal({ postId, onClose, onCommentAdded }) {
       const addedComment = await response.json();
       setComments(prev => [...prev, addedComment]);
       setNewComment('');
-      onCommentAdded(postId); // Notificar al padre que se añadió un comentario
+      onCommentAdded(postId);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -66,36 +66,34 @@ function CommentsModal({ postId, onClose, onCommentAdded }) {
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-content" onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
+      <div className="comments-modal-content" onClick={e => e.stopPropagation()}>
+        <div className="comments-modal-header">
           <h2>Comentarios</h2>
           <button onClick={onClose} className="close-button" disabled={isSubmitting}>
             <X size={24} />
           </button>
         </div>
-        <div className="modal-body">
-          {isLoading && <LoadingComponent text="Cargando comentarios..." />}
+        <div className="comments-list">
+          {isLoading && <p>Cargando...</p>}
           {error && <p className="text-red-500 text-center">{error}</p>}
           {!isLoading && comments.length === 0 && (
             <p className="text-gray-500 text-center py-4">No hay comentarios. ¡Sé el primero!</p>
           )}
-          <div className="comments-list">
-            {comments.map((comment) => (
-              <div key={comment.id} className="comment-item">
-                <img 
-                  src={comment.authorProfilePic || 'https://placehold.co/100x100/E2E8F0/4A5568?text=:)'} 
-                  alt={comment.authorName} 
-                  className="comment-author-pic"
-                />
-                <div className="comment-text-content">
-                  <strong>{comment.authorName}</strong>
-                  <p>{comment.text}</p>
-                </div>
+          {comments.map((comment) => (
+            <div key={comment.id} className="comment-item">
+              <img 
+                src={comment.authorProfilePic || 'https://placehold.co/100x100/E2E8F0/4A5568?text=:)'} 
+                alt={comment.authorName} 
+                className="comment-author-pic"
+              />
+              <div className="comment-text-content">
+                <strong>{comment.authorName}</strong>
+                <p>{comment.text}</p>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
-        <div className="modal-footer">
+        <div className="comments-modal-footer">
           <form onSubmit={handleSubmitComment} className="comment-form">
             <input
               type="text"
