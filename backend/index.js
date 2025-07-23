@@ -1,6 +1,6 @@
 // backend/index.js
-// Versión: 4.6 - Foto de Comentario Corregida
-// Obtiene la foto de perfil del comentarista desde Firestore en lugar del token de autenticación.
+// Versión: 4.7 - Endpoint de Foto de Mascota Restaurado
+// Reintroduce el endpoint para subir la foto de perfil de la mascota.
 
 require('dotenv').config();
 const express = require('express');
@@ -67,7 +67,7 @@ const authenticateUser = async (req, res, next) => {
   }
 };
 
-app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v4.6 - Foto de Comentario Corregida' }));
+app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v4.7 - Endpoint de Foto de Mascota Restaurado' }));
 
 // --- Endpoints ---
 app.post('/api/register', async (req, res) => {try {const { email, password, name } = req.body;if (!email || !password || !name) {return res.status(400).json({ message: 'Nombre, email y contraseña son requeridos.' });}const userRecord = await auth.createUser({ email, password, displayName: name });const newUser = {name,email,createdAt: new Date().toISOString(),userType: 'personal',profilePictureUrl: '',coverPhotoUrl: '',bio: '',phone: '',location: { country: 'Colombia', department: '', city: '' },privacySettings: { profileVisibility: 'public', showEmail: 'private' }};await db.collection('users').doc(userRecord.uid).set(newUser);res.status(201).json({ message: 'Usuario registrado con éxito', uid: userRecord.uid });} catch (error) {console.error('Error en /api/register:', error);if (error.code === 'auth/email-already-exists') {return res.status(409).json({ message: 'El correo electrónico ya está en uso.' });}if (error.code === 'auth/invalid-password') {return res.status(400).json({ message: 'La contraseña debe tener al menos 6 caracteres.' });}res.status(500).json({ message: 'Error al registrar el usuario.' });}});
@@ -100,6 +100,52 @@ app.post('/api/profile/picture', upload.single('profilePicture'), async (req, re
 app.put('/api/pets/:petId', async (req, res) => {const { uid } = req.user;const { petId } = req.params;const updateData = req.body;try {if (!updateData || Object.keys(updateData).length === 0) {return res.status(400).json({ message: 'No se proporcionaron datos para actualizar.' });}const petRef = db.collection('pets').doc(petId);const petDoc = await petRef.get();if (!petDoc.exists) {return res.status(404).json({ message: 'Mascota no encontrada.' });}if (petDoc.data().ownerId !== uid) {return res.status(403).json({ message: 'No autorizado para modificar esta mascota.' });}await petRef.set(updateData, { merge: true });try {if (updateData.location && updateData.location.city) {const userRef = db.collection('users').doc(uid);const userDoc = await userRef.get();if (userDoc.exists) {const userData = userDoc.data();if (!userData.location || !userData.location.city) {await userRef.set({ location: updateData.location }, { merge: true });}}}} catch (implicitLocationError) {console.error('[IMPLICIT_LOCATION_ERROR] Failed to update user location implicitly:', implicitLocationError);}res.status(200).json({ message: 'Mascota actualizada con éxito.' });} catch (error) {console.error(`[PETS_UPDATE_FATAL] A critical error occurred while updating pet ${petId}:`, error);res.status(500).json({ message: 'Error interno del servidor al actualizar la mascota.' });}});
 app.post('/api/pets', async (req, res) => {try {const { uid } = req.user;const { name, breed } = req.body;if (!name) return res.status(400).json({ message: 'El nombre es requerido.' });const petData = {ownerId: uid,name,breed: breed || '',createdAt: new Date().toISOString(),petPictureUrl: '',location: {country: 'Colombia',department: '',city: ''},healthRecord: {birthDate: '',gender: '',}};const petRef = await db.collection('pets').add(petData);res.status(201).json({ message: 'Mascota registrada.', petId: petRef.id });} catch (error) {console.error('Error en /api/pets (POST):', error);res.status(500).json({ message: 'Error interno del servidor.' });}});
 app.get('/api/pets', async (req, res) => {try {const { uid } = req.user;const petsSnapshot = await db.collection('pets').where('ownerId', '==', uid).get();const petsList = petsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));res.status(200).json(petsList);} catch (error) {console.error('Error en /api/pets (GET):', error);res.status(500).json({ message: 'Error interno del servidor.' });}});
+// [RESTAURADO] Endpoint para subir la foto de la mascota
+app.post('/api/pets/:petId/picture', upload.single('petPicture'), async (req, res) => {
+    try {
+        const { uid } = req.user;
+        if (!req.file) return res.status(400).json({ message: 'No se subió ningún archivo.' });
+
+        const { petId } = req.params;
+        const petRef = db.collection('pets').doc(petId);
+        const petDoc = await petRef.get();
+
+        if (!petDoc.exists) {
+            return res.status(404).json({ message: 'Mascota no encontrada.' });
+        }
+        if (petDoc.data().ownerId !== uid) {
+            return res.status(403).json({ message: 'No autorizado para modificar esta mascota.' });
+        }
+
+        const filePath = `pets-pictures/${petId}/${Date.now()}-${req.file.originalname}`;
+        const fileUpload = bucket.file(filePath);
+        const blobStream = fileUpload.createWriteStream({
+            metadata: { contentType: req.file.mimetype },
+        });
+
+        blobStream.on('error', (error) => {
+            console.error("Error en blobStream (mascota):", error);
+            res.status(500).json({ message: 'Error durante la subida del archivo.' });
+        });
+
+        blobStream.on('finish', async () => {
+            try {
+                await fileUpload.makePublic();
+                const publicUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
+                await petRef.update({ petPictureUrl: publicUrl });
+                res.status(200).json({ message: 'Foto de mascota actualizada.', petPictureUrl: publicUrl });
+            } catch (error) {
+                console.error("Error al procesar foto de mascota:", error);
+                res.status(500).json({ message: 'Error al procesar el archivo después de subirlo.' });
+            }
+        });
+
+        blobStream.end(req.file.buffer);
+    } catch (error) {
+        console.error('Error en /api/pets/:petId/picture:', error);
+        res.status(500).json({ message: 'Error interno del servidor.' });
+    }
+});
 app.post('/api/posts', upload.single('postImage'), async (req, res) => {
     const { uid } = req.user;
     const { caption, authorId, authorType } = req.body;
@@ -273,8 +319,6 @@ app.post('/api/posts/like-statuses', async (req, res) => {
         res.status(500).json({ message: 'No se pudieron verificar los likes.' });
     }
 });
-
-// [CORREGIDO] Endpoint para crear comentarios
 app.post('/api/posts/:postId/comment', async (req, res) => {
     const { uid } = req.user;
     const { postId } = req.params;
@@ -300,7 +344,7 @@ app.post('/api/posts/:postId/comment', async (req, res) => {
                 id: commentRef.id,
                 authorId: uid,
                 authorName: userData.name,
-                authorProfilePic: userData.profilePictureUrl || '', // [CORRECCIÓN] Se obtiene de Firestore
+                authorProfilePic: userData.profilePictureUrl || '',
                 text,
                 createdAt: new Date().toISOString()
             };
@@ -317,7 +361,6 @@ app.post('/api/posts/:postId/comment', async (req, res) => {
         res.status(500).json({ message: 'No se pudo añadir el comentario.' });
     }
 });
-
 app.get('/api/posts/:postId/comments', async (req, res) => {
     const { postId } = req.params;
     try {
