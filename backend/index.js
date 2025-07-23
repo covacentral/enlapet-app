@@ -99,18 +99,189 @@ app.put('/api/pets/:petId', async (req, res) => {const { uid } = req.user;const 
 app.post('/api/pets/:petId/picture', upload.single('petPicture'), async (req, res) => {try {const { uid } = req.user;if (!req.file) return res.status(400).json({ message: 'No se subió ningún archivo.' });const { petId } = req.params;const petRef = db.collection('pets').doc(petId);const petDoc = await petRef.get();if (!petDoc.exists) {return res.status(404).json({ message: 'Mascota no encontrada.' });}if (petDoc.data().ownerId !== uid) {return res.status(403).json({ message: 'No autorizado para modificar esta mascota.' });}const filePath = `pets-pictures/${petId}/${Date.now()}-${req.file.originalname}`;const fileUpload = bucket.file(filePath);const blobStream = fileUpload.createWriteStream({ metadata: { contentType: req.file.mimetype } });blobStream.on('error', (error) => {console.error("Error en blobStream (mascota):", error);res.status(500).json({ message: 'Error durante la subida del archivo.' });});blobStream.on('finish', async () => {try {await fileUpload.makePublic();const publicUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;await petRef.update({ petPictureUrl: publicUrl });res.status(200).json({ message: 'Foto de mascota actualizada.', petPictureUrl: publicUrl });} catch (error) {console.error("Error al procesar foto de mascota:", error);res.status(500).json({ message: 'Error al procesar el archivo después de subirlo.' });}});blobStream.end(req.file.buffer);} catch (error) {console.error('Error en /api/pets/:petId/picture:', error);res.status(500).json({ message: 'Error interno del servidor.' });}});
 
 // --- Endpoint del Feed Híbrido ---
-app.get('/api/feed', async (req, res) => { /* ...código de la v5.0... */ });
+app.get('/api/feed', async (req, res) => {
+    const { uid } = req.user;
+    const { followedCursor, discoveryCursor } = req.query;
+    const POSTS_PER_PAGE = 10;
+    const FOLLOWED_POSTS_RATIO = 0.7; // 70% de posts seguidos
+
+    try {
+        // 1. Obtener la lista de perfiles que el usuario sigue
+        const followingSnapshot = await db.collection('users').doc(uid).collection('following').get();
+        const followedIds = followingSnapshot.docs.map(doc => doc.id);
+
+        let followedPosts = [];
+        let discoveryPosts = [];
+
+        // 2. Obtener lote de posts de perfiles seguidos
+        if (followedIds.length > 0) {
+            let followedQuery = db.collection('posts')
+                .where('authorId', 'in', followedIds)
+                .orderBy('createdAt', 'desc');
+            
+            if (followedCursor) {
+                followedQuery = followedQuery.startAfter(new Date(followedCursor));
+            }
+
+            const followedSnapshot = await followedQuery.limit(POSTS_PER_PAGE * FOLLOWED_POSTS_RATIO).get();
+            followedPosts = followedSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        }
+
+        // 3. Determinar cuántos posts de descubrimiento se necesitan
+        const discoveryLimit = POSTS_PER_PAGE - followedPosts.length;
+
+        if (discoveryLimit > 0) {
+            // Obtener la ubicación del usuario para el feed de descubrimiento
+            const userDoc = await db.collection('users').doc(uid).get();
+            const userLocation = userDoc.exists ? userDoc.data().location : null;
+
+            let discoveryQuery = db.collection('posts').orderBy('createdAt', 'desc');
+            
+            // Excluir los posts que el usuario ya sigue y los propios
+            const exclusionIds = [...followedIds, uid];
+            if(exclusionIds.length > 0) {
+                // Firestore 'not-in' tiene un límite de 10, así que esta lógica es una simplificación.
+                // Para una app a gran escala, se necesitaría un enfoque diferente (ej. filtrar en el cliente o una estructura de datos diferente).
+                // Por ahora, para nuestro tamaño, es aceptable.
+            }
+
+            // Lógica de descubrimiento jerárquica (simplificada)
+            if (userLocation && userLocation.city) {
+                 // Idealmente, se filtraría por ciudad, pero las consultas complejas de Firestore son limitadas.
+                 // Mantenemos una consulta simple por ahora.
+            }
+            
+            if (discoveryCursor) {
+                discoveryQuery = discoveryQuery.startAfter(new Date(discoveryCursor));
+            }
+            
+            const discoverySnapshot = await discoveryQuery.limit(discoveryLimit).get();
+            discoveryPosts = discoverySnapshot.docs
+                .map(doc => ({ id: doc.id, ...doc.data() }))
+                .filter(post => !exclusionIds.includes(post.authorId)); // Filtrado post-consulta
+        }
+        
+        // 4. Combinar y mezclar los posts
+        let combinedPosts = [...followedPosts, ...discoveryPosts];
+        combinedPosts.sort(() => Math.random() - 0.5); // Mezcla aleatoria
+
+        // 5. Enriquecer los posts con datos del autor (Optimización N+1)
+        const authorIds = [...new Set(combinedPosts.map(p => p.authorId))];
+        const authorPromises = [];
+        if (authorIds.length > 0) {
+            // Dividir entre usuarios y mascotas para buscar en las colecciones correctas
+            // Esta es una simplificación. Un enfoque más robusto podría tener un campo 'authorType' en el post.
+            authorIds.forEach(id => {
+                authorPromises.push(db.collection('users').doc(id).get());
+                authorPromises.push(db.collection('pets').doc(id).get());
+            });
+        }
+        
+        const authorSnapshots = await Promise.all(authorPromises);
+        const authorsData = {};
+        authorSnapshots.forEach(doc => {
+            if (doc.exists) {
+                const data = doc.data();
+                authorsData[doc.id] = {
+                    id: doc.id,
+                    name: data.name,
+                    profilePictureUrl: data.profilePictureUrl || data.petPictureUrl || ''
+                };
+            }
+        });
+
+        const finalPosts = combinedPosts.map(post => ({
+            ...post,
+            author: authorsData[post.authorId] || { name: 'Autor Desconocido' }
+        }));
+
+        // 6. Preparar la respuesta con los nuevos cursores
+        const nextFollowedCursor = followedPosts.length > 0 ? followedPosts[followedPosts.length - 1].createdAt : null;
+        const nextDiscoveryCursor = discoveryPosts.length > 0 ? discoveryPosts[discoveryPosts.length - 1].createdAt : null;
+
+        res.status(200).json({
+            posts: finalPosts,
+            nextCursors: {
+                followedCursor: nextFollowedCursor,
+                discoveryCursor: nextDiscoveryCursor
+            }
+        });
+
+    } catch (error) {
+        console.error('Error en GET /api/feed:', error);
+        res.status(500).json({ message: 'Error al obtener el feed.' });
+    }
+});
+
 
 // --- Endpoints de Publicaciones (Posts) ---
-app.post('/api/posts', upload.single('postImage'), async (req, res) => { /* ...código de la v5.0... */ });
-app.get('/api/posts/by-author/:authorId', async (req, res) => { /* ...código de la v5.0... */ });
-app.post('/api/posts/:postId/like', async (req, res) => { /* ...código de la v5.0... */ });
-app.delete('/api/posts/:postId/unlike', async (req, res) => { /* ...código de la v5.0... */ });
-app.post('/api/posts/like-statuses', async (req, res) => { /* ...código de la v5.0... */ });
-app.get('/api/posts/:postId/comments', async (req, res) => { /* ...código de la v5.0... */ });
-app.post('/api/posts/:postId/comment', async (req, res) => { /* ...código de la v5.0... */ });
+app.post('/api/posts', upload.single('postImage'), async (req, res) => {
+    const { uid } = req.user;
+    const { caption, authorId, authorType } = req.body;
+    if (!req.file || !caption || !authorId || !authorType) {
+        return res.status(400).json({ message: 'Se requiere una imagen, un texto, un ID de autor y un tipo de autor.' });
+    }
+    let authorData = {};
+    try {
+        if (authorType === 'pet') {
+            const petDoc = await db.collection('pets').doc(authorId).get();
+            if (!petDoc.exists || petDoc.data().ownerId !== uid) {
+                return res.status(403).json({ message: 'No autorizado para publicar en nombre de esta mascota.' });
+            }
+            authorData = petDoc.data();
+        } else { // authorType === 'user'
+            if (authorId !== uid) {
+                return res.status(403).json({ message: 'No autorizado para publicar como este usuario.' });
+            }
+            const userDoc = await db.collection('users').doc(authorId).get();
+            if (!userDoc.exists) {
+                return res.status(404).json({ message: 'Usuario no encontrado.' });
+            }
+            authorData = userDoc.data();
+        }
+    } catch (error) {
+        console.error('Error al obtener datos del autor:', error);
+        return res.status(500).json({ message: 'Error al verificar el autor de la publicación.' });
+    }
+    const postRef = db.collection('posts').doc();
+    const filePath = `posts/${uid}/${postRef.id}/${Date.now()}-${req.file.originalname}`;
+    const fileUpload = bucket.file(filePath);
+    const blobStream = fileUpload.createWriteStream({ metadata: { contentType: req.file.mimetype } });
+    blobStream.on('error', (error) => {
+        console.error("Error en blobStream (post):", error);
+        return res.status(500).json({ message: 'Error durante la subida de la imagen.' });
+    });
+    blobStream.on('finish', async () => {
+        try {
+            await fileUpload.makePublic();
+            const imageUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
+            const newPost = {
+                authorId,
+                authorType, // 'user' or 'pet'
+                authorLocation: authorData.location || null, // Guardar ubicación del autor para descubrimiento
+                imageUrl,
+                caption,
+                createdAt: new Date().toISOString(),
+                likesCount: 0,
+                commentsCount: 0
+            };
+            await postRef.set(newPost);
+            res.status(201).json({ message: 'Publicación creada con éxito.', postId: postRef.id });
+        } catch (error) {
+            console.error("Error al crear el documento del post:", error);
+            return res.status(500).json({ message: 'Error al guardar la publicación.' });
+        }
+    });
+    blobStream.end(req.file.buffer);
+});
+app.get('/api/posts/by-author/:authorId', async (req, res) => {try {const { authorId } = req.params;const postsQuery = await db.collection('posts').where('authorId', '==', authorId).orderBy('createdAt', 'desc').get();const posts = postsQuery.docs.map(doc => ({ id: doc.id, ...doc.data() }));res.status(200).json(posts);} catch (error) {console.error(`Error fetching posts for author ${req.params.authorId}:`, error);res.status(500).json({ message: 'Error al obtener las publicaciones.' });}});
+app.post('/api/posts/:postId/like', async (req, res) => {const { uid } = req.user;const { postId } = req.params;const postRef = db.collection('posts').doc(postId);const likeRef = postRef.collection('likes').doc(uid);try {await db.runTransaction(async (t) => {const likeDoc = await t.get(likeRef);if (likeDoc.exists) {console.log('El usuario ya ha dado like a este post.');return;}t.set(likeRef, { likedAt: new Date() });t.update(postRef, { likesCount: admin.firestore.FieldValue.increment(1) });});res.status(200).json({ message: 'Like añadido.' });} catch (error) {console.error('Error al dar like:', error);res.status(500).json({ message: 'No se pudo añadir el like.' });}});
+app.delete('/api/posts/:postId/unlike', async (req, res) => {const { uid } = req.user;const { postId } = req.params;const postRef = db.collection('posts').doc(postId);const likeRef = postRef.collection('likes').doc(uid);try {await db.runTransaction(async (t) => {const likeDoc = await t.get(likeRef);if (!likeDoc.exists) {console.log('El usuario no había dado like a este post.');return;}t.delete(likeRef);t.update(postRef, { likesCount: admin.firestore.FieldValue.increment(-1) });});res.status(200).json({ message: 'Like eliminado.' });} catch (error) {console.error('Error al quitar like:', error);res.status(500).json({ message: 'No se pudo quitar el like.' });}});
+app.post('/api/posts/like-statuses', async (req, res) => {const { uid } = req.user;const { postIds } = req.body;if (!Array.isArray(postIds) || postIds.length === 0) return res.status(200).json({});try {const likePromises = postIds.map(postId => db.collection('posts').doc(postId).collection('likes').doc(uid).get());const likeSnapshots = await Promise.all(likePromises);const statuses = {};likeSnapshots.forEach((doc, index) => {const postId = postIds[index];statuses[postId] = doc.exists;});res.status(200).json(statuses);} catch (error) {console.error('Error al verificar estados de likes:', error);res.status(500).json({ message: 'No se pudieron verificar los likes.' });}});
+app.get('/api/posts/:postId/comments', async (req, res) => {const { postId } = req.params;try {const commentsQuery = await db.collection('posts').doc(postId).collection('comments').orderBy('createdAt', 'asc').get();const comments = commentsQuery.docs.map(doc => doc.data());res.status(200).json(comments);} catch (error) {console.error('Error al obtener comentarios:', error);res.status(500).json({ message: 'No se pudieron obtener los comentarios.' });}});
+app.post('/api/posts/:postId/comment', async (req, res) => {const { uid } = req.user;const { postId } = req.params;const { text } = req.body;if (!text || text.trim() === '') {return res.status(400).json({ message: 'El comentario no puede estar vacío.' });}const postRef = db.collection('posts').doc(postId);const commentRef = postRef.collection('comments').doc();const userRef = db.collection('users').doc(uid);try {await db.runTransaction(async (t) => {const userDoc = await t.get(userRef);if (!userDoc.exists) {throw new Error("El usuario que comenta no existe.");}const userData = userDoc.data();const newComment = {id: commentRef.id,authorId: uid,authorName: userData.name,authorProfilePic: userData.profilePictureUrl || '',text,createdAt: new Date().toISOString()};t.set(commentRef, newComment);t.update(postRef, { commentsCount: admin.firestore.FieldValue.increment(1) });});const createdComment = (await commentRef.get()).data();res.status(201).json(createdComment);} catch (error) {console.error('Error al añadir comentario:', error);res.status(500).json({ message: 'No se pudo añadir el comentario.' });}});
 
-// --- [NUEVO] Endpoints para Guardar Publicaciones ---
+// --- Endpoints para Guardar Publicaciones ---
 app.post('/api/posts/:postId/save', async (req, res) => {
     const { uid } = req.user;
     const { postId } = req.params;
@@ -205,9 +376,9 @@ app.get('/api/user/saved-posts', async (req, res) => {
 });
 
 // --- Endpoints de Seguimiento (Follow) ---
-app.post('/api/profiles/:profileId/follow', async (req, res) => { /* ...código de la v5.0... */ });
-app.delete('/api/profiles/:profileId/unfollow', async (req, res) => { /* ...código de la v5.0... */ });
-app.get('/api/profiles/:profileId/follow-status', async (req, res) => { /* ...código de la v5.0... */ });
+app.post('/api/profiles/:profileId/follow', async (req, res) => {const { uid } = req.user;const { profileId } = req.params;if (uid === profileId) return res.status(400).json({ message: 'No puedes seguirte a ti mismo.' });const currentUserRef = db.collection('users').doc(uid);const followedPetRef = db.collection('pets').doc(profileId);try {await db.runTransaction(async (t) => {const petDoc = await t.get(followedPetRef);if (!petDoc.exists) throw new Error("La mascota que intentas seguir no existe.");t.set(currentUserRef.collection('following').doc(profileId), { followedAt: new Date() });t.set(followedPetRef.collection('followers').doc(uid), { followedAt: new Date() });});res.status(200).json({ message: 'Ahora sigues a este perfil.' });} catch (error) {console.error('Error al seguir al perfil:', error);res.status(500).json({ message: error.message || 'No se pudo completar la acción.' });}});
+app.delete('/api/profiles/:profileId/unfollow', async (req, res) => {const { uid } = req.user;const { profileId } = req.params;const currentUserRef = db.collection('users').doc(uid);const followedPetRef = db.collection('pets').doc(profileId);try {await db.runTransaction(async (t) => {t.delete(currentUserRef.collection('following').doc(profileId));t.delete(followedPetRef.collection('followers').doc(uid));});res.status(200).json({ message: 'Has dejado de seguir a este perfil.' });} catch (error) {console.error('Error al dejar de seguir al perfil:', error);res.status(500).json({ message: 'No se pudo completar la acción.' });}});
+app.get('/api/profiles/:profileId/follow-status', async (req, res) => {const { uid } = req.user;const { profileId } = req.params;try {const followDoc = await db.collection('users').doc(uid).collection('following').doc(profileId).get();res.status(200).json({ isFollowing: followDoc.exists });} catch (error) {console.error('Error al verificar el estado de seguimiento:', error);res.status(500).json({ message: 'No se pudieron verificar los likes.' });}});
 
 // --- Iniciar Servidor ---
 app.listen(PORT, () => console.log(`Servidor corriendo en el puerto ${PORT}`));
