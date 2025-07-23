@@ -1,16 +1,16 @@
 // frontend/src/ProfileLayout.jsx
-// Versión: 2.1 - Feed de Inicio Integrado
-// Añade la pestaña "Inicio" que muestra el FeedPage como vista principal por defecto,
-// manteniendo la cabecera y la navegación de pestañas existentes.
+// Versión: 2.2 - Pestaña de Publicaciones Guardadas (Completo y Corregido)
+// Restaura el código completo del componente y añade la nueva pestaña "Guardados".
 
 import { useState, useEffect } from 'react';
-import { NavLink, Routes, Route, Navigate, Link } from 'react-router-dom';
+import { NavLink, Routes, Route, Link } from 'react-router-dom';
 import { signOut } from "firebase/auth";
 import { auth } from './firebase';
 import './App.css';
 
 // Componentes de las vistas
-import FeedPage from './FeedPage.jsx'; // ¡NUEVO!
+import FeedPage from './FeedPage.jsx';
+import SavedPostsPage from './SavedPostsPage.jsx'; // ¡NUEVO!
 import SettingsTab from './SettingsTab.jsx';
 import PetsTab from './PetsTab.jsx';
 import PetSocialProfile from './PetSocialProfile.jsx';
@@ -18,6 +18,7 @@ import LoadingComponent from './LoadingComponent.jsx';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
+// --- Componentes Internos (Código Restaurado) ---
 const PetBubble = ({ pet }) => (
   <Link to={`/dashboard/pet/${pet.id}`} className="pet-bubble" title={pet.name}>
     {pet.petPictureUrl ? <img src={pet.petPictureUrl} alt={pet.name} /> : <span>🐾</span>}
@@ -53,9 +54,10 @@ function ProfileLayout({ user }) {
   const [loading, setLoading] = useState(true);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
+  // --- Lógica de Obtención de Datos (Código Restaurado) ---
   const fetchAllData = async () => {
     if (!user) return;
-    setLoading(true); // Aseguramos que muestre el loader en cada recarga de datos
+    setLoading(true);
     try {
       const idToken = await user.getIdToken();
       const [profileResponse, petsResponse] = await Promise.all([
@@ -83,20 +85,12 @@ function ProfileLayout({ user }) {
     await signOut(auth);
   };
 
-  if (loading) {
-    return <LoadingComponent text="Cargando tu universo EnlaPet..." />;
-  }
+  if (loading) return <LoadingComponent text="Cargando tu universo EnlaPet..." />;
 
   return (
     <div className="profile-container">
-      {showLogoutConfirm && (
-        <ConfirmLogoutModal 
-          onConfirm={handleLogout} 
-          onCancel={() => setShowLogoutConfirm(false)} 
-        />
-      )}
-
-      {/* El header se mantiene intacto y siempre visible */}
+      {showLogoutConfirm && ( <ConfirmLogoutModal onConfirm={handleLogout} onCancel={() => setShowLogoutConfirm(false)} /> )}
+      
       <header className="main-header">
         <div className="user-profile-section">
           <h2>{userProfile?.name}</h2>
@@ -121,10 +115,10 @@ function ProfileLayout({ user }) {
         </div>
       </header>
 
-      {/* La barra de pestañas ahora incluye "Inicio" */}
+      {/* La barra de pestañas ahora incluye "Guardados" */}
       <nav className="profile-tabs">
         <NavLink to="/dashboard" end className={({ isActive }) => isActive ? 'active' : ''}>Inicio</NavLink>
-        <NavLink to="/dashboard/gallery" className={({ isActive }) => isActive ? 'active' : ''}>Mi Galería</NavLink>
+        <NavLink to="/dashboard/saved" className={({ isActive }) => isActive ? 'active' : ''}>Guardados</NavLink>
         <NavLink to="/dashboard/pets" className={({ isActive }) => isActive ? 'active' : ''}>Mascotas</NavLink>
         <div className="profile-tab-wrapper">
           <NavLink to="/dashboard/settings" className={({ isActive }) => `profile-main-button ${isActive ? 'active' : ''}`}>Perfil</NavLink>
@@ -134,11 +128,10 @@ function ProfileLayout({ user }) {
         </div>
       </nav>
 
-      {/* El contenido ahora renderiza el FeedPage por defecto */}
       <main className="tab-content">
         <Routes>
           <Route index element={<FeedPage />} />
-          <Route path="gallery" element={<GalleryTab />} />
+          <Route path="saved" element={<SavedPostsPage />} />
           <Route path="pets" element={<PetsTab user={user} initialPets={pets} onPetsUpdate={fetchAllData} />} />
           <Route path="settings" element={<SettingsTab user={user} userProfile={userProfile} onProfileUpdate={fetchAllData} />} />
           <Route path="pet/:petId" element={<PetSocialProfile />} />
