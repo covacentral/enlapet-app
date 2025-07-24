@@ -1,7 +1,6 @@
 /* frontend/src/App.css */
-/* Versión: 2.1 - Unificación Visual Total */
-/* Añade estilos para PetSocialProfile y refina la estética general */
-/* para una experiencia de usuario completamente cohesiva. */
+/* Versión: 2.5 - Estilos para el Mapa Comunitario (Completo) */
+/* Añade todos los estilos necesarios para MapPage, AddLocationModal y ajusta la navegación. */
 
 /* --- Importación de Tipografía --- */
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&display=swap');
@@ -397,6 +396,11 @@ input::-ms-clear {
   grid-template-columns: repeat(4, 1fr);
   gap: 10px;
   margin-bottom: 20px;
+}
+
+/* NUEVA REGLA para 5 columnas */
+.profile-tabs-five {
+  grid-template-columns: repeat(5, 1fr);
 }
 
 .profile-tabs a, .profile-tab-wrapper {
@@ -1274,7 +1278,127 @@ input::-ms-clear {
     width: 100%;
   }
 
-  .profile-tabs {
+  .profile-tabs, .profile-tabs-five {
     grid-template-columns: repeat(2, 1fr); /* 2x2 grid en móvil */
   }
+}
+
+/* --- [NUEVO] ESTILOS PARA EL MAPA COMUNITARIO --- */
+.map-page-container {
+  background-color: var(--background-light);
+  padding: 25px;
+  border-radius: 15px;
+}
+
+.map-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.add-location-button {
+  background-color: var(--primary-accent);
+  color: var(--brand-cream);
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background-color 0.2s;
+}
+.add-location-button:hover {
+  background-color: var(--primary-accent-hover);
+}
+
+.map-filter-bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  overflow-x: auto;
+  padding-bottom: 10px;
+}
+
+.filter-button {
+  background-color: var(--background-dark);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 8px 16px;
+  border-radius: 20px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+.filter-button:hover {
+  border-color: var(--primary-accent);
+  color: var(--text-primary);
+}
+.filter-button.active {
+  background-color: var(--primary-accent);
+  color: var(--brand-cream);
+  border-color: var(--primary-accent);
+  font-weight: bold;
+}
+
+.map-wrapper {
+  height: 60vh;
+  min-height: 500px;
+  border-radius: 15px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+}
+
+/* Estilos para el modal de añadir lugar */
+.add-location-modal-content {
+  background-color: var(--background-light);
+  border: 1px solid var(--border-color);
+  border-radius: 15px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.add-location-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  padding: 20px;
+}
+.form-column, .map-column {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.mini-map-wrapper {
+  width: 100%;
+  height: 250px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.mini-map {
+  cursor: pointer;
+}
+.map-prompt {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+.map-prompt.success {
+  color: #4caf50;
+  font-weight: bold;
+}
+
+.modal-footer.full-width {
+  grid-column: 1 / -1; /* Ocupa todo el ancho */
+  border-top: 1px solid var(--border-color);
+  padding-top: 20px;
 }
