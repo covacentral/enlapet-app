@@ -1,9 +1,10 @@
 // frontend/src/AddLocationModal.jsx
-// Versión: 1.3 - Geolocalización en Mini-Mapa
-// Centra el mapa del formulario en la ubicación actual del usuario.
+// Versión: 1.4 - Importación Corregida
+// Añade la importación de 'useMapEvents' que faltaba para evitar el crash.
 
 import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
+// *** CORRECCIÓN CLAVE: Añadido 'useMapEvents' a la importación ***
+import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
 import { auth } from './firebase';
 import { X } from 'lucide-react';
 
@@ -37,7 +38,7 @@ function AddLocationModal({ categories, onClose, onLocationAdded }) {
   const [coordinates, setCoordinates] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
-  const [mapCenter, setMapCenter] = useState(initialPosition); // ¡NUEVO!
+  const [mapCenter, setMapCenter] = useState(initialPosition);
 
   // Geolocalización al montar el modal
   useEffect(() => {
