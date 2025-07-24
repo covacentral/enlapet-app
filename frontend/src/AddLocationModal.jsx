@@ -1,14 +1,21 @@
 // frontend/src/AddLocationModal.jsx
-// Versión: 1.2 - Corregido y Mejorado
-// Asegura que el campo de categoría funcione correctamente.
+// Versión: 1.3 - Geolocalización en Mini-Mapa
+// Centra el mapa del formulario en la ubicación actual del usuario.
 
-import React, { useState } from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import React, { useState, useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import { auth } from './firebase';
 import { X } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 const initialPosition = [4.5709, -74.2973];
+
+// Componente para cambiar la vista del mapa dinámicamente
+function ChangeView({ center, zoom }) {
+  const map = useMap();
+  map.setView(center, zoom);
+  return null;
+}
 
 function LocationPicker({ onLocationSelect }) {
   const [position, setPosition] = useState(null);
@@ -25,16 +32,24 @@ function LocationPicker({ onLocationSelect }) {
 
 function AddLocationModal({ categories, onClose, onLocationAdded }) {
   const [formData, setFormData] = useState({
-    name: '',
-    category: '', // Inicia vacío
-    address: '',
-    description: '',
-    phone: '',
-    email: ''
+    name: '', category: '', address: '', description: '', phone: '', email: ''
   });
   const [coordinates, setCoordinates] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [mapCenter, setMapCenter] = useState(initialPosition); // ¡NUEVO!
+
+  // Geolocalización al montar el modal
+  useEffect(() => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setMapCenter([position.coords.latitude, position.coords.longitude]);
+      },
+      () => {
+        console.log("No se pudo obtener la ubicación en el modal.");
+      }
+    );
+  }, []);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -121,7 +136,8 @@ function AddLocationModal({ categories, onClose, onLocationAdded }) {
           <div className="form-group">
             <label>Selecciona la ubicación en el mapa</label>
             <div className="mini-map-wrapper">
-              <MapContainer center={initialPosition} zoom={6} className="leaflet-container mini-map">
+              <MapContainer center={mapCenter} zoom={13} className="leaflet-container mini-map">
+                <ChangeView center={mapCenter} zoom={13} />
                 <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
                 <LocationPicker onLocationSelect={handleLocationSelect} />
               </MapContainer>

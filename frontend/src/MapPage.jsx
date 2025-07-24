@@ -1,18 +1,33 @@
 // frontend/src/MapPage.jsx
-// Versión: 1.2 - Geolocalización, Nuevo Tema y Correcciones
-// Centra el mapa en la ubicación del usuario, mejora el tema visual y corrige bugs.
+// Versión: 1.3 - Íconos del Mapa Corregidos
+// Soluciona el bug de los íconos de marcador rotos.
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet'; // Importamos la librería Leaflet
 import { auth } from './firebase';
 import LoadingComponent from './LoadingComponent';
 import AddLocationModal from './AddLocationModal';
 import { Plus } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-const initialPosition = [4.5709, -74.2973]; // Centro de Colombia (fallback)
+const initialPosition = [4.5709, -74.2973];
 
-// Componente para cambiar la vista del mapa dinámicamente
+// *** CORRECCIÓN PARA LOS ÍCONOS ***
+// Soluciona el problema de los íconos por defecto en Leaflet con React.
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+
+delete L.Icon.Default.prototype._getIconUrl;
+
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: markerIcon2x,
+  iconUrl: markerIcon,
+  shadowUrl: markerShadow,
+});
+// *** FIN DE LA CORRECCIÓN ***
+
 function ChangeView({ center, zoom }) {
   const map = useMap();
   map.setView(center, zoom);
@@ -28,7 +43,6 @@ function MapPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [mapCenter, setMapCenter] = useState(initialPosition);
 
-  // Geolocalización al montar el componente
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -41,61 +55,46 @@ function MapPage() {
     );
   }, []);
 
-  const fetchCategories = useCallback(async (idToken) => {
-    try {
-      const categoryUrl = `${API_URL}/api/location-categories`;
-      const categoriesRes = await fetch(categoryUrl, { headers: { 'Authorization': `Bearer ${idToken}` } });
-      if (!categoriesRes.ok) throw new Error('No se pudieron cargar las categorías.');
-      const categoriesData = await categoriesRes.json();
-      setCategories(categoriesData);
-    } catch (err) {
-      setError(err.message);
-    }
-  }, []);
-
-  const fetchLocations = useCallback(async (idToken, categoryFilter) => {
-    try {
-      let locationsUrl = `${API_URL}/api/locations`;
-      if (categoryFilter) {
-        locationsUrl += `?category=${categoryFilter}`;
-      }
-      const locationsRes = await fetch(locationsUrl, { headers: { 'Authorization': `Bearer ${idToken}` } });
-      if (!locationsRes.ok) throw new Error('No se pudieron cargar los lugares.');
-      const locationsData = await locationsRes.json();
-      setLocations(locationsData);
-    } catch (err) {
-      setError(err.message);
-    }
-  }, []);
-
-  const loadInitialData = useCallback(async () => {
+  const fetchMapData = useCallback(async (categoryFilter) => {
     setIsLoading(true);
+    setError(null);
     try {
       const user = auth.currentUser;
       if (!user) throw new Error("Usuario no autenticado.");
       const idToken = await user.getIdToken();
-      await Promise.all([
-        fetchCategories(idToken),
-        fetchLocations(idToken, activeCategory)
+      
+      const categoryUrl = `${API_URL}/api/location-categories`;
+      let locationsUrl = `${API_URL}/api/locations`;
+      if (categoryFilter) {
+        locationsUrl += `?category=${categoryFilter}`;
+      }
+
+      const [categoriesRes, locationsRes] = await Promise.all([
+        categories.length === 0 ? fetch(categoryUrl, { headers: { 'Authorization': `Bearer ${idToken}` } }) : Promise.resolve(null),
+        fetch(locationsUrl, { headers: { 'Authorization': `Bearer ${idToken}` } })
       ]);
+
+      if (categoriesRes && !categoriesRes.ok) throw new Error('No se pudieron cargar las categorías.');
+      if (!locationsRes.ok) throw new Error('No se pudieron cargar los lugares.');
+
+      if (categoriesRes) {
+        const categoriesData = await categoriesRes.json();
+        setCategories(categoriesData);
+      }
+      
+      const locationsData = await locationsRes.json();
+      setLocations(locationsData);
+
     } catch (err) {
       setError(err.message);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [categories]);
 
   useEffect(() => {
-    loadInitialData();
-  }, []);
-
-  useEffect(() => {
-    const user = auth.currentUser;
-    if (user) {
-        user.getIdToken().then(idToken => fetchLocations(idToken, activeCategory));
-    }
-  }, [activeCategory, fetchLocations]);
-
+    fetchMapData(activeCategory);
+  }, [activeCategory, fetchMapData]);
 
   const handleCategoryFilter = (categoryKey) => {
     setActiveCategory(prev => prev === categoryKey ? null : categoryKey);
@@ -107,7 +106,7 @@ function MapPage() {
 
   return (
     <>
-      {isModalOpen && <AddLocationModal categories={categories} onClose={() => setIsModalOpen(false)} onLocationAdded={() => fetchLocations(auth.currentUser.accessToken, activeCategory)} />}
+      {isModalOpen && <AddLocationModal categories={categories} onClose={() => setIsModalOpen(false)} onLocationAdded={() => fetchMapData(activeCategory)} />}
       
       <div className="map-page-container">
         <div className="map-header">
