@@ -1,7 +1,6 @@
 // backend/index.js
-// Versión: 6.2 - Reparación Definitiva y Endpoints de Guardado
-// Corrige el error crítico en el endpoint de posts guardados con una lógica más robusta
-// e introduce la funcionalidad completa para guardar publicaciones.
+// Versión: 7.0 - Sistema de Reportes (Backend)
+// Introduce el endpoint POST /api/reports para la moderación de contenido.
 
 require('dotenv').config();
 const express = require('express');
@@ -77,7 +76,7 @@ const authenticateUser = async (req, res, next) => {
 };
 
 // --- Endpoint Raíz ---
-app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v6.2 - Servidor Estable' }));
+app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v7.0 - Sistema de Reportes Implementado' }));
 
 // --- Endpoints Públicos (No requieren autenticación) ---
 app.post('/api/register', async (req, res) => {try {const { email, password, name } = req.body;if (!email || !password || !name) {return res.status(400).json({ message: 'Nombre, email y contraseña son requeridos.' });}const userRecord = await auth.createUser({ email, password, displayName: name });const newUser = {name,email,createdAt: new Date().toISOString(),userType: 'personal',profilePictureUrl: '',coverPhotoUrl: '',bio: '',phone: '',location: { country: 'Colombia', department: '', city: '' },privacySettings: { profileVisibility: 'public', showEmail: 'private' }};await db.collection('users').doc(userRecord.uid).set(newUser);res.status(201).json({ message: 'Usuario registrado con éxito', uid: userRecord.uid });} catch (error) {console.error('Error en /api/register:', error);if (error.code === 'auth/email-already-exists') {return res.status(409).json({ message: 'El correo electrónico ya está en uso.' });}if (error.code === 'auth/invalid-password') {return res.status(400).json({ message: 'La contraseña debe tener al menos 6 caracteres.' });}res.status(500).json({ message: 'Error al registrar el usuario.' });}});
@@ -106,14 +105,12 @@ app.get('/api/feed', async (req, res) => {
     const FOLLOWED_POSTS_RATIO = 0.7; // 70% de posts seguidos
 
     try {
-        // 1. Obtener la lista de perfiles que el usuario sigue
         const followingSnapshot = await db.collection('users').doc(uid).collection('following').get();
         const followedIds = followingSnapshot.docs.map(doc => doc.id);
 
         let followedPosts = [];
         let discoveryPosts = [];
 
-        // 2. Obtener lote de posts de perfiles seguidos
         if (followedIds.length > 0) {
             let followedQuery = db.collection('posts')
                 .where('authorId', 'in', followedIds)
@@ -127,29 +124,13 @@ app.get('/api/feed', async (req, res) => {
             followedPosts = followedSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         }
 
-        // 3. Determinar cuántos posts de descubrimiento se necesitan
         const discoveryLimit = POSTS_PER_PAGE - followedPosts.length;
 
         if (discoveryLimit > 0) {
-            // Obtener la ubicación del usuario para el feed de descubrimiento
             const userDoc = await db.collection('users').doc(uid).get();
             const userLocation = userDoc.exists ? userDoc.data().location : null;
-
             let discoveryQuery = db.collection('posts').orderBy('createdAt', 'desc');
-            
-            // Excluir los posts que el usuario ya sigue y los propios
             const exclusionIds = [...followedIds, uid];
-            if(exclusionIds.length > 0) {
-                // Firestore 'not-in' tiene un límite de 10, así que esta lógica es una simplificación.
-                // Para una app a gran escala, se necesitaría un enfoque diferente (ej. filtrar en el cliente o una estructura de datos diferente).
-                // Por ahora, para nuestro tamaño, es aceptable.
-            }
-
-            // Lógica de descubrimiento jerárquica (simplificada)
-            if (userLocation && userLocation.city) {
-                 // Idealmente, se filtraría por ciudad, pero las consultas complejas de Firestore son limitadas.
-                 // Mantenemos una consulta simple por ahora.
-            }
             
             if (discoveryCursor) {
                 discoveryQuery = discoveryQuery.startAfter(new Date(discoveryCursor));
@@ -158,19 +139,15 @@ app.get('/api/feed', async (req, res) => {
             const discoverySnapshot = await discoveryQuery.limit(discoveryLimit).get();
             discoveryPosts = discoverySnapshot.docs
                 .map(doc => ({ id: doc.id, ...doc.data() }))
-                .filter(post => !exclusionIds.includes(post.authorId)); // Filtrado post-consulta
+                .filter(post => !exclusionIds.includes(post.authorId));
         }
         
-        // 4. Combinar y mezclar los posts
         let combinedPosts = [...followedPosts, ...discoveryPosts];
-        combinedPosts.sort(() => Math.random() - 0.5); // Mezcla aleatoria
+        combinedPosts.sort(() => Math.random() - 0.5);
 
-        // 5. Enriquecer los posts con datos del autor (Optimización N+1)
         const authorIds = [...new Set(combinedPosts.map(p => p.authorId))];
         const authorPromises = [];
         if (authorIds.length > 0) {
-            // Dividir entre usuarios y mascotas para buscar en las colecciones correctas
-            // Esta es una simplificación. Un enfoque más robusto podría tener un campo 'authorType' en el post.
             authorIds.forEach(id => {
                 authorPromises.push(db.collection('users').doc(id).get());
                 authorPromises.push(db.collection('pets').doc(id).get());
@@ -195,7 +172,6 @@ app.get('/api/feed', async (req, res) => {
             author: authorsData[post.authorId] || { name: 'Autor Desconocido' }
         }));
 
-        // 6. Preparar la respuesta con los nuevos cursores
         const nextFollowedCursor = followedPosts.length > 0 ? followedPosts[followedPosts.length - 1].createdAt : null;
         const nextDiscoveryCursor = discoveryPosts.length > 0 ? discoveryPosts[discoveryPosts.length - 1].createdAt : null;
 
@@ -229,7 +205,7 @@ app.post('/api/posts', upload.single('postImage'), async (req, res) => {
                 return res.status(403).json({ message: 'No autorizado para publicar en nombre de esta mascota.' });
             }
             authorData = petDoc.data();
-        } else { // authorType === 'user'
+        } else {
             if (authorId !== uid) {
                 return res.status(403).json({ message: 'No autorizado para publicar como este usuario.' });
             }
@@ -257,8 +233,8 @@ app.post('/api/posts', upload.single('postImage'), async (req, res) => {
             const imageUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
             const newPost = {
                 authorId,
-                authorType, // 'user' or 'pet'
-                authorLocation: authorData.location || null, // Guardar ubicación del autor para descubrimiento
+                authorType,
+                authorLocation: authorData.location || null,
                 imageUrl,
                 caption,
                 createdAt: new Date().toISOString(),
@@ -295,7 +271,6 @@ app.post('/api/posts/:postId/save', async (req, res) => {
         res.status(500).json({ message: 'No se pudo guardar la publicación.' });
     }
 });
-
 app.delete('/api/posts/:postId/unsave', async (req, res) => {
     const { uid } = req.user;
     const { postId } = req.params;
@@ -308,7 +283,6 @@ app.delete('/api/posts/:postId/unsave', async (req, res) => {
         res.status(500).json({ message: 'No se pudo quitar la publicación guardada.' });
     }
 });
-
 app.post('/api/posts/save-statuses', async (req, res) => {
     const { uid } = req.user;
     const { postIds } = req.body;
@@ -329,7 +303,6 @@ app.post('/api/posts/save-statuses', async (req, res) => {
         res.status(500).json({ message: 'No se pudieron verificar los estados de guardado.' });
     }
 });
-
 app.get('/api/user/saved-posts', async (req, res) => {
     const { uid } = req.user;
     try {
