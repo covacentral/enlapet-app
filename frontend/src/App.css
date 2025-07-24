@@ -773,6 +773,137 @@ input::-ms-clear {
 }
 
 
+/* --- Añadidos para el Sistema de Reportes --- */
+
+.post-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.post-author-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: var(--text-primary);
+  flex-grow: 1;
+}
+
+.post-menu-container {
+  position: relative;
+}
+
+.post-menu-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background-color: var(--background-dark);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px;
+  width: 180px;
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+
+.post-menu-dropdown button {
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  padding: 10px;
+  width: 100%;
+  text-align: left;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.post-menu-dropdown button:hover {
+  background-color: var(--border-color);
+}
+
+.report-modal-content {
+  background-color: var(--background-light);
+  border: 1px solid var(--border-color);
+  border-radius: 15px;
+  width: 90%;
+  max-width: 500px;
+  overflow: hidden;
+}
+
+.report-description {
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+
+.report-reasons-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.reason-button {
+  background-color: var(--background-dark);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 12px;
+  border-radius: 8px;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.reason-button:hover {
+  border-color: var(--primary-accent-hover);
+}
+
+.reason-button.selected {
+  background-color: var(--primary-accent);
+  border-color: var(--primary-accent);
+  color: var(--brand-cream);
+  font-weight: bold;
+}
+
+.submit-report-button {
+  background-color: var(--primary-accent);
+  color: var(--brand-cream);
+  border: none;
+  width: 100%;
+  padding: 14px;
+  font-size: 1rem;
+  font-weight: bold;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.submit-report-button:hover {
+  background-color: var(--primary-accent-hover);
+}
+
+.submit-report-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.confirmation-view {
+  padding: 2rem;
+  text-align: center;
+}
+.confirmation-view h3 {
+  font-size: 1.5rem;
+  color: var(--brand-cream);
+  margin-bottom: 1rem;
+}
+.confirmation-view p {
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 2rem;
+}
+
+
+
 
 /* --- PESTAÑA DE MASCOTAS --- */
 .pets-tab-container {
