@@ -1,6 +1,6 @@
 // frontend/src/AddLocationModal.jsx
-// Versión: 1.1 - Rediseñado a una Columna
-// Mejora la UX con un diseño de una sola columna y una mejor estructura.
+// Versión: 1.2 - Corregido y Mejorado
+// Asegura que el campo de categoría funcione correctamente.
 
 import React, { useState } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
@@ -26,7 +26,7 @@ function LocationPicker({ onLocationSelect }) {
 function AddLocationModal({ categories, onClose, onLocationAdded }) {
   const [formData, setFormData] = useState({
     name: '',
-    category: '',
+    category: '', // Inicia vacío
     address: '',
     description: '',
     phone: '',
@@ -46,13 +46,13 @@ function AddLocationModal({ categories, onClose, onLocationAdded }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!coordinates) {
-      setMessage('Por favor, selecciona una ubicación en el mapa.');
-      return;
-    }
     if (!formData.category) {
         setMessage('Por favor, selecciona una categoría.');
         return;
+    }
+    if (!coordinates) {
+      setMessage('Por favor, selecciona una ubicación en el mapa.');
+      return;
     }
     setIsLoading(true);
     setMessage('Añadiendo lugar...');
@@ -105,7 +105,6 @@ function AddLocationModal({ categories, onClose, onLocationAdded }) {
           </button>
         </div>
         <form onSubmit={handleSubmit} className="add-location-form">
-          {/* El formulario ahora es una sola columna */}
           <div className="form-group">
             <label htmlFor="name">Nombre del Lugar</label>
             <input type="text" id="name" name="name" onChange={handleChange} required />
@@ -123,7 +122,7 @@ function AddLocationModal({ categories, onClose, onLocationAdded }) {
             <label>Selecciona la ubicación en el mapa</label>
             <div className="mini-map-wrapper">
               <MapContainer center={initialPosition} zoom={6} className="leaflet-container mini-map">
-                <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+                <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
                 <LocationPicker onLocationSelect={handleLocationSelect} />
               </MapContainer>
             </div>

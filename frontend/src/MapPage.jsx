@@ -1,17 +1,23 @@
 // frontend/src/MapPage.jsx
-// Versión: 1.1 - Corregido y Rediseñado
-// Soluciona el bug de carga de categorías y cambia el tema del mapa a uno oscuro.
+// Versión: 1.2 - Geolocalización, Nuevo Tema y Correcciones
+// Centra el mapa en la ubicación del usuario, mejora el tema visual y corrige bugs.
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { auth } from './firebase';
 import LoadingComponent from './LoadingComponent';
 import AddLocationModal from './AddLocationModal';
 import { Plus } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const initialPosition = [4.5709, -74.2973]; // Centro de Colombia (fallback)
 
-const initialPosition = [4.5709, -74.2973];
+// Componente para cambiar la vista del mapa dinámicamente
+function ChangeView({ center, zoom }) {
+  const map = useMap();
+  map.setView(center, zoom);
+  return null;
+}
 
 function MapPage() {
   const [locations, setLocations] = useState([]);
@@ -20,49 +26,76 @@ function MapPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [mapCenter, setMapCenter] = useState(initialPosition);
 
-  const fetchMapData = useCallback(async (categoryFilter) => {
-    setIsLoading(true);
-    setError(null);
+  // Geolocalización al montar el componente
+  useEffect(() => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setMapCenter([position.coords.latitude, position.coords.longitude]);
+      },
+      () => {
+        console.log("No se pudo obtener la ubicación, usando la ubicación por defecto.");
+        setMapCenter(initialPosition);
+      }
+    );
+  }, []);
+
+  const fetchCategories = useCallback(async (idToken) => {
     try {
-      const user = auth.currentUser;
-      if (!user) throw new Error("Usuario no autenticado.");
-      const idToken = await user.getIdToken();
-      
       const categoryUrl = `${API_URL}/api/location-categories`;
+      const categoriesRes = await fetch(categoryUrl, { headers: { 'Authorization': `Bearer ${idToken}` } });
+      if (!categoriesRes.ok) throw new Error('No se pudieron cargar las categorías.');
+      const categoriesData = await categoriesRes.json();
+      setCategories(categoriesData);
+    } catch (err) {
+      setError(err.message);
+    }
+  }, []);
+
+  const fetchLocations = useCallback(async (idToken, categoryFilter) => {
+    try {
       let locationsUrl = `${API_URL}/api/locations`;
       if (categoryFilter) {
         locationsUrl += `?category=${categoryFilter}`;
       }
-
-      // Hacemos las peticiones en paralelo
-      const [categoriesRes, locationsRes] = await Promise.all([
-        // Solo pedimos las categorías si aún no las tenemos
-        categories.length === 0 ? fetch(categoryUrl, { headers: { 'Authorization': `Bearer ${idToken}` } }) : Promise.resolve(null),
-        fetch(locationsUrl, { headers: { 'Authorization': `Bearer ${idToken}` } })
-      ]);
-
-      if (categoriesRes && !categoriesRes.ok) throw new Error('No se pudieron cargar las categorías.');
+      const locationsRes = await fetch(locationsUrl, { headers: { 'Authorization': `Bearer ${idToken}` } });
       if (!locationsRes.ok) throw new Error('No se pudieron cargar los lugares.');
-
-      if (categoriesRes) {
-        const categoriesData = await categoriesRes.json();
-        setCategories(categoriesData);
-      }
-      
       const locationsData = await locationsRes.json();
       setLocations(locationsData);
+    } catch (err) {
+      setError(err.message);
+    }
+  }, []);
 
+  const loadInitialData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error("Usuario no autenticado.");
+      const idToken = await user.getIdToken();
+      await Promise.all([
+        fetchCategories(idToken),
+        fetchLocations(idToken, activeCategory)
+      ]);
     } catch (err) {
       setError(err.message);
     } finally {
       setIsLoading(false);
     }
-  }, [categories]); // Dependemos de 'categories' para no volver a pedirlas
+  }, []);
 
   useEffect(() => {
-    fetchMapData(activeCategory);
-  }, [activeCategory]); // Se ejecuta solo cuando cambia el filtro
+    loadInitialData();
+  }, []);
+
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (user) {
+        user.getIdToken().then(idToken => fetchLocations(idToken, activeCategory));
+    }
+  }, [activeCategory, fetchLocations]);
+
 
   const handleCategoryFilter = (categoryKey) => {
     setActiveCategory(prev => prev === categoryKey ? null : categoryKey);
@@ -74,11 +107,11 @@ function MapPage() {
 
   return (
     <>
-      {isModalOpen && <AddLocationModal categories={categories} onClose={() => setIsModalOpen(false)} onLocationAdded={() => fetchMapData(activeCategory)} />}
+      {isModalOpen && <AddLocationModal categories={categories} onClose={() => setIsModalOpen(false)} onLocationAdded={() => fetchLocations(auth.currentUser.accessToken, activeCategory)} />}
       
       <div className="map-page-container">
         <div className="map-header">
-            <h2 className="tab-title">Mapa Comunitario Pet-Friendly</h2>
+            <h2 className="tab-title">Mapa Comunitario</h2>
             <button className="add-location-button" onClick={() => setIsModalOpen(true)}>
                 <Plus size={18} /> Añadir Lugar
             </button>
@@ -105,10 +138,11 @@ function MapPage() {
         {error && <p className="response-message error">{error}</p>}
 
         <div className="map-wrapper">
-          <MapContainer center={initialPosition} zoom={6} scrollWheelZoom={true} className="leaflet-container">
+          <MapContainer center={mapCenter} zoom={13} scrollWheelZoom={true} className="leaflet-container">
+            <ChangeView center={mapCenter} zoom={13} />
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+              url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
             />
             {locations.map(loc => (
               <Marker key={loc.id} position={[loc.coordinates._latitude, loc.coordinates._longitude]}>

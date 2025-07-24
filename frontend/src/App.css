@@ -1,6 +1,6 @@
 /* frontend/src/App.css */
-/* Versión: 2.5 - Estilos para el Mapa Comunitario (Completo) */
-/* Añade todos los estilos necesarios para MapPage, AddLocationModal y ajusta la navegación. */
+/* Versión: 2.7 - Mejoras de UX para el Mapa (Versión Completa y Corregida) */
+/* Aumenta la altura del mini-mapa, corrige el z-index y ajusta el layout del formulario. */
 
 /* --- Importación de Tipografía --- */
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&display=swap');
@@ -398,7 +398,6 @@ input::-ms-clear {
   margin-bottom: 20px;
 }
 
-/* NUEVA REGLA para 5 columnas */
 .profile-tabs-five {
   grid-template-columns: repeat(5, 1fr);
 }
@@ -467,7 +466,7 @@ input::-ms-clear {
   stroke: var(--primary-accent);
 }
 
-/* --- ESTILOS DEL PERFIL SOCIAL DE MASCOTA (NUEVO Y UNIFICADO) --- */
+/* --- ESTILOS DEL PERFIL SOCIAL DE MASCOTA --- */
 .pet-social-profile-container {
   background-color: var(--background-light);
   border-radius: 15px;
@@ -480,7 +479,7 @@ input::-ms-clear {
 }
 .social-profile-header {
   padding: 0 24px 24px;
-  margin-top: -80px; /* Sube los detalles sobre la foto de portada */
+  margin-top: -80px;
   position: relative;
   text-align: left;
 }
@@ -646,7 +645,7 @@ input::-ms-clear {
 .modal-backdrop {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background-color: rgba(0, 0, 0, 0.8);
-  display: flex; justify-content: center; align-items: center; z-index: 1000;
+  display: flex; justify-content: center; align-items: center; z-index: 1001; /* CORREGIDO */
   backdrop-filter: blur(5px);
   animation: modal-fade-in 0.3s ease;
 }
@@ -739,7 +738,7 @@ input::-ms-clear {
   cursor: pointer;
   transition: border-color 0.2s;
   margin-bottom: 16px;
-  overflow: hidden; /* Clave para contener la imagen */
+  overflow: hidden;
 }
 
 .image-upload-area:hover {
@@ -754,7 +753,7 @@ input::-ms-clear {
 .image-preview {
   width: 100%;
   height: 100%;
-  object-fit: cover; /* Clave para que la imagen no se deforme */
+  object-fit: cover;
 }
 
 .publish-button {
@@ -905,9 +904,6 @@ input::-ms-clear {
   line-height: 1.6;
   margin-bottom: 2rem;
 }
-
-
-
 
 /* --- PESTAÑA DE MASCOTAS --- */
 .pets-tab-container {
@@ -1255,6 +1251,100 @@ input::-ms-clear {
   transform: translateY(-2px);
 }
 
+/* --- ESTILOS PARA EL MAPA COMUNITARIO --- */
+.map-page-container {
+  background-color: var(--background-light);
+  padding: 25px;
+  border-radius: 15px;
+}
+.map-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.add-location-button {
+  background-color: var(--primary-accent);
+  color: var(--brand-cream);
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background-color 0.2s;
+}
+.add-location-button:hover { background-color: var(--primary-accent-hover); }
+.map-filter-bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  overflow-x: auto;
+  padding-bottom: 10px;
+}
+.filter-button {
+  background-color: var(--background-dark);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 8px 16px;
+  border-radius: 20px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+.filter-button:hover {
+  border-color: var(--primary-accent);
+  color: var(--text-primary);
+}
+.filter-button.active {
+  background-color: var(--primary-accent);
+  color: var(--brand-cream);
+  border-color: var(--primary-accent);
+  font-weight: bold;
+}
+.map-wrapper {
+  height: 60vh;
+  min-height: 500px;
+  border-radius: 15px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+}
+.add-location-modal-content {
+  background-color: var(--background-light);
+  border: 1px solid var(--border-color);
+  border-radius: 15px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.add-location-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding: 20px;
+}
+.mini-map-wrapper {
+  width: 100%;
+  height: 350px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.mini-map { cursor: pointer; }
+.map-prompt { font-size: 0.9rem; color: var(--text-secondary); }
+.map-prompt.success { color: #4caf50; font-weight: bold; }
+.modal-footer.full-width {
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--border-color);
+  padding-top: 20px;
+}
+
 /* --- MEDIA QUERIES PARA RESPONSIVE DESIGN --- */
 @media (max-width: 900px) {
   .main-header, .pets-tab-container {
@@ -1279,127 +1369,6 @@ input::-ms-clear {
   }
 
   .profile-tabs, .profile-tabs-five {
-    grid-template-columns: repeat(2, 1fr); /* 2x2 grid en móvil */
+    grid-template-columns: repeat(2, 1fr);
   }
-}
-
-/* --- [NUEVO] ESTILOS PARA EL MAPA COMUNITARIO --- */
-.map-page-container {
-  background-color: var(--background-light);
-  padding: 25px;
-  border-radius: 15px;
-}
-
-.map-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.add-location-button {
-  background-color: var(--primary-accent);
-  color: var(--brand-cream);
-  border: none;
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-weight: bold;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: background-color 0.2s;
-}
-.add-location-button:hover {
-  background-color: var(--primary-accent-hover);
-}
-
-.map-filter-bar {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-  overflow-x: auto;
-  padding-bottom: 10px;
-}
-
-.filter-button {
-  background-color: var(--background-dark);
-  border: 1px solid var(--border-color);
-  color: var(--text-secondary);
-  padding: 8px 16px;
-  border-radius: 20px;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.2s;
-}
-.filter-button:hover {
-  border-color: var(--primary-accent);
-  color: var(--text-primary);
-}
-.filter-button.active {
-  background-color: var(--primary-accent);
-  color: var(--brand-cream);
-  border-color: var(--primary-accent);
-  font-weight: bold;
-}
-
-.map-wrapper {
-  height: 60vh;
-  min-height: 500px;
-  border-radius: 15px;
-  overflow: hidden;
-  border: 1px solid var(--border-color);
-}
-
-.leaflet-container {
-  width: 100%;
-  height: 100%;
-}
-
-/* Estilos para el modal de añadir lugar */
-.add-location-modal-content {
-  background-color: var(--background-light);
-  border: 1px solid var(--border-color);
-  border-radius: 15px;
-  width: 90%;
-  max-width: 800px;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-
-.add-location-form {
-  display: flex; /* Cambiado de grid a flex */
-  flex-direction: column; /* Apila los elementos verticalmente */
-  gap: 15px; /* Espacio entre los grupos del formulario */
-  padding: 20px;
-}
-
-.form-column, .map-column {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.mini-map-wrapper {
-  width: 100%;
-  height: 250px;
-  border-radius: 8px;
-  overflow: hidden;
-}
-.mini-map {
-  cursor: pointer;
-}
-.map-prompt {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-}
-.map-prompt.success {
-  color: #4caf50;
-  font-weight: bold;
-}
-
-.modal-footer.full-width {
-  grid-column: 1 / -1; /* Ocupa todo el ancho */
-  border-top: 1px solid var(--border-color);
-  padding-top: 20px;
 }
