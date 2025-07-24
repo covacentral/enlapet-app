@@ -1,6 +1,6 @@
 // backend/index.js
-// Versión: 7.2 - Sistema de Reportes Agregados
-// Modifica el endpoint POST /api/reports para agregar reportes en un único ticket.
+// Versión: 8.0 - Mapa Comunitario (Lugares)
+// Introduce los endpoints para gestionar categorías, lugares y reseñas del mapa.
 
 require('dotenv').config();
 const express = require('express');
@@ -76,7 +76,7 @@ const authenticateUser = async (req, res, next) => {
 };
 
 // --- Endpoint Raíz ---
-app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v7.2 - Sistema de Reportes Agregados' }));
+app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v8.0 - Mapa Comunitario' }));
 
 // --- Endpoints Públicos (No requieren autenticación) ---
 app.post('/api/register', async (req, res) => {try {const { email, password, name } = req.body;if (!email || !password || !name) {return res.status(400).json({ message: 'Nombre, email y contraseña son requeridos.' });}const userRecord = await auth.createUser({ email, password, displayName: name });const newUser = {name,email,createdAt: new Date().toISOString(),userType: 'personal',profilePictureUrl: '',coverPhotoUrl: '',bio: '',phone: '',location: { country: 'Colombia', department: '', city: '' },privacySettings: { profileVisibility: 'public', showEmail: 'private' }};await db.collection('users').doc(userRecord.uid).set(newUser);res.status(201).json({ message: 'Usuario registrado con éxito', uid: userRecord.uid });} catch (error) {console.error('Error en /api/register:', error);if (error.code === 'auth/email-already-exists') {return res.status(409).json({ message: 'El correo electrónico ya está en uso.' });}if (error.code === 'auth/invalid-password') {return res.status(400).json({ message: 'La contraseña debe tener al menos 6 caracteres.' });}res.status(500).json({ message: 'Error al registrar el usuario.' });}});
@@ -87,7 +87,6 @@ app.get('/api/public/pets/:petId', async (req, res) => {try {const { petId } = r
 app.use(authenticateUser);
 
 // --- Endpoints de Gestión de Perfil y Mascotas ---
-// ... (código existente de /api/profile, /api/pets, etc. sin cambios)
 app.get('/api/profile', async (req, res) => {try{const userDoc = await db.collection('users').doc(req.user.uid).get();if (!userDoc.exists) return res.status(404).json({ message: 'Perfil no encontrado.' });res.status(200).json(userDoc.data());}catch(e){res.status(500).json({ message: 'Error interno del servidor.' })}});
 app.put('/api/profile', async (req, res) => {try {const { uid } = req.user;const dataToSave = req.body;if (Object.keys(dataToSave).length === 0) {return res.status(400).json({ message: 'No se proporcionaron datos válidos para actualizar.' });}await db.collection('users').doc(uid).set(dataToSave, { merge: true });res.status(200).json({ message: 'Perfil actualizado con éxito.' });} catch(e) {console.error('Error en /api/profile (PUT):', e);res.status(500).json({ message: 'Error interno del servidor.' });}});
 app.post('/api/profile/picture', upload.single('profilePicture'), async (req, res) => {try {const { uid } = req.user;if (!req.file) return res.status(400).json({ message: 'No se subió ningún archivo.' });const filePath = `profile-pictures/${uid}/${Date.now()}-${req.file.originalname}`;const fileUpload = bucket.file(filePath);const blobStream = fileUpload.createWriteStream({ metadata: { contentType: req.file.mimetype } });blobStream.on('error', (error) => res.status(500).json({ message: 'Error durante la subida del archivo.' }));blobStream.on('finish', async () => {try {await fileUpload.makePublic();const publicUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;await db.collection('users').doc(uid).set({ profilePictureUrl: publicUrl }, { merge: true });res.status(200).json({ message: 'Foto actualizada.', profilePictureUrl: publicUrl });} catch (error) {res.status(500).json({ message: 'Error al procesar el archivo después de subirlo.' });}});blobStream.end(req.file.buffer);} catch (error) {res.status(500).json({ message: 'Error interno del servidor.' });}});
@@ -97,7 +96,6 @@ app.put('/api/pets/:petId', async (req, res) => {const { uid } = req.user;const 
 app.post('/api/pets/:petId/picture', upload.single('petPicture'), async (req, res) => {try {const { uid } = req.user;if (!req.file) return res.status(400).json({ message: 'No se subió ningún archivo.' });const { petId } = req.params;const petRef = db.collection('pets').doc(petId);const petDoc = await petRef.get();if (!petDoc.exists) {return res.status(404).json({ message: 'Mascota no encontrada.' });}if (petDoc.data().ownerId !== uid) {return res.status(403).json({ message: 'No autorizado para modificar esta mascota.' });}const filePath = `pets-pictures/${petId}/${Date.now()}-${req.file.originalname}`;const fileUpload = bucket.file(filePath);const blobStream = fileUpload.createWriteStream({ metadata: { contentType: req.file.mimetype } });blobStream.on('error', (error) => {console.error("Error en blobStream (mascota):", error);res.status(500).json({ message: 'Error durante la subida del archivo.' });});blobStream.on('finish', async () => {try {await fileUpload.makePublic();const publicUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;await petRef.update({ petPictureUrl: publicUrl });res.status(200).json({ message: 'Foto de mascota actualizada.', petPictureUrl: publicUrl });} catch (error) {console.error("Error al procesar foto de mascota:", error);res.status(500).json({ message: 'Error al procesar el archivo después de subirlo.' });}});blobStream.end(req.file.buffer);} catch (error) {console.error('Error en /api/pets/:petId/picture:', error);res.status(500).json({ message: 'Error interno del servidor.' });}});
 
 // --- Endpoint del Feed Híbrido ---
-// ... (código existente de /api/feed sin cambios)
 app.get('/api/feed', async (req, res) => {
     const { uid } = req.user;
     const { followedCursor, discoveryCursor } = req.query;
@@ -151,7 +149,6 @@ app.get('/api/feed', async (req, res) => {
 });
 
 // --- Endpoints de Publicaciones (Posts) ---
-// ... (código existente de /api/posts, likes, comments, etc. sin cambios)
 app.post('/api/posts', upload.single('postImage'), async (req, res) => {
     const { uid } = req.user;
     const { caption, authorId, authorType } = req.body;
@@ -219,7 +216,6 @@ app.get('/api/posts/:postId/comments', async (req, res) => {const { postId } = r
 app.post('/api/posts/:postId/comment', async (req, res) => {const { uid } = req.user;const { postId } = req.params;const { text } = req.body;if (!text || text.trim() === '') {return res.status(400).json({ message: 'El comentario no puede estar vacío.' });}const postRef = db.collection('posts').doc(postId);const commentRef = postRef.collection('comments').doc();const userRef = db.collection('users').doc(uid);try {await db.runTransaction(async (t) => {const userDoc = await t.get(userRef);if (!userDoc.exists) {throw new Error("El usuario que comenta no existe.");}const userData = userDoc.data();const newComment = {id: commentRef.id,authorId: uid,authorName: userData.name,authorProfilePic: userData.profilePictureUrl || '',text,createdAt: new Date().toISOString()};t.set(commentRef, newComment);t.update(postRef, { commentsCount: admin.firestore.FieldValue.increment(1) });});const createdComment = (await commentRef.get()).data();res.status(201).json(createdComment);} catch (error) {console.error('Error al añadir comentario:', error);res.status(500).json({ message: 'No se pudo añadir el comentario.' });}});
 
 // --- Endpoints para Guardar Publicaciones ---
-// ... (código existente de /api/posts/:postId/save, etc. sin cambios)
 app.post('/api/posts/:postId/save', async (req, res) => {
     const { uid } = req.user;
     const { postId } = req.params;
@@ -326,7 +322,6 @@ app.post('/api/reports', async (req, res) => {
             const reportDoc = await transaction.get(reportRef);
 
             if (!reportDoc.exists) {
-                // Si el ticket no existe, lo creamos
                 const newReport = {
                     totalReports: 1,
                     reasons: { [reason]: 1 },
@@ -335,7 +330,6 @@ app.post('/api/reports', async (req, res) => {
                 };
                 transaction.set(reportRef, newReport);
             } else {
-                // Si el ticket ya existe, incrementamos los contadores
                 const updateData = {
                     totalReports: admin.firestore.FieldValue.increment(1),
                     [`reasons.${reason}`]: admin.firestore.FieldValue.increment(1),
@@ -349,6 +343,146 @@ app.post('/api/reports', async (req, res) => {
     } catch (error) {
         console.error('Error al procesar el reporte agregado:', error);
         res.status(500).json({ message: 'Error interno al procesar el reporte.' });
+    }
+});
+
+// --- [NUEVO] Endpoints para el Mapa Comunitario ---
+
+// GET /api/location-categories - Obtiene todas las categorías de lugares
+app.get('/api/location-categories', async (req, res) => {
+    try {
+        const categoriesSnapshot = await db.collection('location_categories').where('isOfficial', '==', true).get();
+        const categories = categoriesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        res.status(200).json(categories);
+    } catch (error) {
+        console.error('Error al obtener categorías de lugares:', error);
+        res.status(500).json({ message: 'Error interno al obtener las categorías.' });
+    }
+});
+
+// GET /api/locations - Obtiene lugares, con filtro opcional por categoría
+app.get('/api/locations', async (req, res) => {
+    const { category } = req.query;
+    try {
+        let query = db.collection('locations').where('approved', '==', true);
+        if (category) {
+            query = query.where('category', '==', category);
+        }
+        const locationsSnapshot = await query.get();
+        const locations = locationsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        res.status(200).json(locations);
+    } catch (error) {
+        console.error('Error al obtener lugares:', error);
+        res.status(500).json({ message: 'Error interno al obtener los lugares.' });
+    }
+});
+
+// GET /api/locations/:locationId - Obtiene los detalles de un lugar específico
+app.get('/api/locations/:locationId', async (req, res) => {
+    const { locationId } = req.params;
+    try {
+        const locationDoc = await db.collection('locations').doc(locationId).get();
+        if (!locationDoc.exists) {
+            return res.status(404).json({ message: 'Lugar no encontrado.' });
+        }
+        const reviewsSnapshot = await db.collection('locations').doc(locationId).collection('reviews').orderBy('createdAt', 'desc').limit(10).get();
+        const reviews = reviewsSnapshot.docs.map(doc => doc.data());
+
+        res.status(200).json({
+            ...locationDoc.data(),
+            id: locationDoc.id,
+            reviews: reviews
+        });
+    } catch (error) {
+        console.error(`Error al obtener detalles del lugar ${locationId}:`, error);
+        res.status(500).json({ message: 'Error interno al obtener los detalles del lugar.' });
+    }
+});
+
+// POST /api/locations - Permite a un usuario sugerir un nuevo lugar
+app.post('/api/locations', async (req, res) => {
+    const { uid } = req.user;
+    const { name, category, address, latitude, longitude, description, contact } = req.body;
+
+    if (!name || !category || !latitude || !longitude) {
+        return res.status(400).json({ message: 'Nombre, categoría y coordenadas son requeridos.' });
+    }
+
+    try {
+        const newLocation = {
+            name,
+            category,
+            address: address || '',
+            description: description || '',
+            contact: contact || {},
+            coordinates: new admin.firestore.GeoPoint(parseFloat(latitude), parseFloat(longitude)),
+            submittedBy: uid,
+            approved: true, // Aprobación automática por ahora
+            createdAt: new Date().toISOString(),
+            averageRating: 0,
+            ratingCount: 0,
+            gallery: []
+        };
+        const docRef = await db.collection('locations').add(newLocation);
+        res.status(201).json({ message: '¡Gracias por tu aporte! El lugar ha sido añadido al mapa.', locationId: docRef.id });
+    } catch (error) {
+        console.error('Error al crear un nuevo lugar:', error);
+        res.status(500).json({ message: 'Error interno al crear el lugar.' });
+    }
+});
+
+// POST /api/locations/:locationId/review - Permite a un usuario dejar una reseña
+app.post('/api/locations/:locationId/review', async (req, res) => {
+    const { uid } = req.user;
+    const { locationId } = req.params;
+    const { rating, comment } = req.body;
+
+    if (!rating || rating < 1 || rating > 5) {
+        return res.status(400).json({ message: 'Se requiere una calificación válida entre 1 y 5.' });
+    }
+
+    const locationRef = db.collection('locations').doc(locationId);
+    const reviewRef = locationRef.collection('reviews').doc(uid); // Usamos UID para permitir solo una reseña por usuario
+
+    try {
+        const userProfileDoc = await db.collection('users').doc(uid).get();
+        if (!userProfileDoc.exists) {
+            return res.status(404).json({ message: 'Perfil de usuario no encontrado.' });
+        }
+        const userProfile = userProfileDoc.data();
+
+        await db.runTransaction(async (transaction) => {
+            const locationDoc = await transaction.get(locationRef);
+            if (!locationDoc.exists) {
+                throw new Error("El lugar ya no existe.");
+            }
+
+            const newReview = {
+                userId: uid,
+                userName: userProfile.name,
+                userProfilePic: userProfile.profilePictureUrl || '',
+                rating,
+                comment: comment || '',
+                createdAt: new Date().toISOString()
+            };
+            transaction.set(reviewRef, newReview);
+
+            // Actualizar la calificación promedio
+            const oldRatingCount = locationDoc.data().ratingCount || 0;
+            const oldAverageRating = locationDoc.data().averageRating || 0;
+            const newRatingCount = oldRatingCount + 1;
+            const newAverageRating = ((oldAverageRating * oldRatingCount) + rating) / newRatingCount;
+
+            transaction.update(locationRef, {
+                ratingCount: newRatingCount,
+                averageRating: newAverageRating
+            });
+        });
+
+        res.status(201).json({ message: 'Reseña añadida con éxito.' });
+    } catch (error) {
+        console.error(`Error al añadir reseña a ${locationId}:`, error);
+        res.status(500).json({ message: 'Error interno al procesar la reseña.' });
     }
 });
 
