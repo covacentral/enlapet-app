@@ -1,6 +1,6 @@
 // frontend/src/ProfileLayout.jsx
-// Versión: 2.2 - Pestaña de Publicaciones Guardadas (Completo y Corregido)
-// Restaura el código completo del componente y añade la nueva pestaña "Guardados".
+// Versión: 2.3 - Pestaña del Mapa Comunitario
+// Añade la nueva pestaña "Mapa" y su ruta correspondiente.
 
 import { useState, useEffect } from 'react';
 import { NavLink, Routes, Route, Link } from 'react-router-dom';
@@ -10,7 +10,8 @@ import './App.css';
 
 // Componentes de las vistas
 import FeedPage from './FeedPage.jsx';
-import SavedPostsPage from './SavedPostsPage.jsx'; // ¡NUEVO!
+import SavedPostsPage from './SavedPostsPage.jsx';
+import MapPage from './MapPage.jsx'; // ¡NUEVO!
 import SettingsTab from './SettingsTab.jsx';
 import PetsTab from './PetsTab.jsx';
 import PetSocialProfile from './PetSocialProfile.jsx';
@@ -18,7 +19,6 @@ import LoadingComponent from './LoadingComponent.jsx';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-// --- Componentes Internos (Código Restaurado) ---
 const PetBubble = ({ pet }) => (
   <Link to={`/dashboard/pet/${pet.id}`} className="pet-bubble" title={pet.name}>
     {pet.petPictureUrl ? <img src={pet.petPictureUrl} alt={pet.name} /> : <span>🐾</span>}
@@ -32,8 +32,6 @@ const LogoutIcon = () => (
     <line x1="21" y1="12" x2="9" y2="12" />
   </svg>
 );
-
-const GalleryTab = () => <h2 style={{padding: '2rem', textAlign: 'center'}}>Mi Galería (En construcción)</h2>;
 
 const ConfirmLogoutModal = ({ onConfirm, onCancel }) => (
   <div className="modal-overlay">
@@ -54,7 +52,6 @@ function ProfileLayout({ user }) {
   const [loading, setLoading] = useState(true);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  // --- Lógica de Obtención de Datos (Código Restaurado) ---
   const fetchAllData = async () => {
     if (!user) return;
     setLoading(true);
@@ -115,9 +112,9 @@ function ProfileLayout({ user }) {
         </div>
       </header>
 
-      {/* La barra de pestañas ahora incluye "Guardados" */}
-      <nav className="profile-tabs">
+      <nav className="profile-tabs profile-tabs-five">
         <NavLink to="/dashboard" end className={({ isActive }) => isActive ? 'active' : ''}>Inicio</NavLink>
+        <NavLink to="/dashboard/map" className={({ isActive }) => isActive ? 'active' : ''}>Mapa</NavLink>
         <NavLink to="/dashboard/saved" className={({ isActive }) => isActive ? 'active' : ''}>Guardados</NavLink>
         <NavLink to="/dashboard/pets" className={({ isActive }) => isActive ? 'active' : ''}>Mascotas</NavLink>
         <div className="profile-tab-wrapper">
@@ -131,6 +128,7 @@ function ProfileLayout({ user }) {
       <main className="tab-content">
         <Routes>
           <Route index element={<FeedPage />} />
+          <Route path="map" element={<MapPage />} />
           <Route path="saved" element={<SavedPostsPage />} />
           <Route path="pets" element={<PetsTab user={user} initialPets={pets} onPetsUpdate={fetchAllData} />} />
           <Route path="settings" element={<SettingsTab user={user} userProfile={userProfile} onProfileUpdate={fetchAllData} />} />
