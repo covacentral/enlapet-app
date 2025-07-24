@@ -1,17 +1,16 @@
 // frontend/src/MapPage.jsx
-// Versión: 1.0 - Página del Mapa Comunitario
-// Muestra un mapa interactivo con lugares pet-friendly, filtros y opción de añadir.
+// Versión: 1.1 - Corregido y Rediseñado
+// Soluciona el bug de carga de categorías y cambia el tema del mapa a uno oscuro.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { auth } from './firebase';
 import LoadingComponent from './LoadingComponent';
-import AddLocationModal from './AddLocationModal'; // Lo crearemos en el siguiente paso
+import AddLocationModal from './AddLocationModal';
 import { Plus } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-// Posición inicial del mapa (centrado en Colombia)
 const initialPosition = [4.5709, -74.2973];
 
 function MapPage() {
@@ -22,7 +21,7 @@ function MapPage() {
   const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const fetchData = useCallback(async () => {
+  const fetchMapData = useCallback(async (categoryFilter) => {
     setIsLoading(true);
     setError(null);
     try {
@@ -32,22 +31,26 @@ function MapPage() {
       
       const categoryUrl = `${API_URL}/api/location-categories`;
       let locationsUrl = `${API_URL}/api/locations`;
-      if (activeCategory) {
-        locationsUrl += `?category=${activeCategory}`;
+      if (categoryFilter) {
+        locationsUrl += `?category=${categoryFilter}`;
       }
 
+      // Hacemos las peticiones en paralelo
       const [categoriesRes, locationsRes] = await Promise.all([
-        fetch(categoryUrl, { headers: { 'Authorization': `Bearer ${idToken}` } }),
+        // Solo pedimos las categorías si aún no las tenemos
+        categories.length === 0 ? fetch(categoryUrl, { headers: { 'Authorization': `Bearer ${idToken}` } }) : Promise.resolve(null),
         fetch(locationsUrl, { headers: { 'Authorization': `Bearer ${idToken}` } })
       ]);
 
-      if (!categoriesRes.ok) throw new Error('No se pudieron cargar las categorías.');
+      if (categoriesRes && !categoriesRes.ok) throw new Error('No se pudieron cargar las categorías.');
       if (!locationsRes.ok) throw new Error('No se pudieron cargar los lugares.');
 
-      const categoriesData = await categoriesRes.json();
+      if (categoriesRes) {
+        const categoriesData = await categoriesRes.json();
+        setCategories(categoriesData);
+      }
+      
       const locationsData = await locationsRes.json();
-
-      setCategories(categoriesData);
       setLocations(locationsData);
 
     } catch (err) {
@@ -55,23 +58,23 @@ function MapPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [activeCategory]);
+  }, [categories]); // Dependemos de 'categories' para no volver a pedirlas
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchMapData(activeCategory);
+  }, [activeCategory]); // Se ejecuta solo cuando cambia el filtro
 
   const handleCategoryFilter = (categoryKey) => {
     setActiveCategory(prev => prev === categoryKey ? null : categoryKey);
   };
   
-  if (isLoading && locations.length === 0) {
+  if (isLoading && categories.length === 0) {
       return <LoadingComponent text="Cargando el mapa comunitario..." />;
   }
 
   return (
     <>
-      {isModalOpen && <AddLocationModal categories={categories} onClose={() => setIsModalOpen(false)} onLocationAdded={fetchData} />}
+      {isModalOpen && <AddLocationModal categories={categories} onClose={() => setIsModalOpen(false)} onLocationAdded={() => fetchMapData(activeCategory)} />}
       
       <div className="map-page-container">
         <div className="map-header">
@@ -104,8 +107,8 @@ function MapPage() {
         <div className="map-wrapper">
           <MapContainer center={initialPosition} zoom={6} scrollWheelZoom={true} className="leaflet-container">
             <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
             />
             {locations.map(loc => (
               <Marker key={loc.id} position={[loc.coordinates._latitude, loc.coordinates._longitude]}>
