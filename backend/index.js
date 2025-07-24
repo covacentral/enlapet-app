@@ -1,6 +1,6 @@
 // backend/index.js
-// Versión: 7.0 - Sistema de Reportes (Backend)
-// Introduce el endpoint POST /api/reports para la moderación de contenido.
+// Versión: 7.1 - Sistema de Reportes (Backend) Corregido
+// Introduce correctamente el endpoint POST /api/reports para la moderación.
 
 require('dotenv').config();
 const express = require('express');
@@ -76,7 +76,7 @@ const authenticateUser = async (req, res, next) => {
 };
 
 // --- Endpoint Raíz ---
-app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v7.0 - Sistema de Reportes Implementado' }));
+app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v7.1 - Sistema de Reportes Corregido' }));
 
 // --- Endpoints Públicos (No requieren autenticación) ---
 app.post('/api/register', async (req, res) => {try {const { email, password, name } = req.body;if (!email || !password || !name) {return res.status(400).json({ message: 'Nombre, email y contraseña son requeridos.' });}const userRecord = await auth.createUser({ email, password, displayName: name });const newUser = {name,email,createdAt: new Date().toISOString(),userType: 'personal',profilePictureUrl: '',coverPhotoUrl: '',bio: '',phone: '',location: { country: 'Colombia', department: '', city: '' },privacySettings: { profileVisibility: 'public', showEmail: 'private' }};await db.collection('users').doc(userRecord.uid).set(newUser);res.status(201).json({ message: 'Usuario registrado con éxito', uid: userRecord.uid });} catch (error) {console.error('Error en /api/register:', error);if (error.code === 'auth/email-already-exists') {return res.status(409).json({ message: 'El correo electrónico ya está en uso.' });}if (error.code === 'auth/invalid-password') {return res.status(400).json({ message: 'La contraseña debe tener al menos 6 caracteres.' });}res.status(500).json({ message: 'Error al registrar el usuario.' });}});
@@ -102,93 +102,53 @@ app.get('/api/feed', async (req, res) => {
     const { uid } = req.user;
     const { followedCursor, discoveryCursor } = req.query;
     const POSTS_PER_PAGE = 10;
-    const FOLLOWED_POSTS_RATIO = 0.7; // 70% de posts seguidos
-
+    const FOLLOWED_POSTS_RATIO = 0.7;
     try {
         const followingSnapshot = await db.collection('users').doc(uid).collection('following').get();
         const followedIds = followingSnapshot.docs.map(doc => doc.id);
-
         let followedPosts = [];
-        let discoveryPosts = [];
-
         if (followedIds.length > 0) {
-            let followedQuery = db.collection('posts')
-                .where('authorId', 'in', followedIds)
-                .orderBy('createdAt', 'desc');
-            
+            let followedQuery = db.collection('posts').where('authorId', 'in', followedIds).orderBy('createdAt', 'desc');
             if (followedCursor) {
                 followedQuery = followedQuery.startAfter(new Date(followedCursor));
             }
-
             const followedSnapshot = await followedQuery.limit(POSTS_PER_PAGE * FOLLOWED_POSTS_RATIO).get();
             followedPosts = followedSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         }
-
         const discoveryLimit = POSTS_PER_PAGE - followedPosts.length;
-
+        let discoveryPosts = [];
         if (discoveryLimit > 0) {
-            const userDoc = await db.collection('users').doc(uid).get();
-            const userLocation = userDoc.exists ? userDoc.data().location : null;
             let discoveryQuery = db.collection('posts').orderBy('createdAt', 'desc');
             const exclusionIds = [...followedIds, uid];
-            
             if (discoveryCursor) {
                 discoveryQuery = discoveryQuery.startAfter(new Date(discoveryCursor));
             }
-            
             const discoverySnapshot = await discoveryQuery.limit(discoveryLimit).get();
-            discoveryPosts = discoverySnapshot.docs
-                .map(doc => ({ id: doc.id, ...doc.data() }))
-                .filter(post => !exclusionIds.includes(post.authorId));
+            discoveryPosts = discoverySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(post => !exclusionIds.includes(post.authorId));
         }
-        
         let combinedPosts = [...followedPosts, ...discoveryPosts];
         combinedPosts.sort(() => Math.random() - 0.5);
-
         const authorIds = [...new Set(combinedPosts.map(p => p.authorId))];
-        const authorPromises = [];
+        const authorsData = {};
         if (authorIds.length > 0) {
-            authorIds.forEach(id => {
-                authorPromises.push(db.collection('users').doc(id).get());
-                authorPromises.push(db.collection('pets').doc(id).get());
+            const authorPromises = authorIds.map(id => db.collection('users').doc(id).get().then(doc => doc.exists ? doc : db.collection('pets').doc(id).get()));
+            const authorSnapshots = await Promise.all(authorPromises);
+            authorSnapshots.forEach(doc => {
+                if (doc.exists) {
+                    const data = doc.data();
+                    authorsData[doc.id] = { id: doc.id, name: data.name, profilePictureUrl: data.profilePictureUrl || data.petPictureUrl || '' };
+                }
             });
         }
-        
-        const authorSnapshots = await Promise.all(authorPromises);
-        const authorsData = {};
-        authorSnapshots.forEach(doc => {
-            if (doc.exists) {
-                const data = doc.data();
-                authorsData[doc.id] = {
-                    id: doc.id,
-                    name: data.name,
-                    profilePictureUrl: data.profilePictureUrl || data.petPictureUrl || ''
-                };
-            }
-        });
-
-        const finalPosts = combinedPosts.map(post => ({
-            ...post,
-            author: authorsData[post.authorId] || { name: 'Autor Desconocido' }
-        }));
-
+        const finalPosts = combinedPosts.map(post => ({ ...post, author: authorsData[post.authorId] || { name: 'Autor Desconocido' } }));
         const nextFollowedCursor = followedPosts.length > 0 ? followedPosts[followedPosts.length - 1].createdAt : null;
         const nextDiscoveryCursor = discoveryPosts.length > 0 ? discoveryPosts[discoveryPosts.length - 1].createdAt : null;
-
-        res.status(200).json({
-            posts: finalPosts,
-            nextCursors: {
-                followedCursor: nextFollowedCursor,
-                discoveryCursor: nextDiscoveryCursor
-            }
-        });
-
+        res.status(200).json({ posts: finalPosts, nextCursors: { followedCursor: nextFollowedCursor, discoveryCursor: nextDiscoveryCursor } });
     } catch (error) {
         console.error('Error en GET /api/feed:', error);
         res.status(500).json({ message: 'Error al obtener el feed.' });
     }
 });
-
 
 // --- Endpoints de Publicaciones (Posts) ---
 app.post('/api/posts', upload.single('postImage'), async (req, res) => {
@@ -251,8 +211,8 @@ app.post('/api/posts', upload.single('postImage'), async (req, res) => {
     blobStream.end(req.file.buffer);
 });
 app.get('/api/posts/by-author/:authorId', async (req, res) => {try {const { authorId } = req.params;const postsQuery = await db.collection('posts').where('authorId', '==', authorId).orderBy('createdAt', 'desc').get();const posts = postsQuery.docs.map(doc => ({ id: doc.id, ...doc.data() }));res.status(200).json(posts);} catch (error) {console.error(`Error fetching posts for author ${req.params.authorId}:`, error);res.status(500).json({ message: 'Error al obtener las publicaciones.' });}});
-app.post('/api/posts/:postId/like', async (req, res) => {const { uid } = req.user;const { postId } = req.params;const postRef = db.collection('posts').doc(postId);const likeRef = postRef.collection('likes').doc(uid);try {await db.runTransaction(async (t) => {const likeDoc = await t.get(likeRef);if (likeDoc.exists) {console.log('El usuario ya ha dado like a este post.');return;}t.set(likeRef, { likedAt: new Date() });t.update(postRef, { likesCount: admin.firestore.FieldValue.increment(1) });});res.status(200).json({ message: 'Like añadido.' });} catch (error) {console.error('Error al dar like:', error);res.status(500).json({ message: 'No se pudo añadir el like.' });}});
-app.delete('/api/posts/:postId/unlike', async (req, res) => {const { uid } = req.user;const { postId } = req.params;const postRef = db.collection('posts').doc(postId);const likeRef = postRef.collection('likes').doc(uid);try {await db.runTransaction(async (t) => {const likeDoc = await t.get(likeRef);if (!likeDoc.exists) {console.log('El usuario no había dado like a este post.');return;}t.delete(likeRef);t.update(postRef, { likesCount: admin.firestore.FieldValue.increment(-1) });});res.status(200).json({ message: 'Like eliminado.' });} catch (error) {console.error('Error al quitar like:', error);res.status(500).json({ message: 'No se pudo quitar el like.' });}});
+app.post('/api/posts/:postId/like', async (req, res) => {const { uid } = req.user;const { postId } = req.params;const postRef = db.collection('posts').doc(postId);const likeRef = postRef.collection('likes').doc(uid);try {await db.runTransaction(async (t) => {const likeDoc = await t.get(likeRef);if (likeDoc.exists) {return;}t.set(likeRef, { likedAt: new Date() });t.update(postRef, { likesCount: admin.firestore.FieldValue.increment(1) });});res.status(200).json({ message: 'Like añadido.' });} catch (error) {console.error('Error al dar like:', error);res.status(500).json({ message: 'No se pudo añadir el like.' });}});
+app.delete('/api/posts/:postId/unlike', async (req, res) => {const { uid } = req.user;const { postId } = req.params;const postRef = db.collection('posts').doc(postId);const likeRef = postRef.collection('likes').doc(uid);try {await db.runTransaction(async (t) => {const likeDoc = await t.get(likeRef);if (!likeDoc.exists) {return;}t.delete(likeRef);t.update(postRef, { likesCount: admin.firestore.FieldValue.increment(-1) });});res.status(200).json({ message: 'Like eliminado.' });} catch (error) {console.error('Error al quitar like:', error);res.status(500).json({ message: 'No se pudo quitar el like.' });}});
 app.post('/api/posts/like-statuses', async (req, res) => {const { uid } = req.user;const { postIds } = req.body;if (!Array.isArray(postIds) || postIds.length === 0) return res.status(200).json({});try {const likePromises = postIds.map(postId => db.collection('posts').doc(postId).collection('likes').doc(uid).get());const likeSnapshots = await Promise.all(likePromises);const statuses = {};likeSnapshots.forEach((doc, index) => {const postId = postIds[index];statuses[postId] = doc.exists;});res.status(200).json(statuses);} catch (error) {console.error('Error al verificar estados de likes:', error);res.status(500).json({ message: 'No se pudieron verificar los likes.' });}});
 app.get('/api/posts/:postId/comments', async (req, res) => {const { postId } = req.params;try {const commentsQuery = await db.collection('posts').doc(postId).collection('comments').orderBy('createdAt', 'asc').get();const comments = commentsQuery.docs.map(doc => doc.data());res.status(200).json(comments);} catch (error) {console.error('Error al obtener comentarios:', error);res.status(500).json({ message: 'No se pudieron obtener los comentarios.' });}});
 app.post('/api/posts/:postId/comment', async (req, res) => {const { uid } = req.user;const { postId } = req.params;const { text } = req.body;if (!text || text.trim() === '') {return res.status(400).json({ message: 'El comentario no puede estar vacío.' });}const postRef = db.collection('posts').doc(postId);const commentRef = postRef.collection('comments').doc();const userRef = db.collection('users').doc(uid);try {await db.runTransaction(async (t) => {const userDoc = await t.get(userRef);if (!userDoc.exists) {throw new Error("El usuario que comenta no existe.");}const userData = userDoc.data();const newComment = {id: commentRef.id,authorId: uid,authorName: userData.name,authorProfilePic: userData.profilePictureUrl || '',text,createdAt: new Date().toISOString()};t.set(commentRef, newComment);t.update(postRef, { commentsCount: admin.firestore.FieldValue.increment(1) });});const createdComment = (await commentRef.get()).data();res.status(201).json(createdComment);} catch (error) {console.error('Error al añadir comentario:', error);res.status(500).json({ message: 'No se pudo añadir el comentario.' });}});
@@ -345,6 +305,35 @@ app.get('/api/user/saved-posts', async (req, res) => {
     } catch (error) {
         console.error(`[CRITICAL] Error en GET /api/user/saved-posts para user ${uid}:`, error);
         res.status(500).json({ message: 'Error al obtener las publicaciones guardadas.' });
+    }
+});
+
+// --- [NUEVO] Endpoint para el Sistema de Reportes ---
+app.post('/api/reports', async (req, res) => {
+    const { uid } = req.user;
+    const { contentId, contentType, reason, comments } = req.body;
+
+    if (!contentId || !contentType || !reason) {
+        return res.status(400).json({ message: 'Se requiere ID del contenido, tipo y razón para el reporte.' });
+    }
+
+    try {
+        const newReport = {
+            reporterId: uid,
+            reportedContentId: contentId,
+            reportedContentType: contentType,
+            reason: reason,
+            comments: comments || '', // Opcional
+            status: 'pending',
+            createdAt: new Date().toISOString(),
+        };
+
+        await db.collection('reports').add(newReport);
+
+        res.status(201).json({ message: 'Reporte enviado con éxito. Gracias por ayudarnos a mantener la comunidad segura.' });
+    } catch (error) {
+        console.error('Error al crear el reporte:', error);
+        res.status(500).json({ message: 'Error interno al procesar el reporte.' });
     }
 });
 
