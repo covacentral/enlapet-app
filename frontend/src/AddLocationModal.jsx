@@ -1,6 +1,6 @@
 // frontend/src/AddLocationModal.jsx
-// Versión: 1.0 - Modal para Añadir Lugares
-// Formulario para que los usuarios sugieran nuevos puntos en el mapa.
+// Versión: 1.1 - Rediseñado a una Columna
+// Mejora la UX con un diseño de una sola columna y una mejor estructura.
 
 import React, { useState } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
@@ -49,6 +49,10 @@ function AddLocationModal({ categories, onClose, onLocationAdded }) {
     if (!coordinates) {
       setMessage('Por favor, selecciona una ubicación en el mapa.');
       return;
+    }
+    if (!formData.category) {
+        setMessage('Por favor, selecciona una categoría.');
+        return;
     }
     setIsLoading(true);
     setMessage('Añadiendo lugar...');
@@ -101,47 +105,46 @@ function AddLocationModal({ categories, onClose, onLocationAdded }) {
           </button>
         </div>
         <form onSubmit={handleSubmit} className="add-location-form">
-          <div className="form-column">
-            <div className="form-group">
-              <label htmlFor="name">Nombre del Lugar</label>
-              <input type="text" id="name" name="name" onChange={handleChange} required />
-            </div>
-            <div className="form-group">
-              <label htmlFor="category">Categoría</label>
-              <select id="category" name="category" onChange={handleChange} required>
-                <option value="">Selecciona una categoría...</option>
-                {categories.map(cat => (
-                  <option key={cat.id} value={cat.key}>{cat.name}</option>
-                ))}
-              </select>
-            </div>
-             <div className="form-group">
-              <label htmlFor="description">Descripción (Opcional)</label>
-              <textarea id="description" name="description" rows="3" onChange={handleChange}></textarea>
-            </div>
-            <div className="form-group">
-              <label htmlFor="address">Dirección (Opcional)</label>
-              <input type="text" id="address" name="address" onChange={handleChange} />
-            </div>
-            <div className="form-group">
-              <label htmlFor="phone">Teléfono de Contacto (Opcional)</label>
-              <input type="tel" id="phone" name="phone" onChange={handleChange} />
-            </div>
+          {/* El formulario ahora es una sola columna */}
+          <div className="form-group">
+            <label htmlFor="name">Nombre del Lugar</label>
+            <input type="text" id="name" name="name" onChange={handleChange} required />
           </div>
-          <div className="map-column">
+          <div className="form-group">
+            <label htmlFor="category">Categoría</label>
+            <select id="category" name="category" onChange={handleChange} required value={formData.category}>
+              <option value="" disabled>Selecciona una categoría...</option>
+              {categories.map(cat => (
+                <option key={cat.id} value={cat.key}>{cat.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="form-group">
             <label>Selecciona la ubicación en el mapa</label>
             <div className="mini-map-wrapper">
               <MapContainer center={initialPosition} zoom={6} className="leaflet-container mini-map">
-                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
                 <LocationPicker onLocationSelect={handleLocationSelect} />
               </MapContainer>
             </div>
             {!coordinates && <small className="map-prompt">Haz clic en el mapa para marcar el punto exacto.</small>}
             {coordinates && <small className="map-prompt success">¡Ubicación seleccionada!</small>}
           </div>
-          <div className="modal-footer full-width">
+           <div className="form-group">
+            <label htmlFor="description">Descripción (Opcional)</label>
+            <textarea id="description" name="description" rows="3" onChange={handleChange}></textarea>
+          </div>
+          <div className="form-group">
+            <label htmlFor="address">Dirección (Opcional)</label>
+            <input type="text" id="address" name="address" onChange={handleChange} />
+          </div>
+          <div className="form-group">
+            <label htmlFor="phone">Teléfono de Contacto (Opcional)</label>
+            <input type="tel" id="phone" name="phone" onChange={handleChange} />
+          </div>
+          <div className="modal-footer">
             {message && <p className="response-message">{message}</p>}
-            <button type="submit" className="publish-button" disabled={isLoading || !coordinates}>
+            <button type="submit" className="publish-button" disabled={isLoading || !coordinates || !formData.category}>
               {isLoading ? 'Guardando...' : 'Añadir Lugar al Mapa'}
             </button>
           </div>

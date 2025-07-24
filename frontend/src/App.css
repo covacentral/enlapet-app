@@ -1368,11 +1368,12 @@ input::-ms-clear {
 }
 
 .add-location-form {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  display: flex; /* Cambiado de grid a flex */
+  flex-direction: column; /* Apila los elementos verticalmente */
+  gap: 15px; /* Espacio entre los grupos del formulario */
   padding: 20px;
 }
+
 .form-column, .map-column {
   display: flex;
   flex-direction: column;
