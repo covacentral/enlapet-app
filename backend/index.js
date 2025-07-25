@@ -1,6 +1,6 @@
 // backend/index.js
-// Versión: 9.0 - Módulo de Eventos Comunitarios (Completo)
-// Introduce los endpoints para gestionar categorías y eventos del mapa.
+// Versión: 9.1 - Corrección del Endpoint de Eventos
+// Soluciona un error en la consulta GET /api/events.
 
 require('dotenv').config();
 const express = require('express');
@@ -76,7 +76,7 @@ const authenticateUser = async (req, res, next) => {
 };
 
 // --- Endpoint Raíz ---
-app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v9.0 - Módulo de Eventos' }));
+app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v9.1 - Corrección de Eventos' }));
 
 // --- Endpoints Públicos (No requieren autenticación) ---
 app.post('/api/register', async (req, res) => {try {const { email, password, name } = req.body;if (!email || !password || !name) {return res.status(400).json({ message: 'Nombre, email y contraseña son requeridos.' });}const userRecord = await auth.createUser({ email, password, displayName: name });const newUser = {name,email,createdAt: new Date().toISOString(),userType: 'personal',profilePictureUrl: '',coverPhotoUrl: '',bio: '',phone: '',location: { country: 'Colombia', department: '', city: '' },privacySettings: { profileVisibility: 'public', showEmail: 'private' }};await db.collection('users').doc(userRecord.uid).set(newUser);res.status(201).json({ message: 'Usuario registrado con éxito', uid: userRecord.uid });} catch (error) {console.error('Error en /api/register:', error);if (error.code === 'auth/email-already-exists') {return res.status(409).json({ message: 'El correo electrónico ya está en uso.' });}if (error.code === 'auth/invalid-password') {return res.status(400).json({ message: 'La contraseña debe tener al menos 6 caracteres.' });}res.status(500).json({ message: 'Error al registrar el usuario.' });}});
@@ -475,7 +475,8 @@ app.post('/api/locations/:locationId/review', async (req, res) => {
     }
 });
 
-// --- [NUEVO] Endpoints para el Módulo de Eventos ---
+// --- Endpoints para el Módulo de Eventos (CORREGIDO) ---
+
 app.get('/api/event-categories', async (req, res) => {
     try {
         const categoriesSnapshot = await db.collection('event_categories').where('isOfficial', '==', true).get();
@@ -486,6 +487,7 @@ app.get('/api/event-categories', async (req, res) => {
         res.status(500).json({ message: 'Error interno al obtener las categorías.' });
     }
 });
+
 app.get('/api/events', async (req, res) => {
     const { status } = req.query;
     try {
@@ -503,6 +505,7 @@ app.get('/api/events', async (req, res) => {
         res.status(500).json({ message: 'Error interno al obtener los eventos.' });
     }
 });
+
 app.get('/api/events/:eventId', async (req, res) => {
     const { eventId } = req.params;
     try {
@@ -516,25 +519,32 @@ app.get('/api/events/:eventId', async (req, res) => {
         res.status(500).json({ message: 'Error interno al obtener los detalles del evento.' });
     }
 });
+
 app.post('/api/events', upload.single('coverImage'), async (req, res) => {
-    const { uid, name: organizerName } = req.user;
+    const { uid } = req.user;
+    const { name: organizerName } = auth.getUser(uid); // Obtenemos el nombre del usuario autenticado
     const { name, description, category, startDate, endDate, locationId, customAddress, customLat, customLng, contactPhone, contactEmail } = req.body;
+
     if (!name || !category || !startDate || !endDate || !req.file) {
         return res.status(400).json({ message: 'Nombre, categoría, fechas y una imagen de portada son requeridos.' });
     }
+
     try {
         const eventRef = db.collection('events').doc();
         const filePath = `events/${eventRef.id}/${Date.now()}-${req.file.originalname}`;
         const fileUpload = bucket.file(filePath);
         const blobStream = fileUpload.createWriteStream({ metadata: { contentType: req.file.mimetype } });
+
         blobStream.on('error', (error) => {
             console.error("Error en la subida de la imagen del evento:", error);
             return res.status(500).json({ message: 'Error durante la subida de la imagen.' });
         });
+
         blobStream.on('finish', async () => {
             try {
                 await fileUpload.makePublic();
                 const imageUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
+
                 const newEvent = {
                     name,
                     description,
@@ -545,9 +555,13 @@ app.post('/api/events', upload.single('coverImage'), async (req, res) => {
                     status: 'planned',
                     startDate: new Date(startDate).toISOString(),
                     endDate: new Date(endDate).toISOString(),
-                    contact: { phone: contactPhone || '', email: contactEmail || '' },
+                    contact: {
+                        phone: contactPhone || '',
+                        email: contactEmail || ''
+                    },
                     createdAt: new Date().toISOString(),
                 };
+
                 if (locationId) {
                     newEvent.locationId = locationId;
                 } else if (customAddress && customLat && customLng) {
@@ -558,6 +572,7 @@ app.post('/api/events', upload.single('coverImage'), async (req, res) => {
                 } else {
                     return res.status(400).json({ message: 'Se requiere una ubicación (existente o personalizada).' });
                 }
+
                 await eventRef.set(newEvent);
                 res.status(201).json({ message: '¡Evento creado con éxito!', eventId: eventRef.id });
             } catch (error) {
@@ -565,19 +580,23 @@ app.post('/api/events', upload.single('coverImage'), async (req, res) => {
                 return res.status(500).json({ message: 'Error al guardar el evento.' });
             }
         });
+
         blobStream.end(req.file.buffer);
     } catch (error) {
         console.error('Error al crear un nuevo evento:', error);
         res.status(500).json({ message: 'Error interno al crear el evento.' });
     }
 });
+
 app.put('/api/events/:eventId', async (req, res) => {
     const { uid } = req.user;
     const { eventId } = req.params;
     const { status } = req.body;
+
     if (!status || !['planned', 'active', 'finished'].includes(status)) {
         return res.status(400).json({ message: 'Se requiere un estado válido (planned, active, finished).' });
     }
+
     const eventRef = db.collection('events').doc(eventId);
     try {
         const eventDoc = await eventRef.get();
@@ -587,8 +606,10 @@ app.put('/api/events/:eventId', async (req, res) => {
         if (eventDoc.data().organizerId !== uid) {
             return res.status(403).json({ message: 'No autorizado para modificar este evento.' });
         }
+
         await eventRef.update({ status });
         res.status(200).json({ message: `El estado del evento ha sido actualizado a: ${status}` });
+
     } catch (error) {
         console.error(`Error al actualizar el evento ${eventId}:`, error);
         res.status(500).json({ message: 'Error interno al actualizar el evento.' });

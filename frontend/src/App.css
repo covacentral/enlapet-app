@@ -1262,7 +1262,15 @@ input::-ms-clear {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  flex-wrap: wrap; /* Permite que los elementos pasen a la siguiente línea */
+  gap: 10px; /* Añade espacio entre los elementos cuando se envuelven */
 }
+
+.map-header .tab-title {
+  width: 100%; /* Ocupa todo el ancho en la primera línea */
+  text-align: left;
+}
+
 .add-location-button {
   background-color: var(--primary-accent);
   color: var(--brand-cream);
