@@ -1,7 +1,6 @@
 // frontend/src/PetSocialProfile.jsx
-// Versión: 2.2 - Diseño y Botón Corregidos
-// Separa el header del timeline para corregir el layout visual.
-// Repara la funcionalidad del botón "Seguir" añadiendo la API_URL.
+// Versión: 2.4 - Sintaxis de Importación Corregida
+// Se corrige un error de sintaxis en la línea de importación de React que causaba un fallo en el build.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
@@ -18,6 +17,7 @@ function PetSocialProfile() {
     const [petProfile, setPetProfile] = useState(null);
     const [posts, setPosts] = useState([]);
     const [likedStatuses, setLikedStatuses] = useState({});
+    const [savedStatuses, setSavedStatuses] = useState({});
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
     const [isOwner, setIsOwner] = useState(false);
@@ -26,7 +26,6 @@ function PetSocialProfile() {
     const [followLoading, setFollowLoading] = useState(false);
 
     const fetchData = useCallback(async () => {
-        // No reiniciar el loading si ya tenemos datos, para una recarga más suave.
         if (!petProfile) setIsLoading(true);
         try {
             const user = auth.currentUser;
@@ -63,12 +62,20 @@ function PetSocialProfile() {
 
             if (postsData.length > 0) {
                 const postIds = postsData.map(p => p.id);
-                const response = await fetch(`${API_URL}/api/posts/like-statuses`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-                    body: JSON.stringify({ postIds })
-                });
-                if (response.ok) setLikedStatuses(await response.json());
+                const [likes, saves] = await Promise.all([
+                    fetch(`${API_URL}/api/posts/like-statuses`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+                        body: JSON.stringify({ postIds })
+                    }),
+                    fetch(`${API_URL}/api/posts/save-statuses`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+                        body: JSON.stringify({ postIds })
+                    })
+                ]);
+                if (likes) setLikedStatuses(likes);
+                if (saves) setSavedStatuses(saves);
             }
         } catch (err) {
             setError(err.message);
@@ -79,10 +86,9 @@ function PetSocialProfile() {
 
     useEffect(() => {
         fetchData();
-    }, [petId]); // Dependencia simplificada para evitar bucles
+    }, [petId]);
 
     const handleLikeToggle = async (postId) => {
-        // Lógica sin cambios
         const isCurrentlyLiked = !!likedStatuses[postId];
         setLikedStatuses(prev => ({ ...prev, [postId]: !isCurrentlyLiked }));
         setPosts(prevPosts => prevPosts.map(p => 
@@ -102,9 +108,27 @@ function PetSocialProfile() {
             ));
         }
     };
+    
+    const handleSaveToggle = async (postId) => {
+        const isCurrentlySaved = !!savedStatuses[postId];
+        setSavedStatuses(prev => ({ ...prev, [postId]: !isCurrentlySaved }));
+        try {
+            const user = auth.currentUser;
+            if (!user) return;
+            const idToken = await user.getIdToken();
+            const endpoint = isCurrentlySaved ? `/api/posts/${postId}/unsave` : `/api/posts/${postId}/save`;
+            const method = isCurrentlySaved ? 'DELETE' : 'POST';
+            await fetch(`${API_URL}${endpoint}`, {
+                method,
+                headers: { 'Authorization': `Bearer ${idToken}` }
+            });
+        } catch (error) {
+            console.error("Error en el toggle de guardado:", error);
+            setSavedStatuses(prev => ({ ...prev, [postId]: isCurrentlySaved }));
+        }
+    };
 
     const handleCommentAdded = (postId) => {
-        // Lógica sin cambios
         setPosts(prevPosts => prevPosts.map(p => 
             p.id === postId ? { ...p, commentsCount: p.commentsCount + 1 } : p
         ));
@@ -115,7 +139,6 @@ function PetSocialProfile() {
         const user = auth.currentUser;
         if (!user) return;
         
-        // *** CORRECCIÓN CLAVE: Añadido API_URL al endpoint ***
         const endpoint = isFollowing 
             ? `${API_URL}/api/profiles/${petId}/unfollow` 
             : `${API_URL}/api/profiles/${petId}/follow`;
@@ -123,7 +146,14 @@ function PetSocialProfile() {
         const method = isFollowing ? 'DELETE' : 'POST';
         try {
             const idToken = await user.getIdToken();
-            const response = await fetch(endpoint, { method, headers: { 'Authorization': `Bearer ${idToken}` } });
+            const response = await fetch(endpoint, { 
+                method, 
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${idToken}` 
+                },
+                body: JSON.stringify({ profileType: 'pet' }) 
+            });
             if (!response.ok) throw new Error('La acción no se pudo completar.');
             setIsFollowing(!isFollowing);
         } catch (err) {
@@ -139,7 +169,6 @@ function PetSocialProfile() {
 
     return (
         <>
-            {/* *** CORRECCIÓN ESTRUCTURAL: El div contenedor se ha eliminado *** */}
             <header className="pet-social-profile-container">
                 <div className="profile-cover-photo"></div>
                 <div className="social-profile-header">
@@ -179,7 +208,9 @@ function PetSocialProfile() {
                             key={post.id} 
                             post={post} 
                             isLiked={!!likedStatuses[post.id]}
+                            isSaved={!!savedStatuses[post.id]}
                             onLikeToggle={handleLikeToggle}
+                            onSaveToggle={handleSaveToggle}
                             onCommentAdded={handleCommentAdded}
                         />
                     ))
@@ -198,7 +229,6 @@ function PetSocialProfile() {
 
             {isCreateModalOpen && (
                 <CreatePostModal 
-                    user={auth.currentUser}
                     petProfile={petProfile}
                     onClose={() => setIsCreateModalOpen(false)}
                     onPostCreated={fetchData}
