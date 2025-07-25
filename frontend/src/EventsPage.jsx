@@ -1,12 +1,12 @@
 // frontend/src/EventsPage.jsx
-// Versión: 1.0 - Página de Eventos
-// Muestra listas de eventos y permite la creación de nuevos.
+// Versión: 1.1 - Conectar Modal de Creación (Completo)
+// Importa y renderiza el modal para crear eventos.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { auth } from './firebase';
 import LoadingComponent from './LoadingComponent';
 import EventCard from './EventCard';
-// import CreateEventModal from './CreateEventModal'; // Lo crearemos en el siguiente paso
+import CreateEventModal from './CreateEventModal';
 import { Plus } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -52,7 +52,7 @@ function EventsPage() {
 
   return (
     <>
-      {/* {isModalOpen && <CreateEventModal onClose={() => setIsModalOpen(false)} onEventCreated={fetchEvents} />} */}
+      {isModalOpen && <CreateEventModal onClose={() => setIsModalOpen(false)} onEventCreated={fetchEvents} />}
       
       <div className="events-page-container">
         <div className="events-header">
