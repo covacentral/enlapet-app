@@ -1,10 +1,11 @@
 // backend/index.js
-// Versión: 9.1 - Corrección del Endpoint de Eventos
-// Soluciona un error en la consulta GET /api/events.
+// Versión: 10.0 - Refactorización Estratégica
+// CORRECCIÓN: Se repara el endpoint POST /api/events para obtener correctamente el nombre del organizador.
+// REFACTOR: Los endpoints de Follow/Unfollow ahora soportan seguir tanto a mascotas como a otros usuarios.
 
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
+const cors =require('cors');
 const admin = require('firebase-admin');
 const multer = require('multer');
 
@@ -76,7 +77,7 @@ const authenticateUser = async (req, res, next) => {
 };
 
 // --- Endpoint Raíz ---
-app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v9.1 - Corrección de Eventos' }));
+app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v10.0 - Refactor Estratégico' }));
 
 // --- Endpoints Públicos (No requieren autenticación) ---
 app.post('/api/register', async (req, res) => {try {const { email, password, name } = req.body;if (!email || !password || !name) {return res.status(400).json({ message: 'Nombre, email y contraseña son requeridos.' });}const userRecord = await auth.createUser({ email, password, displayName: name });const newUser = {name,email,createdAt: new Date().toISOString(),userType: 'personal',profilePictureUrl: '',coverPhotoUrl: '',bio: '',phone: '',location: { country: 'Colombia', department: '', city: '' },privacySettings: { profileVisibility: 'public', showEmail: 'private' }};await db.collection('users').doc(userRecord.uid).set(newUser);res.status(201).json({ message: 'Usuario registrado con éxito', uid: userRecord.uid });} catch (error) {console.error('Error en /api/register:', error);if (error.code === 'auth/email-already-exists') {return res.status(409).json({ message: 'El correo electrónico ya está en uso.' });}if (error.code === 'auth/invalid-password') {return res.status(400).json({ message: 'La contraseña debe tener al menos 6 caracteres.' });}res.status(500).json({ message: 'Error al registrar el usuario.' });}});
@@ -475,7 +476,7 @@ app.post('/api/locations/:locationId/review', async (req, res) => {
     }
 });
 
-// --- Endpoints para el Módulo de Eventos (CORREGIDO) ---
+// --- Endpoints para el Módulo de Eventos ---
 
 app.get('/api/event-categories', async (req, res) => {
     try {
@@ -522,7 +523,7 @@ app.get('/api/events/:eventId', async (req, res) => {
 
 app.post('/api/events', upload.single('coverImage'), async (req, res) => {
     const { uid } = req.user;
-    const { name: organizerName } = auth.getUser(uid); // Obtenemos el nombre del usuario autenticado
+    // [CORRECCIÓN] Se elimina la llamada síncrona a auth.getUser().
     const { name, description, category, startDate, endDate, locationId, customAddress, customLat, customLng, contactPhone, contactEmail } = req.body;
 
     if (!name || !category || !startDate || !endDate || !req.file) {
@@ -530,6 +531,13 @@ app.post('/api/events', upload.single('coverImage'), async (req, res) => {
     }
 
     try {
+        // [CORRECCIÓN] Obtenemos el perfil del usuario desde Firestore para conseguir el nombre.
+        const userDoc = await db.collection('users').doc(uid).get();
+        if (!userDoc.exists) {
+            return res.status(404).json({ message: 'No se pudo encontrar el perfil del organizador.' });
+        }
+        const organizerName = userDoc.data().name;
+
         const eventRef = db.collection('events').doc();
         const filePath = `events/${eventRef.id}/${Date.now()}-${req.file.originalname}`;
         const fileUpload = bucket.file(filePath);
@@ -550,7 +558,7 @@ app.post('/api/events', upload.single('coverImage'), async (req, res) => {
                     description,
                     coverImage: imageUrl,
                     organizerId: uid,
-                    organizerName,
+                    organizerName, // [CORRECCIÓN] Usamos el nombre obtenido de Firestore.
                     category,
                     status: 'planned',
                     startDate: new Date(startDate).toISOString(),
@@ -570,6 +578,7 @@ app.post('/api/events', upload.single('coverImage'), async (req, res) => {
                         coordinates: new admin.firestore.GeoPoint(parseFloat(customLat), parseFloat(customLng))
                     };
                 } else {
+                    // Si no hay ubicación, no se debería llegar aquí si el frontend valida, pero es una buena salvaguarda.
                     return res.status(400).json({ message: 'Se requiere una ubicación (existente o personalizada).' });
                 }
 
@@ -616,10 +625,83 @@ app.put('/api/events/:eventId', async (req, res) => {
     }
 });
 
-// --- Endpoints de Seguimiento (Follow) ---
-app.post('/api/profiles/:profileId/follow', async (req, res) => {const { uid } = req.user;const { profileId } = req.params;if (uid === profileId) return res.status(400).json({ message: 'No puedes seguirte a ti mismo.' });const currentUserRef = db.collection('users').doc(uid);const followedPetRef = db.collection('pets').doc(profileId);try {await db.runTransaction(async (t) => {const petDoc = await t.get(followedPetRef);if (!petDoc.exists) throw new Error("La mascota que intentas seguir no existe.");t.set(currentUserRef.collection('following').doc(profileId), { followedAt: new Date() });t.set(followedPetRef.collection('followers').doc(uid), { followedAt: new Date() });});res.status(200).json({ message: 'Ahora sigues a este perfil.' });} catch (error) {console.error('Error al seguir al perfil:', error);res.status(500).json({ message: error.message || 'No se pudo completar la acción.' });}});
-app.delete('/api/profiles/:profileId/unfollow', async (req, res) => {const { uid } = req.user;const { profileId } = req.params;const currentUserRef = db.collection('users').doc(uid);const followedPetRef = db.collection('pets').doc(profileId);try {await db.runTransaction(async (t) => {t.delete(currentUserRef.collection('following').doc(profileId));t.delete(followedPetRef.collection('followers').doc(uid));});res.status(200).json({ message: 'Has dejado de seguir a este perfil.' });} catch (error) {console.error('Error al dejar de seguir al perfil:', error);res.status(500).json({ message: 'No se pudo completar la acción.' });}});
-app.get('/api/profiles/:profileId/follow-status', async (req, res) => {const { uid } = req.user;const { profileId } = req.params;try {const followDoc = await db.collection('users').doc(uid).collection('following').doc(profileId).get();res.status(200).json({ isFollowing: followDoc.exists });} catch (error) {console.error('Error al verificar el estado de seguimiento:', error);res.status(500).json({ message: 'No se pudieron verificar los likes.' });}});
+// --- [REFACTORIZADO] Endpoints de Seguimiento (Follow) ---
+app.post('/api/profiles/:profileId/follow', async (req, res) => {
+    const { uid } = req.user; // El que sigue
+    const { profileId } = req.params; // El que será seguido
+    const { profileType } = req.body; // 'pet' o 'user'
+
+    if (uid === profileId) {
+        return res.status(400).json({ message: 'No puedes seguirte a ti mismo.' });
+    }
+    if (!profileType || !['pet', 'user'].includes(profileType)) {
+        return res.status(400).json({ message: 'Se requiere un tipo de perfil válido (pet/user).' });
+    }
+
+    const currentUserRef = db.collection('users').doc(uid);
+    // La colección del perfil a seguir depende del tipo
+    const followedProfileRef = db.collection(profileType === 'pet' ? 'pets' : 'users').doc(profileId);
+
+    try {
+        await db.runTransaction(async (t) => {
+            const followedDoc = await t.get(followedProfileRef);
+            if (!followedDoc.exists) {
+                throw new Error("El perfil que intentas seguir no existe.");
+            }
+            // Añadir a la subcolección 'following' del usuario actual
+            t.set(currentUserRef.collection('following').doc(profileId), { 
+                followedAt: new Date(),
+                type: profileType 
+            });
+            // Añadir al usuario actual a la subcolección 'followers' del perfil seguido
+            t.set(followedProfileRef.collection('followers').doc(uid), { 
+                followedAt: new Date() 
+            });
+        });
+        res.status(200).json({ message: 'Ahora sigues a este perfil.' });
+    } catch (error) {
+        console.error('Error al seguir al perfil:', error);
+        res.status(500).json({ message: error.message || 'No se pudo completar la acción.' });
+    }
+});
+
+app.delete('/api/profiles/:profileId/unfollow', async (req, res) => {
+    const { uid } = req.user;
+    const { profileId } = req.params;
+    const { profileType } = req.body; // 'pet' o 'user'
+
+    if (!profileType || !['pet', 'user'].includes(profileType)) {
+        return res.status(400).json({ message: 'Se requiere un tipo de perfil válido (pet/user).' });
+    }
+
+    const currentUserRef = db.collection('users').doc(uid);
+    const followedProfileRef = db.collection(profileType === 'pet' ? 'pets' : 'users').doc(profileId);
+
+    try {
+        await db.runTransaction(async (t) => {
+            // Simplemente borramos los documentos de las subcolecciones
+            t.delete(currentUserRef.collection('following').doc(profileId));
+            t.delete(followedProfileRef.collection('followers').doc(uid));
+        });
+        res.status(200).json({ message: 'Has dejado de seguir a este perfil.' });
+    } catch (error) {
+        console.error('Error al dejar de seguir al perfil:', error);
+        res.status(500).json({ message: 'No se pudo completar la acción.' });
+    }
+});
+
+app.get('/api/profiles/:profileId/follow-status', async (req, res) => {
+    const { uid } = req.user;
+    const { profileId } = req.params;
+    try {
+        const followDoc = await db.collection('users').doc(uid).collection('following').doc(profileId).get();
+        res.status(200).json({ isFollowing: followDoc.exists });
+    } catch (error) {
+        console.error('Error al verificar el estado de seguimiento:', error);
+        res.status(500).json({ message: 'No se pudo verificar el estado de seguimiento.' });
+    }
+});
+
 
 // --- Iniciar Servidor ---
 app.listen(PORT, () => console.log(`Servidor corriendo en el puerto ${PORT}`));
