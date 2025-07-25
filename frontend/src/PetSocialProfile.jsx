@@ -1,9 +1,8 @@
 // frontend/src/PetSocialProfile.jsx
-// Versión: 2.3 - Lógica de Seguimiento Corregida
-// Se actualiza la llamada a la API para incluir el 'profileType' requerido por el backend refactorizado,
-// restaurando la funcionalidad del botón de seguir.
+// Versión: 2.4 - Sintaxis de Importación Corregida
+// Se corrige un error de sintaxis en la línea de importación de React que causaba un fallo en el build.
 
-import React, 'useState', useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { auth } from './firebase';
 import LoadingComponent from './LoadingComponent';
@@ -149,7 +148,6 @@ function PetSocialProfile() {
             const idToken = await user.getIdToken();
             const response = await fetch(endpoint, { 
                 method, 
-                // [CORRECCIÓN] Añadimos headers y body para enviar el tipo de perfil.
                 headers: { 
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${idToken}` 
