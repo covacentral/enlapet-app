@@ -1,6 +1,6 @@
 // backend/index.js
-// Versión: 8.0 - Mapa Comunitario (Lugares)
-// Introduce los endpoints para gestionar categorías, lugares y reseñas del mapa.
+// Versión: 9.0 - Módulo de Eventos Comunitarios (Completo)
+// Introduce los endpoints para gestionar categorías y eventos del mapa.
 
 require('dotenv').config();
 const express = require('express');
@@ -76,7 +76,7 @@ const authenticateUser = async (req, res, next) => {
 };
 
 // --- Endpoint Raíz ---
-app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v8.0 - Mapa Comunitario' }));
+app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v9.0 - Módulo de Eventos' }));
 
 // --- Endpoints Públicos (No requieren autenticación) ---
 app.post('/api/register', async (req, res) => {try {const { email, password, name } = req.body;if (!email || !password || !name) {return res.status(400).json({ message: 'Nombre, email y contraseña son requeridos.' });}const userRecord = await auth.createUser({ email, password, displayName: name });const newUser = {name,email,createdAt: new Date().toISOString(),userType: 'personal',profilePictureUrl: '',coverPhotoUrl: '',bio: '',phone: '',location: { country: 'Colombia', department: '', city: '' },privacySettings: { profileVisibility: 'public', showEmail: 'private' }};await db.collection('users').doc(userRecord.uid).set(newUser);res.status(201).json({ message: 'Usuario registrado con éxito', uid: userRecord.uid });} catch (error) {console.error('Error en /api/register:', error);if (error.code === 'auth/email-already-exists') {return res.status(409).json({ message: 'El correo electrónico ya está en uso.' });}if (error.code === 'auth/invalid-password') {return res.status(400).json({ message: 'La contraseña debe tener al menos 6 caracteres.' });}res.status(500).json({ message: 'Error al registrar el usuario.' });}});
@@ -346,9 +346,7 @@ app.post('/api/reports', async (req, res) => {
     }
 });
 
-// --- [NUEVO] Endpoints para el Mapa Comunitario ---
-
-// GET /api/location-categories - Obtiene todas las categorías de lugares
+// --- Endpoints para el Mapa Comunitario (Lugares) ---
 app.get('/api/location-categories', async (req, res) => {
     try {
         const categoriesSnapshot = await db.collection('location_categories').where('isOfficial', '==', true).get();
@@ -359,8 +357,6 @@ app.get('/api/location-categories', async (req, res) => {
         res.status(500).json({ message: 'Error interno al obtener las categorías.' });
     }
 });
-
-// GET /api/locations - Obtiene lugares, con filtro opcional por categoría
 app.get('/api/locations', async (req, res) => {
     const { category } = req.query;
     try {
@@ -376,8 +372,6 @@ app.get('/api/locations', async (req, res) => {
         res.status(500).json({ message: 'Error interno al obtener los lugares.' });
     }
 });
-
-// GET /api/locations/:locationId - Obtiene los detalles de un lugar específico
 app.get('/api/locations/:locationId', async (req, res) => {
     const { locationId } = req.params;
     try {
@@ -398,8 +392,6 @@ app.get('/api/locations/:locationId', async (req, res) => {
         res.status(500).json({ message: 'Error interno al obtener los detalles del lugar.' });
     }
 });
-
-// POST /api/locations - Permite a un usuario sugerir un nuevo lugar
 app.post('/api/locations', async (req, res) => {
     const { uid } = req.user;
     const { name, category, address, latitude, longitude, description, contact } = req.body;
@@ -430,8 +422,6 @@ app.post('/api/locations', async (req, res) => {
         res.status(500).json({ message: 'Error interno al crear el lugar.' });
     }
 });
-
-// POST /api/locations/:locationId/review - Permite a un usuario dejar una reseña
 app.post('/api/locations/:locationId/review', async (req, res) => {
     const { uid } = req.user;
     const { locationId } = req.params;
@@ -442,7 +432,7 @@ app.post('/api/locations/:locationId/review', async (req, res) => {
     }
 
     const locationRef = db.collection('locations').doc(locationId);
-    const reviewRef = locationRef.collection('reviews').doc(uid); // Usamos UID para permitir solo una reseña por usuario
+    const reviewRef = locationRef.collection('reviews').doc(uid);
 
     try {
         const userProfileDoc = await db.collection('users').doc(uid).get();
@@ -467,7 +457,6 @@ app.post('/api/locations/:locationId/review', async (req, res) => {
             };
             transaction.set(reviewRef, newReview);
 
-            // Actualizar la calificación promedio
             const oldRatingCount = locationDoc.data().ratingCount || 0;
             const oldAverageRating = locationDoc.data().averageRating || 0;
             const newRatingCount = oldRatingCount + 1;
@@ -483,6 +472,126 @@ app.post('/api/locations/:locationId/review', async (req, res) => {
     } catch (error) {
         console.error(`Error al añadir reseña a ${locationId}:`, error);
         res.status(500).json({ message: 'Error interno al procesar la reseña.' });
+    }
+});
+
+// --- [NUEVO] Endpoints para el Módulo de Eventos ---
+app.get('/api/event-categories', async (req, res) => {
+    try {
+        const categoriesSnapshot = await db.collection('event_categories').where('isOfficial', '==', true).get();
+        const categories = categoriesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        res.status(200).json(categories);
+    } catch (error) {
+        console.error('Error al obtener categorías de eventos:', error);
+        res.status(500).json({ message: 'Error interno al obtener las categorías.' });
+    }
+});
+app.get('/api/events', async (req, res) => {
+    const { status } = req.query;
+    try {
+        let query = db.collection('events');
+        if (status && ['planned', 'active', 'finished'].includes(status)) {
+            query = query.where('status', '==', status);
+        } else {
+            query = query.where('status', 'in', ['planned', 'active']);
+        }
+        const eventsSnapshot = await query.orderBy('startDate', 'asc').get();
+        const events = eventsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        res.status(200).json(events);
+    } catch (error) {
+        console.error('Error al obtener eventos:', error);
+        res.status(500).json({ message: 'Error interno al obtener los eventos.' });
+    }
+});
+app.get('/api/events/:eventId', async (req, res) => {
+    const { eventId } = req.params;
+    try {
+        const eventDoc = await db.collection('events').doc(eventId).get();
+        if (!eventDoc.exists) {
+            return res.status(404).json({ message: 'Evento no encontrado.' });
+        }
+        res.status(200).json({ id: eventDoc.id, ...eventDoc.data() });
+    } catch (error) {
+        console.error(`Error al obtener detalles del evento ${eventId}:`, error);
+        res.status(500).json({ message: 'Error interno al obtener los detalles del evento.' });
+    }
+});
+app.post('/api/events', upload.single('coverImage'), async (req, res) => {
+    const { uid, name: organizerName } = req.user;
+    const { name, description, category, startDate, endDate, locationId, customAddress, customLat, customLng, contactPhone, contactEmail } = req.body;
+    if (!name || !category || !startDate || !endDate || !req.file) {
+        return res.status(400).json({ message: 'Nombre, categoría, fechas y una imagen de portada son requeridos.' });
+    }
+    try {
+        const eventRef = db.collection('events').doc();
+        const filePath = `events/${eventRef.id}/${Date.now()}-${req.file.originalname}`;
+        const fileUpload = bucket.file(filePath);
+        const blobStream = fileUpload.createWriteStream({ metadata: { contentType: req.file.mimetype } });
+        blobStream.on('error', (error) => {
+            console.error("Error en la subida de la imagen del evento:", error);
+            return res.status(500).json({ message: 'Error durante la subida de la imagen.' });
+        });
+        blobStream.on('finish', async () => {
+            try {
+                await fileUpload.makePublic();
+                const imageUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
+                const newEvent = {
+                    name,
+                    description,
+                    coverImage: imageUrl,
+                    organizerId: uid,
+                    organizerName,
+                    category,
+                    status: 'planned',
+                    startDate: new Date(startDate).toISOString(),
+                    endDate: new Date(endDate).toISOString(),
+                    contact: { phone: contactPhone || '', email: contactEmail || '' },
+                    createdAt: new Date().toISOString(),
+                };
+                if (locationId) {
+                    newEvent.locationId = locationId;
+                } else if (customAddress && customLat && customLng) {
+                    newEvent.customLocation = {
+                        address: customAddress,
+                        coordinates: new admin.firestore.GeoPoint(parseFloat(customLat), parseFloat(customLng))
+                    };
+                } else {
+                    return res.status(400).json({ message: 'Se requiere una ubicación (existente o personalizada).' });
+                }
+                await eventRef.set(newEvent);
+                res.status(201).json({ message: '¡Evento creado con éxito!', eventId: eventRef.id });
+            } catch (error) {
+                console.error("Error al guardar el evento en Firestore:", error);
+                return res.status(500).json({ message: 'Error al guardar el evento.' });
+            }
+        });
+        blobStream.end(req.file.buffer);
+    } catch (error) {
+        console.error('Error al crear un nuevo evento:', error);
+        res.status(500).json({ message: 'Error interno al crear el evento.' });
+    }
+});
+app.put('/api/events/:eventId', async (req, res) => {
+    const { uid } = req.user;
+    const { eventId } = req.params;
+    const { status } = req.body;
+    if (!status || !['planned', 'active', 'finished'].includes(status)) {
+        return res.status(400).json({ message: 'Se requiere un estado válido (planned, active, finished).' });
+    }
+    const eventRef = db.collection('events').doc(eventId);
+    try {
+        const eventDoc = await eventRef.get();
+        if (!eventDoc.exists) {
+            return res.status(404).json({ message: 'Evento no encontrado.' });
+        }
+        if (eventDoc.data().organizerId !== uid) {
+            return res.status(403).json({ message: 'No autorizado para modificar este evento.' });
+        }
+        await eventRef.update({ status });
+        res.status(200).json({ message: `El estado del evento ha sido actualizado a: ${status}` });
+    } catch (error) {
+        console.error(`Error al actualizar el evento ${eventId}:`, error);
+        res.status(500).json({ message: 'Error interno al actualizar el evento.' });
     }
 });
 
