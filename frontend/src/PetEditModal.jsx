@@ -1,11 +1,11 @@
 // frontend/src/PetEditModal.jsx
-// Versión: 3.1 - Corrección de Lógica de Datos
-// CORRECCIÓN: Se revierte la lógica de búsqueda de ciudades a la versión estable que usa
-// el array de datos de Colombia, solucionando el crash de la pantalla en blanco.
+// Versión: 3.2 - UI Estática del Carné de Salud
+// TAREA 2: Se construye la interfaz estática para las secciones de Vacunas e Historial Clínico.
 
 import { useState, useEffect, useRef } from 'react';
 import { colombiaData, departments } from './utils/colombiaData';
 import { auth } from './firebase';
+import { Plus, Trash2 } from 'lucide-react'; // Importamos los iconos necesarios
 import './App.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -16,7 +16,12 @@ function PetEditModal({ pet, user, onClose, onUpdate }) {
     name: '',
     breed: '',
     location: { department: '', city: '' },
-    healthRecord: { birthDate: '', gender: '' }
+    healthRecord: { 
+      birthDate: '', 
+      gender: '',
+      vaccines: [], // Inicializamos los arrays
+      medicalHistory: [] 
+    }
   });
   const [cities, setCities] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -30,9 +35,14 @@ function PetEditModal({ pet, user, onClose, onUpdate }) {
         name: pet.name || '',
         breed: pet.breed || '',
         location: pet.location || { department: '', city: '' },
-        healthRecord: pet.healthRecord || { birthDate: '', gender: '' }
+        // Aseguramos que healthRecord y sus arrays existan
+        healthRecord: {
+          birthDate: pet.healthRecord?.birthDate || '',
+          gender: pet.healthRecord?.gender || '',
+          vaccines: pet.healthRecord?.vaccines || [],
+          medicalHistory: pet.healthRecord?.medicalHistory || []
+        }
       });
-      // [CORRECCIÓN] Se usa la lógica correcta para encontrar las ciudades
       if (pet.location && pet.location.department) {
         const departmentData = colombiaData.find(d => d.departamento === pet.location.department);
         setCities(departmentData ? departmentData.ciudades : []);
@@ -48,7 +58,6 @@ function PetEditModal({ pet, user, onClose, onUpdate }) {
       const newSectionData = { ...formData[section], [field]: value };
       if (name === 'location.department') {
         newSectionData.city = '';
-        // [CORRECCIÓN] Se usa la lógica correcta para actualizar las ciudades al cambiar el departamento
         const departmentData = colombiaData.find(d => d.departamento === value);
         setCities(departmentData ? departmentData.ciudades : []);
       }
@@ -135,6 +144,7 @@ function PetEditModal({ pet, user, onClose, onUpdate }) {
               {activeTab === 'profile' && (
                 <>
                   <h3 className="form-section-title">Información General</h3>
+                  {/* ... (código de la pestaña de perfil sin cambios) ... */}
                   <div className="form-group">
                       <label>Foto de Perfil:</label>
                       <button type="button" onClick={() => fileInputRef.current.click()} className="upload-button-secondary" disabled={isUploading}>
@@ -163,16 +173,41 @@ function PetEditModal({ pet, user, onClose, onUpdate }) {
 
               {activeTab === 'health' && (
                 <>
-                  <h3 className="form-section-title">Datos Básicos</h3>
-                  <div className="form-group"><label>Fecha de Nacimiento:</label><input type="date" name="healthRecord.birthDate" value={formData.healthRecord.birthDate} onChange={handleChange} disabled={isLoading} /></div>
-                  <div className="form-group">
-                    <label>Género:</label>
-                    <select name="healthRecord.gender" value={formData.healthRecord.gender} onChange={handleChange} disabled={isLoading}>
-                      <option value="">No especificado</option><option value="Macho">Macho</option><option value="Hembra">Hembra</option>
-                    </select>
+                  <div className="health-section">
+                    <h3 className="form-section-title">Datos Básicos</h3>
+                    <div className="form-group"><label>Fecha de Nacimiento:</label><input type="date" name="healthRecord.birthDate" value={formData.healthRecord.birthDate} onChange={handleChange} disabled={isLoading} /></div>
+                    <div className="form-group">
+                      <label>Género:</label>
+                      <select name="healthRecord.gender" value={formData.healthRecord.gender} onChange={handleChange} disabled={isLoading}>
+                        <option value="">No especificado</option><option value="Macho">Macho</option><option value="Hembra">Hembra</option>
+                      </select>
+                    </div>
                   </div>
-                  <div style={{textAlign: 'center', color: 'var(--text-secondary)', padding: '2rem 0'}}>
-                    <p>Próximamente: Registro de Vacunas e Historial Clínico.</p>
+
+                  <div className="health-section">
+                    <div className="health-section-header">
+                      <h4>Vacunas</h4>
+                      <button type="button" className="add-record-button"><Plus size={16} /> Añadir</button>
+                    </div>
+                    <div className="record-list">
+                      {/* Aquí mapearemos las vacunas. Por ahora, un placeholder. */}
+                      <div className="empty-health-section">
+                        <p>Aún no has registrado ninguna vacuna.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="health-section">
+                    <div className="health-section-header">
+                      <h4>Historial Clínico</h4>
+                      <button type="button" className="add-record-button"><Plus size={16} /> Añadir</button>
+                    </div>
+                    <div className="record-list">
+                      {/* Aquí mapearemos el historial. Por ahora, un placeholder. */}
+                      <div className="empty-health-section">
+                        <p>Aún no has registrado ninguna entrada en el historial.</p>
+                      </div>
+                    </div>
                   </div>
                 </>
               )}
