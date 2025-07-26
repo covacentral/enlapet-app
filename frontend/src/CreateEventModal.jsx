@@ -1,6 +1,6 @@
 // frontend/src/CreateEventModal.jsx
-// Versión: 1.0 - Modal para Crear Eventos
-// Formulario completo para que los usuarios creen nuevos eventos comunitarios.
+// Versión: 2.0 - Estructura Estandarizada
+// REFACTOR: Se adopta la nueva estructura de modales (header, body, footer) para una UX consistente.
 
 import React, { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
@@ -130,39 +130,40 @@ function CreateEventModal({ onClose, onEventCreated }) {
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="add-location-modal-content" onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>Crear un Nuevo Evento</h2>
-          <button onClick={onClose} className="close-button" disabled={isLoading}>
-            <X size={24} />
-          </button>
-        </div>
-        <form onSubmit={handleSubmit} className="add-location-form">
-          <div className="form-group">
-            <label>Imagen de Portada</label>
-            <div className="image-upload-area" onClick={() => fileInputRef.current.click()}>
-              {previewImage ? <img src={previewImage} alt="Previsualización" className="image-preview" /> : 
-                <div className="upload-prompt-content"><UploadCloud size={48} /><p>Selecciona una imagen</p></div>
-              }
+      <div className="modal-view-content" onClick={e => e.stopPropagation()}>
+        <form onSubmit={handleSubmit}>
+          <div className="modal-header">
+            <h2>Crear un Nuevo Evento</h2>
+            <button type="button" onClick={onClose} className="close-button" disabled={isLoading}>
+              <X size={24} />
+            </button>
+          </div>
+
+          <div className="modal-body">
+            <div className="form-group">
+              <label>Imagen de Portada</label>
+              <div className="image-upload-area" onClick={() => fileInputRef.current.click()}>
+                {previewImage ? <img src={previewImage} alt="Previsualización" className="image-preview" /> : 
+                  <div className="upload-prompt-content"><UploadCloud size={48} /><p>Selecciona una imagen</p></div>
+                }
+              </div>
+              <input type="file" ref={fileInputRef} onChange={handleImageChange} style={{ display: 'none' }} accept="image/*" required />
             </div>
-            <input type="file" ref={fileInputRef} onChange={handleImageChange} style={{ display: 'none' }} accept="image/*" required />
-          </div>
-          <div className="form-group">
-            <label htmlFor="name">Nombre del Evento</label>
-            <input type="text" id="name" name="name" onChange={handleChange} required />
-          </div>
-          <div className="form-group">
-            <label htmlFor="category">Categoría del Evento</label>
-            <select id="category" name="category" onChange={handleChange} required value={formData.category}>
-              <option value="" disabled>Selecciona una categoría...</option>
-              {eventCategories.map(cat => <option key={cat.id} value={cat.key}>{cat.name}</option>)}
-            </select>
-          </div>
-          <div className="form-group">
-            <label htmlFor="description">Descripción</label>
-            <textarea id="description" name="description" rows="4" onChange={handleChange} required></textarea>
-          </div>
-          <div className="form-group-row">
+            <div className="form-group">
+              <label htmlFor="name">Nombre del Evento</label>
+              <input type="text" id="name" name="name" onChange={handleChange} required />
+            </div>
+            <div className="form-group">
+              <label htmlFor="category">Categoría del Evento</label>
+              <select id="category" name="category" onChange={handleChange} required value={formData.category}>
+                <option value="" disabled>Selecciona una categoría...</option>
+                {eventCategories.map(cat => <option key={cat.id} value={cat.key}>{cat.name}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="description">Descripción</label>
+              <textarea id="description" name="description" rows="4" onChange={handleChange} required></textarea>
+            </div>
             <div className="form-group">
               <label htmlFor="startDate">Fecha y Hora de Inicio</label>
               <input type="datetime-local" id="startDate" name="startDate" onChange={handleChange} required />
@@ -171,23 +172,24 @@ function CreateEventModal({ onClose, onEventCreated }) {
               <label htmlFor="endDate">Fecha y Hora de Fin</label>
               <input type="datetime-local" id="endDate" name="endDate" onChange={handleChange} required />
             </div>
-          </div>
-          <div className="form-group">
-            <label>Ubicación del Evento</label>
-            <div className="mini-map-wrapper">
-              <MapContainer center={mapCenter} zoom={13} className="leaflet-container mini-map">
-                <ChangeView center={mapCenter} zoom={13} />
-                <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
-                <LocationPicker onLocationSelect={(latlng) => setCoordinates({ latitude: latlng.lat, longitude: latlng.lng })} />
-              </MapContainer>
+            <div className="form-group">
+              <label>Ubicación del Evento</label>
+              <div className="mini-map-wrapper">
+                <MapContainer center={mapCenter} zoom={13} className="leaflet-container mini-map">
+                  <ChangeView center={mapCenter} zoom={13} />
+                  <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
+                  <LocationPicker onLocationSelect={(latlng) => setCoordinates({ latitude: latlng.lat, longitude: latlng.lng })} />
+                </MapContainer>
+              </div>
+              {!coordinates && <small className="map-prompt">Haz clic en el mapa para marcar el punto exacto.</small>}
+              {coordinates && <small className="map-prompt success">¡Ubicación seleccionada!</small>}
             </div>
-            {!coordinates && <small className="map-prompt">Haz clic en el mapa para marcar el punto exacto.</small>}
-            {coordinates && <small className="map-prompt success">¡Ubicación seleccionada!</small>}
+            <div className="form-group">
+              <label htmlFor="customAddress">Dirección (Opcional)</label>
+              <input type="text" id="customAddress" name="customAddress" onChange={handleChange} />
+            </div>
           </div>
-          <div className="form-group">
-            <label htmlFor="customAddress">Dirección (Opcional)</label>
-            <input type="text" id="customAddress" name="customAddress" onChange={handleChange} />
-          </div>
+
           <div className="modal-footer">
             {message && <p className="response-message">{message}</p>}
             <button type="submit" className="publish-button" disabled={isLoading}>
