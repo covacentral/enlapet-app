@@ -1,7 +1,6 @@
 // backend/index.js
-// Versión: 10.1 - Corrección de Validación de Eventos
-// CORRECCIÓN: Se flexibiliza la validación en POST /api/events. Ahora la dirección personalizada
-// es opcional, requiriendo solo las coordenadas del mapa para crear una ubicación.
+// Versión: 11.0 - Perfil Social del Responsable
+// MEJORA: Se añade el nuevo endpoint GET /api/public/users/:userId para obtener los perfiles públicos de los usuarios.
 
 require('dotenv').config();
 const express = require('express');
@@ -77,7 +76,7 @@ const authenticateUser = async (req, res, next) => {
 };
 
 // --- Endpoint Raíz ---
-app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v10.0 - Refactor Estratégico' }));
+app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v11.0 - Perfil Social del Responsable' }));
 
 // --- Endpoints Públicos (No requieren autenticación) ---
 app.post('/api/register', async (req, res) => {try {const { email, password, name } = req.body;if (!email || !password || !name) {return res.status(400).json({ message: 'Nombre, email y contraseña son requeridos.' });}const userRecord = await auth.createUser({ email, password, displayName: name });const newUser = {name,email,createdAt: new Date().toISOString(),userType: 'personal',profilePictureUrl: '',coverPhotoUrl: '',bio: '',phone: '',location: { country: 'Colombia', department: '', city: '' },privacySettings: { profileVisibility: 'public', showEmail: 'private' }};await db.collection('users').doc(userRecord.uid).set(newUser);res.status(201).json({ message: 'Usuario registrado con éxito', uid: userRecord.uid });} catch (error) {console.error('Error en /api/register:', error);if (error.code === 'auth/email-already-exists') {return res.status(409).json({ message: 'El correo electrónico ya está en uso.' });}if (error.code === 'auth/invalid-password') {return res.status(400).json({ message: 'La contraseña debe tener al menos 6 caracteres.' });}res.status(500).json({ message: 'Error al registrar el usuario.' });}});
@@ -86,6 +85,51 @@ app.get('/api/public/pets/:petId', async (req, res) => {try {const { petId } = r
 
 // --- A partir de aquí, todos los endpoints requieren autenticación ---
 app.use(authenticateUser);
+
+// --- [NUEVO] Endpoint para Perfiles Públicos de Usuarios ---
+app.get('/api/public/users/:userId', async (req, res) => {
+    const { userId } = req.params;
+    try {
+        const userRef = db.collection('users').doc(userId);
+        const userDoc = await userRef.get();
+
+        if (!userDoc.exists) {
+            return res.status(404).json({ message: 'Usuario no encontrado.' });
+        }
+
+        const userData = userDoc.data();
+
+        // Obtenemos conteos de seguidores/seguidos
+        const followersSnapshot = await userRef.collection('followers').get();
+        const followingSnapshot = await userRef.collection('following').get();
+
+        // Filtramos para devolver solo la información pública
+        const publicProfile = {
+            id: userDoc.id,
+            name: userData.name,
+            profilePictureUrl: userData.profilePictureUrl || '',
+            bio: userData.bio || '',
+            followersCount: followersSnapshot.size || 0,
+            followingCount: followingSnapshot.size || 0,
+        };
+
+        // Obtenemos las mascotas del usuario
+        const petsSnapshot = await db.collection('pets').where('ownerId', '==', userId).get();
+        const petsList = petsSnapshot.docs.map(doc => ({
+            id: doc.id,
+            name: doc.data().name,
+            breed: doc.data().breed,
+            petPictureUrl: doc.data().petPictureUrl || ''
+        }));
+
+        res.status(200).json({ userProfile: publicProfile, pets: petsList });
+
+    } catch (error) {
+        console.error(`Error en /api/public/users/${userId}:`, error);
+        res.status(500).json({ message: 'Error interno del servidor.' });
+    }
+});
+
 
 // --- Endpoints de Gestión de Perfil y Mascotas ---
 app.get('/api/profile', async (req, res) => {try{const userDoc = await db.collection('users').doc(req.user.uid).get();if (!userDoc.exists) return res.status(404).json({ message: 'Perfil no encontrado.' });res.status(200).json(userDoc.data());}catch(e){res.status(500).json({ message: 'Error interno del servidor.' })}});
