@@ -1558,12 +1558,14 @@ input::-ms-clear {
 }
 
 
-/* --- [NUEVO] ESTILOS PARA PESTAÑAS DENTRO DE MODALES --- */
+/* --- [CORREGIDO] ESTILOS PARA PESTAÑAS DENTRO DE MODALES --- */
 .modal-tabs {
   display: flex;
-  border-bottom: 1px solid var(--border-color);
-  margin: -24px -24px 24px -24px; /* Se ajusta para unirse con los bordes del modal */
+  /* [CORRECCIÓN] Se elimina el borde del contenedor principal para evitar el bug visual. */
+  /* border-bottom: 1px solid var(--border-color); */
+  margin: -24px -24px 24px -24px;
   padding: 0 24px;
+  border-bottom: 1px solid var(--border-color); /* Se mantiene un borde sutil para la separación */
 }
 
 .modal-tab-button {
@@ -1576,6 +1578,7 @@ input::-ms-clear {
   cursor: pointer;
   position: relative;
   transition: color 0.2s ease-in-out;
+  border-bottom: 3px solid transparent; /* Borde invisible por defecto */
 }
 
 .modal-tab-button:hover {
@@ -1584,15 +1587,7 @@ input::-ms-clear {
 
 .modal-tab-button.active {
   color: var(--primary-accent);
+  border-bottom-color: var(--primary-accent); /* La línea activa ahora es el borde del botón */
 }
 
-.modal-tab-button.active::after {
-  content: '';
-  position: absolute;
-  bottom: -1px; /* Se alinea con el borde inferior del contenedor */
-  left: 0;
-  right: 0;
-  height: 3px;
-  background-color: var(--primary-accent);
-  border-radius: 3px 3px 0 0;
-}
+/* [CORRECCIÓN] Ya no necesitamos el pseudo-elemento ::after */

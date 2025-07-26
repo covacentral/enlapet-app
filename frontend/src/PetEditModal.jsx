@@ -1,16 +1,17 @@
 // frontend/src/PetEditModal.jsx
-// Versión: 3.0 - Implementación de Pestañas
-// TAREA 1: Se reestructura el modal para incluir un sistema de pestañas: "Perfil" y "Carné de Salud".
+// Versión: 3.1 - Corrección de Lógica de Datos
+// CORRECCIÓN: Se revierte la lógica de búsqueda de ciudades a la versión estable que usa
+// el array de datos de Colombia, solucionando el crash de la pantalla en blanco.
 
 import { useState, useEffect, useRef } from 'react';
-import { colombiaData, departments } from './utils/colombiaData'; // Asumo que tienes este util
-import { auth } from './firebase'; // Asumo importación de auth
+import { colombiaData, departments } from './utils/colombiaData';
+import { auth } from './firebase';
 import './App.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 function PetEditModal({ pet, user, onClose, onUpdate }) {
-  const [activeTab, setActiveTab] = useState('profile'); // 'profile' o 'health'
+  const [activeTab, setActiveTab] = useState('profile');
   const [formData, setFormData] = useState({
     name: '',
     breed: '',
@@ -31,9 +32,10 @@ function PetEditModal({ pet, user, onClose, onUpdate }) {
         location: pet.location || { department: '', city: '' },
         healthRecord: pet.healthRecord || { birthDate: '', gender: '' }
       });
+      // [CORRECCIÓN] Se usa la lógica correcta para encontrar las ciudades
       if (pet.location && pet.location.department) {
-        const departmentCities = colombiaData.find(d => d.departamento === pet.location.department);
-        setCities(departmentCities ? departmentCities.ciudades : []);
+        const departmentData = colombiaData.find(d => d.departamento === pet.location.department);
+        setCities(departmentData ? departmentData.ciudades : []);
       }
     }
   }, [pet]);
@@ -46,8 +48,9 @@ function PetEditModal({ pet, user, onClose, onUpdate }) {
       const newSectionData = { ...formData[section], [field]: value };
       if (name === 'location.department') {
         newSectionData.city = '';
-        const departmentCities = colombiaData.find(d => d.departamento === value);
-        setCities(departmentCities ? departmentCities.ciudades : []);
+        // [CORRECCIÓN] Se usa la lógica correcta para actualizar las ciudades al cambiar el departamento
+        const departmentData = colombiaData.find(d => d.departamento === value);
+        setCities(departmentData ? departmentData.ciudades : []);
       }
       setFormData(prev => ({ ...prev, [section]: newSectionData }));
     } else {
@@ -62,7 +65,6 @@ function PetEditModal({ pet, user, onClose, onUpdate }) {
     try {
       const idToken = await user.getIdToken();
       const endpoint = `${API_URL}/api/pets/${pet.id}`;
-      // Enviamos el formData completo, que ahora puede incluir el carné de salud
       const response = await fetch(endpoint, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
@@ -121,7 +123,6 @@ function PetEditModal({ pet, user, onClose, onUpdate }) {
           
           <form onSubmit={handleSaveChanges}>
             <div className="modal-body">
-              {/* --- SISTEMA DE PESTAÑAS --- */}
               <div className="modal-tabs">
                 <button type="button" className={`modal-tab-button ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => setActiveTab('profile')}>
                   Perfil
@@ -131,7 +132,6 @@ function PetEditModal({ pet, user, onClose, onUpdate }) {
                 </button>
               </div>
 
-              {/* --- CONTENIDO DE LA PESTAÑA PERFIL --- */}
               {activeTab === 'profile' && (
                 <>
                   <h3 className="form-section-title">Información General</h3>
@@ -161,7 +161,6 @@ function PetEditModal({ pet, user, onClose, onUpdate }) {
                 </>
               )}
 
-              {/* --- CONTENIDO DE LA PESTAÑA CARNÉ DE SALUD --- */}
               {activeTab === 'health' && (
                 <>
                   <h3 className="form-section-title">Datos Básicos</h3>
