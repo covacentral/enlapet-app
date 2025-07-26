@@ -1,7 +1,7 @@
 // backend/index.js
-// Versión: 10.0 - Refactorización Estratégica
-// CORRECCIÓN: Se repara el endpoint POST /api/events para obtener correctamente el nombre del organizador.
-// REFACTOR: Los endpoints de Follow/Unfollow ahora soportan seguir tanto a mascotas como a otros usuarios.
+// Versión: 10.1 - Corrección de Validación de Eventos
+// CORRECCIÓN: Se flexibiliza la validación en POST /api/events. Ahora la dirección personalizada
+// es opcional, requiriendo solo las coordenadas del mapa para crear una ubicación.
 
 require('dotenv').config();
 const express = require('express');
@@ -570,15 +570,15 @@ app.post('/api/events', upload.single('coverImage'), async (req, res) => {
                     createdAt: new Date().toISOString(),
                 };
 
+                // [CORRECCIÓN] La condición ahora solo requiere las coordenadas.
                 if (locationId) {
                     newEvent.locationId = locationId;
-                } else if (customAddress && customLat && customLng) {
+                } else if (customLat && customLng) {
                     newEvent.customLocation = {
-                        address: customAddress,
+                        address: customAddress || '', // Guardamos la dirección si existe, si no, un string vacío
                         coordinates: new admin.firestore.GeoPoint(parseFloat(customLat), parseFloat(customLng))
                     };
                 } else {
-                    // Si no hay ubicación, no se debería llegar aquí si el frontend valida, pero es una buena salvaguarda.
                     return res.status(400).json({ message: 'Se requiere una ubicación (existente o personalizada).' });
                 }
 
