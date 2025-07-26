@@ -1,8 +1,8 @@
 // frontend/src/UserProfilePage.jsx
-// Versión: 1.0 - Estructura Estática del Perfil de Usuario
-// TAREA 2: Se crea el componente con la estructura visual completa, usando datos de ejemplo.
+// Versión: 2.0 - Conexión a API y Datos Dinámicos
+// TAREA 3: Se implementa la llamada a la API para obtener y mostrar datos reales del perfil del usuario.
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { auth } from './firebase';
 import LoadingComponent from './LoadingComponent';
@@ -27,29 +27,55 @@ function UserProfilePage() {
   const { userId } = useParams();
   const [activeTab, setActiveTab] = useState('pets'); // 'posts' o 'pets'
   
-  // --- DATOS DE EJEMPLO (TEMPORAL) ---
-  const [userProfile, setUserProfile] = useState({
-    name: 'Nombre de Usuario',
-    bio: 'Esta es una biografía de ejemplo. El usuario puede escribir algo sobre sí mismo o su negocio aquí.',
-    profilePictureUrl: 'https://placehold.co/300x300/9B89B3/FFFFFF?text=U',
-    followersCount: 125,
-    followingCount: 88,
-  });
-  const [pets, setPets] = useState([
-    {id: '1', name: 'Firulais', breed: 'Mestizo', petPictureUrl: 'https://placehold.co/150x150/E2E8F0/4A5568?text=🐾'},
-    {id: '2', name: 'Luna', breed: 'Labrador', petPictureUrl: 'https://placehold.co/150x150/E2E8F0/4A5568?text=🐾'},
-  ]);
-  const [posts, setPosts] = useState([]); // Aún no tenemos posts de usuario
-  const [isLoading, setIsLoading] = useState(false); // Cambiar a true cuando conectemos la API
+  const [userProfile, setUserProfile] = useState(null);
+  const [pets, setPets] = useState([]);
+  const [posts, setPosts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   
-  // Lógica de seguimiento (a implementar en Tarea 4)
   const [isFollowing, setIsFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
   const isOwnProfile = auth.currentUser?.uid === userId;
 
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    setError('');
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error("Debes iniciar sesión para ver perfiles.");
+      const idToken = await user.getIdToken();
+
+      const response = await fetch(`${API_URL}/api/public/users/${userId}`, {
+        headers: { 'Authorization': `Bearer ${idToken}` }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'No se pudo cargar el perfil.');
+      }
+
+      const { userProfile: profileData, pets: petsData } = await response.json();
+      setUserProfile(profileData);
+      setPets(petsData);
+
+      // Aquí iría la lógica para cargar los posts del usuario en el futuro
+      // Por ahora, la pestaña de posts estará vacía.
+
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+
   if (isLoading) return <LoadingComponent text="Cargando perfil..." />;
-  if (error) return <div className="error-message">{error}</div>;
+  if (error) return <div className="error-message" style={{padding: '2rem'}}>{error}</div>;
+  if (!userProfile) return <div className="empty-state-message">No se encontró el perfil del usuario.</div>;
 
   return (
     <>
@@ -59,7 +85,7 @@ function UserProfilePage() {
           <div className="social-profile-details">
             <div className="social-profile-picture-wrapper">
               <img 
-                src={userProfile.profilePictureUrl} 
+                src={userProfile.profilePictureUrl || 'https://placehold.co/300x300/9B89B3/FFFFFF?text=U'} 
                 alt={userProfile.name} 
                 className="social-profile-picture"
               />
