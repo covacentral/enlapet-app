@@ -1597,3 +1597,151 @@ input::-ms-clear {
 .pet-edit-modal-content .modal-header {
   border-bottom: none; /* Específicamente quitamos el borde del header en este modal */
 }
+
+/* --- [NUEVO] ESTILOS PARA EL CARNÉ DE SALUD --- */
+.health-section {
+  margin-top: 1.5rem;
+}
+
+.health-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.health-section-header h4 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.add-record-button {
+  background-color: var(--primary-accent);
+  color: var(--brand-cream);
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background-color 0.2s;
+}
+
+.add-record-button:hover {
+  background-color: var(--primary-accent-hover);
+}
+
+.record-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.record-card {
+  background-color: var(--background-dark);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.record-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+}
+
+.record-card-info strong {
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.record-card-info span {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.record-card-actions button {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.record-card-actions button:hover {
+  color: var(--error-red);
+}
+
+.empty-health-section {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  padding: 1rem;
+  border: 1px dashed var(--border-color);
+  border-radius: 8px;
+}
+
+/* --- [NUEVO] ESTILOS PARA FORMULARIOS DEL CARNÉ DE SALUD --- */
+.add-record-form {
+  background-color: var(--background-dark);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-row {
+  display: flex;
+  gap: 12px;
+}
+
+.form-row .form-group {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.add-record-form-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.form-action-button {
+  background: none;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.form-action-button.save {
+  background-color: var(--primary-accent);
+  color: var(--brand-cream);
+}
+.form-action-button.save:hover {
+  background-color: var(--primary-accent-hover);
+}
+
+.form-action-button.cancel {
+  background-color: var(--border-color);
+  color: var(--text-secondary);
+}
+.form-action-button.cancel:hover {
+  background-color: #3a3a3c;
+}
