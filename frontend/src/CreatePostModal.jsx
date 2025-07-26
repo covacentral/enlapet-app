@@ -1,6 +1,7 @@
 // frontend/src/CreatePostModal.jsx
-// Versión: 2.1 - Acepta Autor Inicial
-// MEJORA: El modal ahora puede recibir un 'initialAuthor' para preseleccionar un perfil.
+// Versión: 2.2 - Lógica de Autor Corregida
+// CORRECCIÓN: Se mejora la lógica en AuthorSelector para diferenciar correctamente
+// entre un usuario y una mascota, solucionando el bug de las burbujas incorrectas.
 
 import { useState, useRef } from 'react';
 import { X, UploadCloud } from 'lucide-react';
@@ -18,7 +19,11 @@ const AuthorSelector = ({ userProfile, pets, selectedAuthor, onSelectAuthor }) =
       <div className="author-selector-scroll">
         {allProfiles.map(profile => {
           const isSelected = profile.id === selectedAuthor.id;
-          const isUser = !profile.breed;
+          
+          // [CORRECCIÓN] Usamos la presencia de 'ownerId' para identificar a una mascota.
+          // Esto es mucho más fiable que comprobar la ausencia de 'breed'.
+          const isUser = !profile.ownerId; 
+          
           const profilePic = isUser ? profile.profilePictureUrl : profile.petPictureUrl;
 
           return (
@@ -66,7 +71,7 @@ function CreatePostModal({ userProfile, pets, initialAuthor, onClose, onPostCrea
         setIsLoading(true);
         setMessage('Publicando momento...');
 
-        const authorType = selectedAuthor.breed ? 'pet' : 'user';
+        const authorType = selectedAuthor.ownerId ? 'pet' : 'user';
 
         const formData = new FormData();
         formData.append('postImage', postImage);
@@ -102,7 +107,7 @@ function CreatePostModal({ userProfile, pets, initialAuthor, onClose, onPostCrea
         }
     };
     
-    const placeholderText = selectedAuthor.breed 
+    const placeholderText = selectedAuthor.ownerId
       ? `¿Qué está haciendo ${selectedAuthor.name}?`
       : `¿Qué estás pensando, ${selectedAuthor.name.split(' ')[0]}?`;
 
