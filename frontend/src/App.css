@@ -1690,3 +1690,58 @@ input::-ms-clear {
   border: 1px dashed var(--border-color);
   border-radius: 8px;
 }
+
+/* --- [NUEVO] ESTILOS PARA FORMULARIOS DEL CARNÉ DE SALUD --- */
+.add-record-form {
+  background-color: var(--background-dark);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-row {
+  display: flex;
+  gap: 12px;
+}
+
+.form-row .form-group {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.add-record-form-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.form-action-button {
+  background: none;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.form-action-button.save {
+  background-color: var(--primary-accent);
+  color: var(--brand-cream);
+}
+.form-action-button.save:hover {
+  background-color: var(--primary-accent-hover);
+}
+
+.form-action-button.cancel {
+  background-color: var(--border-color);
+  color: var(--text-secondary);
+}
+.form-action-button.cancel:hover {
+  background-color: #3a3a3c;
+}

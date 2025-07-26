@@ -1,14 +1,84 @@
 // frontend/src/PetEditModal.jsx
-// Versión: 3.2 - UI Estática del Carné de Salud
-// TAREA 2: Se construye la interfaz estática para las secciones de Vacunas e Historial Clínico.
+// Versión: 3.3 - Lógica Completa del Carné de Salud
+// TAREA 3 y 4: Se implementa la lógica de estado para añadir y eliminar vacunas e
+// historial clínico, junto con los formularios de adición.
 
 import { useState, useEffect, useRef } from 'react';
 import { colombiaData, departments } from './utils/colombiaData';
 import { auth } from './firebase';
-import { Plus, Trash2 } from 'lucide-react'; // Importamos los iconos necesarios
+import { Plus, Trash2 } from 'lucide-react';
 import './App.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+// --- Componente para el formulario de añadir vacuna ---
+const AddVaccineForm = ({ onSave, onCancel }) => {
+  const [vaccine, setVaccine] = useState({ name: '', date: '', nextDate: '' });
+  const handleChange = (e) => setVaccine({ ...vaccine, [e.target.name]: e.target.value });
+
+  const handleSave = () => {
+    if (vaccine.name && vaccine.date) {
+      onSave({ ...vaccine, id: crypto.randomUUID() });
+    }
+  };
+
+  return (
+    <div className="add-record-form">
+      <div className="form-group">
+        <label>Nombre de la Vacuna</label>
+        <input type="text" name="name" value={vaccine.name} onChange={handleChange} />
+      </div>
+      <div className="form-row">
+        <div className="form-group">
+          <label>Fecha de Aplicación</label>
+          <input type="date" name="date" value={vaccine.date} onChange={handleChange} />
+        </div>
+        <div className="form-group">
+          <label>Próximo Refuerzo (Opcional)</label>
+          <input type="date" name="nextDate" value={vaccine.nextDate} onChange={handleChange} />
+        </div>
+      </div>
+      <div className="add-record-form-actions">
+        <button type="button" className="form-action-button cancel" onClick={onCancel}>Cancelar</button>
+        <button type="button" className="form-action-button save" onClick={handleSave}>Guardar</button>
+      </div>
+    </div>
+  );
+};
+
+// --- Componente para el formulario de añadir historial ---
+const AddMedicalHistoryForm = ({ onSave, onCancel }) => {
+  const [entry, setEntry] = useState({ title: '', date: '', description: '' });
+  const handleChange = (e) => setEntry({ ...entry, [e.target.name]: e.target.value });
+
+  const handleSave = () => {
+    if (entry.title && entry.date) {
+      onSave({ ...entry, id: crypto.randomUUID() });
+    }
+  };
+
+  return (
+    <div className="add-record-form">
+      <div className="form-group">
+        <label>Motivo o Título</label>
+        <input type="text" name="title" value={entry.title} onChange={handleChange} />
+      </div>
+      <div className="form-group">
+        <label>Fecha</label>
+        <input type="date" name="date" value={entry.date} onChange={handleChange} />
+      </div>
+      <div className="form-group">
+        <label>Descripción (Opcional)</label>
+        <textarea name="description" rows="3" value={entry.description} onChange={handleChange}></textarea>
+      </div>
+      <div className="add-record-form-actions">
+        <button type="button" className="form-action-button cancel" onClick={onCancel}>Cancelar</button>
+        <button type="button" className="form-action-button save" onClick={handleSave}>Guardar</button>
+      </div>
+    </div>
+  );
+};
+
 
 function PetEditModal({ pet, user, onClose, onUpdate }) {
   const [activeTab, setActiveTab] = useState('profile');
@@ -19,7 +89,7 @@ function PetEditModal({ pet, user, onClose, onUpdate }) {
     healthRecord: { 
       birthDate: '', 
       gender: '',
-      vaccines: [], // Inicializamos los arrays
+      vaccines: [],
       medicalHistory: [] 
     }
   });
@@ -29,13 +99,16 @@ function PetEditModal({ pet, user, onClose, onUpdate }) {
   const [message, setMessage] = useState('');
   const fileInputRef = useRef(null);
 
+  // Estados para controlar la visibilidad de los formularios de adición
+  const [showAddVaccine, setShowAddVaccine] = useState(false);
+  const [showAddHistory, setShowAddHistory] = useState(false);
+
   useEffect(() => {
     if (pet) {
       setFormData({
         name: pet.name || '',
         breed: pet.breed || '',
         location: pet.location || { department: '', city: '' },
-        // Aseguramos que healthRecord y sus arrays existan
         healthRecord: {
           birthDate: pet.healthRecord?.birthDate || '',
           gender: pet.healthRecord?.gender || '',
@@ -67,6 +140,42 @@ function PetEditModal({ pet, user, onClose, onUpdate }) {
     }
   };
 
+  // --- LÓGICA PARA MANEJAR EL CARNÉ DE SALUD ---
+  const handleAddVaccine = (vaccine) => {
+    const updatedVaccines = [...formData.healthRecord.vaccines, vaccine];
+    setFormData(prev => ({
+      ...prev,
+      healthRecord: { ...prev.healthRecord, vaccines: updatedVaccines }
+    }));
+    setShowAddVaccine(false);
+  };
+
+  const handleRemoveVaccine = (vaccineId) => {
+    const updatedVaccines = formData.healthRecord.vaccines.filter(v => v.id !== vaccineId);
+    setFormData(prev => ({
+      ...prev,
+      healthRecord: { ...prev.healthRecord, vaccines: updatedVaccines }
+    }));
+  };
+
+  const handleAddMedicalHistory = (entry) => {
+    const updatedHistory = [...formData.healthRecord.medicalHistory, entry];
+    setFormData(prev => ({
+      ...prev,
+      healthRecord: { ...prev.healthRecord, medicalHistory: updatedHistory }
+    }));
+    setShowAddHistory(false);
+  };
+
+  const handleRemoveMedicalHistory = (entryId) => {
+    const updatedHistory = formData.healthRecord.medicalHistory.filter(h => h.id !== entryId);
+    setFormData(prev => ({
+      ...prev,
+      healthRecord: { ...prev.healthRecord, medicalHistory: updatedHistory }
+    }));
+  };
+
+  // --- Lógica de guardado y subida (sin cambios) ---
   const handleSaveChanges = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -144,7 +253,6 @@ function PetEditModal({ pet, user, onClose, onUpdate }) {
               {activeTab === 'profile' && (
                 <>
                   <h3 className="form-section-title">Información General</h3>
-                  {/* ... (código de la pestaña de perfil sin cambios) ... */}
                   <div className="form-group">
                       <label>Foto de Perfil:</label>
                       <button type="button" onClick={() => fileInputRef.current.click()} className="upload-button-secondary" disabled={isUploading}>
@@ -187,26 +295,51 @@ function PetEditModal({ pet, user, onClose, onUpdate }) {
                   <div className="health-section">
                     <div className="health-section-header">
                       <h4>Vacunas</h4>
-                      <button type="button" className="add-record-button"><Plus size={16} /> Añadir</button>
+                      {!showAddVaccine && <button type="button" className="add-record-button" onClick={() => setShowAddVaccine(true)}><Plus size={16} /> Añadir</button>}
                     </div>
+                    {showAddVaccine && <AddVaccineForm onSave={handleAddVaccine} onCancel={() => setShowAddVaccine(false)} />}
                     <div className="record-list">
-                      {/* Aquí mapearemos las vacunas. Por ahora, un placeholder. */}
-                      <div className="empty-health-section">
-                        <p>Aún no has registrado ninguna vacuna.</p>
-                      </div>
+                      {formData.healthRecord.vaccines.length > 0 ? (
+                        formData.healthRecord.vaccines.map(vaccine => (
+                          <div key={vaccine.id} className="record-card">
+                            <div className="record-card-info">
+                              <strong>{vaccine.name}</strong>
+                              <span>Aplicada: {vaccine.date} {vaccine.nextDate && `| Próxima: ${vaccine.nextDate}`}</span>
+                            </div>
+                            <div className="record-card-actions">
+                              <button type="button" onClick={() => handleRemoveVaccine(vaccine.id)}><Trash2 size={16} /></button>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        !showAddVaccine && <div className="empty-health-section"><p>Aún no has registrado ninguna vacuna.</p></div>
+                      )}
                     </div>
                   </div>
 
                   <div className="health-section">
                     <div className="health-section-header">
                       <h4>Historial Clínico</h4>
-                      <button type="button" className="add-record-button"><Plus size={16} /> Añadir</button>
+                      {!showAddHistory && <button type="button" className="add-record-button" onClick={() => setShowAddHistory(true)}><Plus size={16} /> Añadir</button>}
                     </div>
+                    {showAddHistory && <AddMedicalHistoryForm onSave={handleAddMedicalHistory} onCancel={() => setShowAddHistory(false)} />}
                     <div className="record-list">
-                      {/* Aquí mapearemos el historial. Por ahora, un placeholder. */}
-                      <div className="empty-health-section">
-                        <p>Aún no has registrado ninguna entrada en el historial.</p>
-                      </div>
+                      {formData.healthRecord.medicalHistory.length > 0 ? (
+                        formData.healthRecord.medicalHistory.map(entry => (
+                          <div key={entry.id} className="record-card">
+                            <div className="record-card-info">
+                              <strong>{entry.title}</strong>
+                              <span>Fecha: {entry.date}</span>
+                              {entry.description && <span style={{fontSize: '0.8rem', opacity: 0.8}}>{entry.description}</span>}
+                            </div>
+                            <div className="record-card-actions">
+                              <button type="button" onClick={() => handleRemoveMedicalHistory(entry.id)}><Trash2 size={16} /></button>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        !showAddHistory && <div className="empty-health-section"><p>Aún no has registrado ninguna entrada en el historial.</p></div>
+                      )}
                     </div>
                   </div>
                 </>
