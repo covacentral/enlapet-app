@@ -1,12 +1,9 @@
 // backend/index.js
-// Versión: 12.0 - Lógica de Refinamiento
+// Versión: 12.1 - Correcciones de Refinamiento
 // IMPLEMENTA:
-// 1. (Feed) El creador ahora ve sus propios posts en el feed.
-// 2. (Feed) El endpoint de creación de post ahora devuelve el objeto del post creado.
-// 3. (Eventos) El endpoint GET /events calcula el estado del evento dinámicamente.
-// 4. (Eventos) El endpoint POST /events asigna el estado inicial correcto.
-// 5. (Eventos) Se añade el endpoint PUT /events/:eventId/details con límite de tiempo.
-// 6. (Eventos) El endpoint PUT /events/:eventId ahora solo gestiona el estado.
+// 1. (Feed) Se restaura la lógica del feed HÍBRIDO, mostrando posts del usuario, seguidos y de descubrimiento.
+// 2. (Eventos) Se corrige el endpoint GET /api/events/:eventId para que funcione correctamente.
+// 3. (Eventos) Se añade un parámetro `view` a GET /api/events para poder consultar eventos finalizados.
 
 require('dotenv').config();
 const express = require('express');
@@ -82,7 +79,7 @@ const authenticateUser = async (req, res, next) => {
 };
 
 // --- Endpoint Raíz ---
-app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v12.0 - Lógica de Refinamiento' }));
+app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v12.1 - Correcciones de Refinamiento' }));
 
 // --- Endpoints Públicos (No requieren autenticación) ---
 app.post('/api/register', async (req, res) => {try {const { email, password, name } = req.body;if (!email || !password || !name) {return res.status(400).json({ message: 'Nombre, email y contraseña son requeridos.' });}const userRecord = await auth.createUser({ email, password, displayName: name });const newUser = {name,email,createdAt: new Date().toISOString(),userType: 'personal',profilePictureUrl: '',coverPhotoUrl: '',bio: '',phone: '',location: { country: 'Colombia', department: '', city: '' },privacySettings: { profileVisibility: 'public', showEmail: 'private' }};await db.collection('users').doc(userRecord.uid).set(newUser);res.status(201).json({ message: 'Usuario registrado con éxito', uid: userRecord.uid });} catch (error) {console.error('Error en /api/register:', error);if (error.code === 'auth/email-already-exists') {return res.status(409).json({ message: 'El correo electrónico ya está en uso.' });}if (error.code === 'auth/invalid-password') {return res.status(400).json({ message: 'La contraseña debe tener al menos 6 caracteres.' });}res.status(500).json({ message: 'Error al registrar el usuario.' });}});
@@ -141,69 +138,61 @@ app.post('/api/pets', async (req, res) => {try {const { uid } = req.user;const {
 app.put('/api/pets/:petId', async (req, res) => {const { uid } = req.user;const { petId } = req.params;const updateData = req.body;try {if (!updateData || Object.keys(updateData).length === 0) {return res.status(400).json({ message: 'No se proporcionaron datos para actualizar.' });}const petRef = db.collection('pets').doc(petId);const petDoc = await petRef.get();if (!petDoc.exists) {return res.status(404).json({ message: 'Mascota no encontrada.' });}if (petDoc.data().ownerId !== uid) {return res.status(403).json({ message: 'No autorizado para modificar esta mascota.' });}await petRef.set(updateData, { merge: true });try {if (updateData.location && updateData.location.city) {const userRef = db.collection('users').doc(uid);const userDoc = await userRef.get();if (userDoc.exists) {const userData = userDoc.data();if (!userData.location || !userData.location.city) {await userRef.set({ location: updateData.location }, { merge: true });}}}} catch (implicitLocationError) {console.error('[IMPLICIT_LOCATION_ERROR] Failed to update user location implicitly:', implicitLocationError);}res.status(200).json({ message: 'Mascota actualizada con éxito.' });} catch (error) {console.error(`[PETS_UPDATE_FATAL] A critical error occurred while updating pet ${petId}:`, error);res.status(500).json({ message: 'Error interno del servidor al actualizar la mascota.' });}});
 app.post('/api/pets/:petId/picture', upload.single('petPicture'), async (req, res) => {try {const { uid } = req.user;if (!req.file) return res.status(400).json({ message: 'No se subió ningún archivo.' });const { petId } = req.params;const petRef = db.collection('pets').doc(petId);const petDoc = await petRef.get();if (!petDoc.exists) {return res.status(404).json({ message: 'Mascota no encontrada.' });}if (petDoc.data().ownerId !== uid) {return res.status(403).json({ message: 'No autorizado para modificar esta mascota.' });}const filePath = `pets-pictures/${petId}/${Date.now()}-${req.file.originalname}`;const fileUpload = bucket.file(filePath);const blobStream = fileUpload.createWriteStream({ metadata: { contentType: req.file.mimetype } });blobStream.on('error', (error) => {console.error("Error en blobStream (mascota):", error);res.status(500).json({ message: 'Error durante la subida del archivo.' });});blobStream.on('finish', async () => {try {await fileUpload.makePublic();const publicUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;await petRef.update({ petPictureUrl: publicUrl });res.status(200).json({ message: 'Foto de mascota actualizada.', petPictureUrl: publicUrl });} catch (error) {console.error("Error al procesar foto de mascota:", error);res.status(500).json({ message: 'Error al procesar el archivo después de subirlo.' });}});blobStream.end(req.file.buffer);} catch (error) {console.error('Error en /api/pets/:petId/picture:', error);res.status(500).json({ message: 'Error interno del servidor.' });}});
 
-// --- [REFINADO] Endpoint del Feed Híbrido ---
+// --- [CORRECCIÓN] Endpoint del Feed Híbrido Restaurado ---
 app.get('/api/feed', async (req, res) => {
     const { uid } = req.user;
     const { cursor } = req.query;
     const POSTS_PER_PAGE = 10;
+    const FOLLOWED_POSTS_RATIO = 0.7; // 70% de posts de seguidos
 
     try {
-        // 1. Obtener la lista de IDs de perfiles que el usuario sigue.
         const followingSnapshot = await db.collection('users').doc(uid).collection('following').get();
         const followedIds = followingSnapshot.docs.map(doc => doc.id);
-
-        // 2. [REFINADO] Incluir el propio UID del usuario para que vea sus posts.
         const authorsToInclude = [...new Set([...followedIds, uid])];
 
-        let postsQuery;
-        
+        let followedPosts = [];
         if (authorsToInclude.length > 0) {
-            // 3. Si sigue a alguien (o para verse a sí mismo), construir la consulta principal.
-            postsQuery = db.collection('posts')
-                .where('authorId', 'in', authorsToInclude)
-                .orderBy('createdAt', 'desc');
-        } else {
-            // 4. Si es un usuario nuevo que no sigue a nadie, crear un feed de descubrimiento.
-            // (Esta lógica se puede expandir para ser más inteligente, por ej. por ubicación)
-            postsQuery = db.collection('posts').orderBy('createdAt', 'desc');
+            let followedQuery = db.collection('posts').where('authorId', 'in', authorsToInclude).orderBy('createdAt', 'desc');
+            if (cursor) {
+                followedQuery = followedQuery.startAfter(new Date(cursor));
+            }
+            const limit = Math.ceil(POSTS_PER_PAGE * FOLLOWED_POSTS_RATIO);
+            const followedSnapshot = await followedQuery.limit(limit).get();
+            followedPosts = followedSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         }
 
-        if (cursor) {
-            postsQuery = postsQuery.startAfter(new Date(cursor));
+        const discoveryLimit = POSTS_PER_PAGE - followedPosts.length;
+        let discoveryPosts = [];
+        if (discoveryLimit > 0) {
+            let discoveryQuery = db.collection('posts').orderBy('createdAt', 'desc');
+            const discoverySnapshot = await discoveryQuery.limit(20).get(); // Traemos más para poder filtrar
+            discoveryPosts = discoverySnapshot.docs
+                .map(doc => ({ id: doc.id, ...doc.data() }))
+                .filter(post => !authorsToInclude.includes(post.authorId)) // Excluimos los que ya vemos
+                .slice(0, discoveryLimit); // Aplicamos el límite final
         }
 
-        const postsSnapshot = await postsQuery.limit(POSTS_PER_PAGE).get();
-        const posts = postsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        let combinedPosts = [...followedPosts, ...discoveryPosts];
+        // Mezclamos para que no sea tan predecible
+        combinedPosts.sort(() => Math.random() - 0.5);
 
-        // 5. Enriquecer los posts con la información del autor (mascota o usuario).
-        const authorIds = [...new Set(posts.map(p => p.authorId))];
+        const authorIds = [...new Set(combinedPosts.map(p => p.authorId))];
         const authorsData = {};
         if (authorIds.length > 0) {
-            const authorPromises = authorIds.map(id => 
-                db.collection('users').doc(id).get().then(doc => doc.exists ? doc : db.collection('pets').doc(id).get())
-            );
+            const authorPromises = authorIds.map(id => db.collection('users').doc(id).get().then(doc => doc.exists ? doc : db.collection('pets').doc(id).get()));
             const authorSnapshots = await Promise.all(authorPromises);
             authorSnapshots.forEach(doc => {
                 if (doc.exists) {
                     const data = doc.data();
-                    authorsData[doc.id] = { 
-                        id: doc.id, 
-                        name: data.name, 
-                        profilePictureUrl: data.profilePictureUrl || data.petPictureUrl || '' 
-                    };
+                    authorsData[doc.id] = { id: doc.id, name: data.name, profilePictureUrl: data.profilePictureUrl || data.petPictureUrl || '' };
                 }
             });
         }
 
-        const finalPosts = posts.map(post => ({ 
-            ...post, 
-            author: authorsData[post.authorId] || { name: 'Autor Desconocido' } 
-        }));
-
-        const nextCursor = posts.length > 0 ? posts[posts.length - 1].createdAt : null;
+        const finalPosts = combinedPosts.map(post => ({ ...post, author: authorsData[post.authorId] || { name: 'Autor Desconocido' } }));
+        const nextCursor = finalPosts.length > 0 ? finalPosts[finalPosts.length - 1].createdAt : null;
         
         res.status(200).json({ posts: finalPosts, nextCursor });
-
     } catch (error) {
         console.error('Error en GET /api/feed:', error);
         res.status(500).json({ message: 'Error al obtener el feed.' });
@@ -269,7 +258,6 @@ app.post('/api/posts', upload.single('postImage'), async (req, res) => {
             };
             await postRef.set(newPost);
             
-            // [REFINADO] Devolver el post completo y enriquecido.
             const finalPost = {
                 ...newPost,
                 id: postRef.id,
@@ -568,10 +556,13 @@ app.get('/api/event-categories', async (req, res) => {
     }
 });
 
-// [REFINADO] Endpoint de eventos con lógica de estado dinámica
+// [CORRECCIÓN] Endpoint de eventos con lógica de estado dinámica y vista de finalizados
 app.get('/api/events', async (req, res) => {
+    const { view } = req.query; // 'finished' o por defecto
     try {
         let query = db.collection('events');
+        
+        // Ordenamos por fecha de inicio para tener una base consistente
         const eventsSnapshot = await query.orderBy('startDate', 'asc').get();
         const now = new Date();
         
@@ -587,19 +578,23 @@ app.get('/api/events', async (req, res) => {
                 calculatedStatus = 'finished';
             }
             
-            // Devolvemos el evento con el estado calculado en tiempo real
             return { ...event, status: calculatedStatus };
         });
 
-        // Filtramos los eventos finalizados para no enviarlos a la vista principal
-        const activeAndPlannedEvents = events.filter(e => e.status !== 'finished');
-        res.status(200).json(activeAndPlannedEvents);
+        if (view === 'finished') {
+            const finishedEvents = events.filter(e => e.status === 'finished');
+            res.status(200).json(finishedEvents);
+        } else {
+            const activeAndPlannedEvents = events.filter(e => e.status !== 'finished');
+            res.status(200).json(activeAndPlannedEvents);
+        }
     } catch (error) {
         console.error('Error al obtener eventos:', error);
         res.status(500).json({ message: 'Error interno al obtener los eventos.' });
     }
 });
 
+// [CORRECCIÓN] Este endpoint es crucial para obtener los datos de un evento para el modal de detalles
 app.get('/api/events/:eventId', async (req, res) => {
     const { eventId } = req.params;
     try {
@@ -607,14 +602,22 @@ app.get('/api/events/:eventId', async (req, res) => {
         if (!eventDoc.exists) {
             return res.status(404).json({ message: 'Evento no encontrado.' });
         }
-        res.status(200).json({ id: eventDoc.id, ...eventDoc.data() });
+        // Devolvemos el estado dinámico también para consistencia
+        const event = { id: eventDoc.id, ...eventDoc.data() };
+        const now = new Date();
+        const startDate = new Date(event.startDate);
+        const endDate = new Date(event.endDate);
+        if (now >= startDate && now <= endDate) event.status = 'active';
+        else if (now > endDate) event.status = 'finished';
+        else event.status = 'planned';
+
+        res.status(200).json(event);
     } catch (error) {
         console.error(`Error al obtener detalles del evento ${eventId}:`, error);
         res.status(500).json({ message: 'Error interno al obtener los detalles del evento.' });
     }
 });
 
-// [REFINADO] Endpoint de creación de eventos con estado inicial dinámico
 app.post('/api/events', upload.single('coverImage'), async (req, res) => {
     const { uid } = req.user;
     const { name, description, category, startDate, endDate, locationId, customAddress, customLat, customLng, contactPhone, contactEmail } = req.body;
@@ -645,7 +648,6 @@ app.post('/api/events', upload.single('coverImage'), async (req, res) => {
                 await fileUpload.makePublic();
                 const imageUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
 
-                // [REFINADO] Lógica para determinar el estado inicial
                 const now = new Date();
                 const eventStartDate = new Date(startDate);
                 const initialStatus = now >= eventStartDate ? 'active' : 'planned';
@@ -657,7 +659,7 @@ app.post('/api/events', upload.single('coverImage'), async (req, res) => {
                     organizerId: uid,
                     organizerName,
                     category,
-                    status: initialStatus, // Asignamos el estado calculado
+                    status: initialStatus,
                     startDate: eventStartDate.toISOString(),
                     endDate: new Date(endDate).toISOString(),
                     contact: { phone: contactPhone || '', email: contactEmail || '' },
@@ -672,7 +674,6 @@ app.post('/api/events', upload.single('coverImage'), async (req, res) => {
                         coordinates: new admin.firestore.GeoPoint(parseFloat(customLat), parseFloat(customLng))
                     };
                 } else {
-                    // Este caso no debería ocurrir si el frontend valida bien, pero es una salvaguarda.
                     return res.status(400).json({ message: 'Se requiere una ubicación.' });
                 }
 
@@ -691,7 +692,6 @@ app.post('/api/events', upload.single('coverImage'), async (req, res) => {
     }
 });
 
-// [REFINADO] Endpoint para actualizar solo el ESTADO de un evento
 app.put('/api/events/:eventId/status', async (req, res) => {
     const { uid } = req.user;
     const { eventId } = req.params;
@@ -720,7 +720,6 @@ app.put('/api/events/:eventId/status', async (req, res) => {
     }
 });
 
-// [NUEVO] Endpoint para actualizar los DETALLES de un evento con límite de tiempo
 app.put('/api/events/:eventId/details', async (req, res) => {
     const { uid } = req.user;
     const { eventId } = req.params;
@@ -738,21 +737,17 @@ app.put('/api/events/:eventId/details', async (req, res) => {
             return res.status(403).json({ message: 'No autorizado para modificar este evento.' });
         }
 
-        // Lógica de ventana de tiempo de 1 hora
         const oneHourInMs = 60 * 60 * 1000;
         const createdAt = new Date(eventData.createdAt).getTime();
         if (Date.now() - createdAt > oneHourInMs) {
             return res.status(403).json({ message: 'El período de edición de 1 hora para los detalles ha expirado. Solo puedes cambiar el estado.' });
         }
 
-        // Campos que se pueden editar (excluimos status, organizerId, etc.)
         const allowedUpdates = {
             name: updateData.name,
             description: updateData.description,
-            category: updateData.category,
-            startDate: updateData.startDate,
-            endDate: updateData.endDate,
-            // ... otros campos que permitas editar
+            startDate: new Date(updateData.startDate).toISOString(),
+            endDate: new Date(updateData.endDate).toISOString(),
         };
 
         await eventRef.update(allowedUpdates);

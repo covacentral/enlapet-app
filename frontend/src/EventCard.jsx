@@ -1,21 +1,30 @@
 // frontend/src/EventCard.jsx
-// Versión: 1.1 - Lógica de Clic
-// El botón "Ver Detalles" ahora invoca una función pasada por props.
+// Versión: 1.2 - Visualización de Fecha de Finalización
+// CORRECCIÓN: Ahora muestra la fecha de finalización si el evento dura más de un día.
 
 import React from 'react';
 import { Calendar, Clock, MapPin } from 'lucide-react';
 
-function EventCard({ event, onDetailsClick }) { // Aceptamos la nueva prop
-  const formatDate = (isoString) => {
-    return new Date(isoString).toLocaleDateString('es-ES', {
-      year: 'numeric', month: 'long', day: 'numeric'
-    });
-  };
+function EventCard({ event, onDetailsClick }) {
+  
+  const formatEventDuration = (startIso, endIso) => {
+    const startDate = new Date(startIso);
+    const endDate = new Date(endIso);
 
-  const formatTime = (isoString) => {
-    return new Date(isoString).toLocaleTimeString('es-CO', {
-      hour: '2-digit', minute: '2-digit', hour12: true
-    });
+    const optionsDate = { year: 'numeric', month: 'long', day: 'numeric' };
+    const optionsTime = { hour: '2-digit', minute: '2-digit', hour12: true };
+
+    const startDateString = startDate.toLocaleDateString('es-ES', optionsDate);
+    const endDateString = endDate.toLocaleDateString('es-ES', optionsDate);
+
+    const startTimeString = startDate.toLocaleTimeString('es-CO', optionsTime);
+    const endTimeString = endDate.toLocaleTimeString('es-CO', optionsTime);
+
+    if (startDateString === endDateString) {
+      return `${startDateString}, ${startTimeString} - ${endTimeString}`;
+    } else {
+      return `Del ${startDateString} al ${endDateString}`;
+    }
   };
 
   const getStatusInfo = (status) => {
@@ -41,11 +50,8 @@ function EventCard({ event, onDetailsClick }) { // Aceptamos la nueva prop
         <div className="event-card-details">
           <div className="detail-item">
             <Calendar size={16} />
-            <span>{formatDate(event.startDate)}</span>
-          </div>
-          <div className="detail-item">
-            <Clock size={16} />
-            <span>{formatTime(event.startDate)} - {formatTime(event.endDate)}</span>
+            {/* [CORRECCIÓN] Usamos la nueva función para mostrar la duración completa */}
+            <span>{formatEventDuration(event.startDate, event.endDate)}</span>
           </div>
           {event.customLocation?.address && (
             <div className="detail-item">
@@ -54,7 +60,6 @@ function EventCard({ event, onDetailsClick }) { // Aceptamos la nueva prop
             </div>
           )}
         </div>
-        {/* [REFINADO] El botón ahora tiene una acción */}
         <button className="event-card-button" onClick={onDetailsClick}>Ver Detalles</button>
       </div>
     </div>
