@@ -1556,3 +1556,43 @@ input::-ms-clear {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+
+/* --- [NUEVO] ESTILOS PARA PESTAÑAS DENTRO DE MODALES --- */
+.modal-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-color);
+  margin: -24px -24px 24px -24px; /* Se ajusta para unirse con los bordes del modal */
+  padding: 0 24px;
+}
+
+.modal-tab-button {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-weight: bold;
+  font-size: 1rem;
+  padding: 16px 20px;
+  cursor: pointer;
+  position: relative;
+  transition: color 0.2s ease-in-out;
+}
+
+.modal-tab-button:hover {
+  color: var(--text-primary);
+}
+
+.modal-tab-button.active {
+  color: var(--primary-accent);
+}
+
+.modal-tab-button.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; /* Se alinea con el borde inferior del contenedor */
+  left: 0;
+  right: 0;
+  height: 3px;
+  background-color: var(--primary-accent);
+  border-radius: 3px 3px 0 0;
+}
