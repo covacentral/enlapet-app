@@ -1556,3 +1556,44 @@ input::-ms-clear {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+
+/* --- [CORREGIDO Y REFINADO] ESTILOS PARA PESTAÑAS DENTRO DE MODALES --- */
+.modal-tabs {
+  display: flex;
+  margin: 0 -24px 24px -24px; /* Se ajusta para unirse con los bordes del modal */
+  padding: 0 24px;
+  position: relative; /* Contenedor de referencia para la línea inferior */
+  border-bottom: 1px solid var(--border-color); /* Línea de base sutil */
+}
+
+.modal-tab-button {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-weight: bold;
+  font-size: 1rem;
+  padding: 16px 20px;
+  cursor: pointer;
+  transition: color 0.2s ease-in-out;
+  border-bottom: 3px solid transparent; /* Borde invisible para mantener el espacio */
+  margin-bottom: -1px; /* Sube el botón para que su borde se superponga al del contenedor */
+}
+
+.modal-tab-button:hover {
+  color: var(--text-primary);
+}
+
+.modal-tab-button.active {
+  color: var(--primary-accent);
+  border-bottom-color: var(--primary-accent); /* La línea activa ahora es el borde del botón */
+}
+
+/* [CORRECCIÓN] Se elimina el borde del header cuando hay pestañas para evitar la línea doble */
+.modal-header {
+  border-bottom: 1px solid var(--border-color);
+}
+
+.pet-edit-modal-content .modal-header {
+  border-bottom: none; /* Específicamente quitamos el borde del header en este modal */
+}
