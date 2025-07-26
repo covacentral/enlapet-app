@@ -1,20 +1,19 @@
 // frontend/src/PostCard.jsx
-// Versión: 1.5 - Funcionalidad de Reporte
-// Añade un menú de opciones para reportar la publicación.
+// Versión: 2.0 - Enlaces de Autor Dinámicos
+// TAREA 5: El enlace del autor ahora dirige al perfil de mascota o de usuario según el 'authorType'.
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, MessageCircle, Bookmark, MoreVertical } from 'lucide-react';
 import CommentsModal from './CommentsModal';
-import ReportModal from './ReportModal'; // ¡NUEVO!
+import ReportModal from './ReportModal';
 
 function PostCard({ post, isLiked, isSaved, onLikeToggle, onSaveToggle, onCommentAdded }) {
   const [isCommentsModalOpen, setIsCommentsModalOpen] = useState(false);
-  const [isReportModalOpen, setIsReportModalOpen] = useState(false); // ¡NUEVO!
-  const [isMenuOpen, setIsMenuOpen] = useState(false); // ¡NUEVO!
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
-  // Cierra el menú si se hace clic fuera de él
   useEffect(() => {
     function handleClickOutside(event) {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
@@ -27,11 +26,15 @@ function PostCard({ post, isLiked, isSaved, onLikeToggle, onSaveToggle, onCommen
 
   if (!post || !post.author) return null;
 
+  // --- LÓGICA DE ENLACE DINÁMICO ---
+  const authorProfileLink = post.authorType === 'pet'
+    ? `/dashboard/pet/${post.author.id}`
+    : `/dashboard/user/${post.author.id}`;
+
   const profilePic = post.author.profilePictureUrl || 'https://placehold.co/100x100/E2E8F0/4A5568?text=:)';
   const postDate = new Date(post.createdAt).toLocaleDateString('es-ES', {
     year: 'numeric', month: 'long', day: 'numeric'
   });
-  const authorProfileLink = `/dashboard/pet/${post.author.id}`;
 
   const handleLikeClick = (e) => { e.preventDefault(); e.stopPropagation(); onLikeToggle(post.id); };
   const handleSaveClick = (e) => { e.preventDefault(); e.stopPropagation(); onSaveToggle(post.id); };
@@ -53,7 +56,6 @@ function PostCard({ post, isLiked, isSaved, onLikeToggle, onSaveToggle, onCommen
             <span className="post-author-name">{post.author.name}</span>
           </Link>
           
-          {/* Menú de Opciones */}
           <div className="post-menu-container" ref={menuRef}>
             <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="action-button">
               <MoreVertical size={20} />
