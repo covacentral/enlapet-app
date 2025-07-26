@@ -1,6 +1,7 @@
 // frontend/src/CreatePostModal.jsx
-// Versión: 1.1 - Previsualización de Imagen Corregida
-// Utiliza nuevas clases de CSS para contener la imagen de previsualización.
+// Versión: 2.2 - Lógica de Autor Corregida
+// CORRECCIÓN: Se mejora la lógica en AuthorSelector para diferenciar correctamente
+// entre un usuario y una mascota, solucionando el bug de las burbujas incorrectas.
 
 import { useState, useRef } from 'react';
 import { X, UploadCloud } from 'lucide-react';
@@ -8,7 +9,44 @@ import { auth } from './firebase';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-function CreatePostModal({ petProfile, onClose, onPostCreated }) {
+// --- Componente para el selector de autor ---
+const AuthorSelector = ({ userProfile, pets, selectedAuthor, onSelectAuthor }) => {
+  const userProfileWithId = { ...userProfile, id: auth.currentUser.uid };
+  const allProfiles = [userProfileWithId, ...pets];
+
+  return (
+    <div className="author-selector-container">
+      <div className="author-selector-scroll">
+        {allProfiles.map(profile => {
+          const isSelected = profile.id === selectedAuthor.id;
+          
+          // [CORRECCIÓN] Usamos la presencia de 'ownerId' para identificar a una mascota.
+          // Esto es mucho más fiable que comprobar la ausencia de 'breed'.
+          const isUser = !profile.ownerId; 
+          
+          const profilePic = isUser ? profile.profilePictureUrl : profile.petPictureUrl;
+
+          return (
+            <div 
+              key={profile.id} 
+              className={`author-bubble ${isSelected ? 'selected' : ''}`}
+              onClick={() => onSelectAuthor(profile)}
+            >
+              <div className="author-bubble-image">
+                <img src={profilePic || 'https://placehold.co/100x100/E2E8F0/4A5568?text=:)'} alt={profile.name} />
+              </div>
+              <span className="author-bubble-name">{isUser ? 'Tú' : profile.name.split(' ')[0]}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+function CreatePostModal({ userProfile, pets, initialAuthor, onClose, onPostCreated }) {
+    const userProfileWithId = { ...userProfile, id: auth.currentUser.uid };
+    const [selectedAuthor, setSelectedAuthor] = useState(initialAuthor || userProfileWithId);
     const [caption, setCaption] = useState('');
     const [postImage, setPostImage] = useState(null);
     const [previewImage, setPreviewImage] = useState(null);
@@ -33,11 +71,13 @@ function CreatePostModal({ petProfile, onClose, onPostCreated }) {
         setIsLoading(true);
         setMessage('Publicando momento...');
 
+        const authorType = selectedAuthor.ownerId ? 'pet' : 'user';
+
         const formData = new FormData();
         formData.append('postImage', postImage);
         formData.append('caption', caption);
-        formData.append('authorId', petProfile.id);
-        formData.append('authorType', 'pet');
+        formData.append('authorId', selectedAuthor.id);
+        formData.append('authorType', authorType);
 
         try {
             const user = auth.currentUser;
@@ -66,6 +106,10 @@ function CreatePostModal({ petProfile, onClose, onPostCreated }) {
             setIsLoading(false);
         }
     };
+    
+    const placeholderText = selectedAuthor.ownerId
+      ? `¿Qué está haciendo ${selectedAuthor.name}?`
+      : `¿Qué estás pensando, ${selectedAuthor.name.split(' ')[0]}?`;
 
     return (
         <div className="modal-backdrop" onClick={onClose}>
@@ -76,8 +120,16 @@ function CreatePostModal({ petProfile, onClose, onPostCreated }) {
                         <X size={24} />
                     </button>
                 </div>
+                
+                <AuthorSelector 
+                  userProfile={userProfile} 
+                  pets={pets} 
+                  selectedAuthor={selectedAuthor} 
+                  onSelectAuthor={setSelectedAuthor}
+                />
+
                 <form onSubmit={handleSubmit} className="create-post-form">
-                    <div className="modal-body">
+                    <div className="modal-body" style={{paddingTop: '16px'}}>
                         <div 
                             className="image-upload-area" 
                             onClick={() => fileInputRef.current.click()}
@@ -103,7 +155,7 @@ function CreatePostModal({ petProfile, onClose, onPostCreated }) {
                                 id="caption"
                                 value={caption}
                                 onChange={(e) => setCaption(e.target.value)}
-                                placeholder={`¿Qué está haciendo ${petProfile.name}?`}
+                                placeholder={placeholderText}
                                 rows="4"
                                 maxLength="280"
                                 required
