@@ -1,26 +1,25 @@
 // frontend/src/FeedPage.jsx
-// Versión: 2.0 - Integración de Creación de Posts
-// TAREA 3: Se integra el prompt y el modal para permitir la creación de posts desde el feed.
+// Versión: 2.1 - Publicación Inmediata
+// Implementa la lógica para mostrar un nuevo post en el feed
+// instantáneamente después de su creación.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { auth } from './firebase';
 import PostCard from './PostCard';
 import LoadingComponent from './LoadingComponent';
-import CreatePostPrompt from './CreatePostPrompt'; // Importamos el prompt
-import CreatePostModal from './CreatePostModal';   // Importamos el modal
+import CreatePostPrompt from './CreatePostPrompt';
+import CreatePostModal from './CreatePostModal';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-function FeedPage({ userProfile, pets }) { // Aceptamos props
+function FeedPage({ userProfile, pets }) {
   const [posts, setPosts] = useState([]);
   const [likedStatuses, setLikedStatuses] = useState({});
   const [savedStatuses, setSavedStatuses] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [nextCursors, setNextCursors] = useState({ followedCursor: null, discoveryCursor: null });
+  const [nextCursor, setNextCursor] = useState(null);
   const [hasMore, setHasMore] = useState(true);
-
-  // Nuevo estado para controlar la visibilidad del modal
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const fetchStatuses = async (endpoint, postIds, idToken) => {
@@ -38,32 +37,23 @@ function FeedPage({ userProfile, pets }) { // Aceptamos props
     }
   };
 
-  const fetchFeed = useCallback(async (cursors, reset = false) => {
-    // Solo mostramos el loader grande en la carga inicial
-    if (reset || posts.length === 0) {
-      setIsLoading(true);
-    }
+  const fetchFeed = useCallback(async (cursor, reset = false) => {
+    if (reset || posts.length === 0) setIsLoading(true);
     setError(null);
     try {
       const user = auth.currentUser;
       if (!user) throw new Error("Usuario no autenticado.");
       const idToken = await user.getIdToken();
       
-      const queryParams = new URLSearchParams();
-      if (cursors.followedCursor) queryParams.append('followedCursor', cursors.followedCursor);
-      if (cursors.discoveryCursor) queryParams.append('discoveryCursor', cursors.discoveryCursor);
+      const url = cursor ? `${API_URL}/api/feed?cursor=${cursor}` : `${API_URL}/api/feed`;
       
-      const response = await fetch(`${API_URL}/api/feed?${queryParams.toString()}`, {
-        headers: { 'Authorization': `Bearer ${idToken}` }
-      });
-
+      const response = await fetch(url, { headers: { 'Authorization': `Bearer ${idToken}` } });
       if (!response.ok) throw new Error((await response.json()).message);
-
       const data = await response.json();
       
       setPosts(prevPosts => reset ? data.posts : [...prevPosts, ...data.posts]);
-      setNextCursors(data.nextCursors);
-      if (!data.nextCursors.followedCursor && !data.nextCursors.discoveryCursor) setHasMore(false);
+      setNextCursor(data.nextCursor);
+      if (!data.nextCursor) setHasMore(false);
 
       if (data.posts.length > 0) {
         const postIds = data.posts.map(p => p.id);
@@ -79,17 +69,21 @@ function FeedPage({ userProfile, pets }) { // Aceptamos props
     } finally {
       setIsLoading(false);
     }
-  }, [posts.length]); // Dependemos de posts.length para decidir si mostrar el loader
+  }, [posts.length]);
 
   useEffect(() => {
-    // Carga inicial del feed
-    fetchFeed({ followedCursor: null, discoveryCursor: null }, true);
-  }, []); // El array vacío asegura que esto solo se ejecute una vez al montar
+    fetchFeed(null, true);
+  }, []);
 
-  const handlePostCreated = () => {
+  // [REFINADO] La función ahora acepta el nuevo post y lo añade al estado.
+  const handlePostCreated = (newPost) => {
     setIsModalOpen(false);
-    // Refrescamos el feed desde el principio para ver la nueva publicación
-    fetchFeed({ followedCursor: null, discoveryCursor: null }, true);
+    if (newPost) {
+      setPosts(prevPosts => [newPost, ...prevPosts]);
+    } else {
+      // Fallback si el backend no devuelve el post, recargamos todo.
+      fetchFeed(null, true);
+    }
   };
 
   const handleLikeToggle = async (postId) => {
@@ -109,6 +103,7 @@ function FeedPage({ userProfile, pets }) { // Aceptamos props
   };
 
   const handleCommentAdded = (postId) => setPosts(prevPosts => prevPosts.map(p => p.id === postId ? { ...p, commentsCount: p.commentsCount + 1 } : p));
+  
   const handleSaveToggle = async (postId) => {
     const isCurrentlySaved = !!savedStatuses[postId];
     setSavedStatuses(prev => ({ ...prev, [postId]: !isCurrentlySaved }));
@@ -123,7 +118,7 @@ function FeedPage({ userProfile, pets }) { // Aceptamos props
     }
   };
 
-  const handleLoadMore = () => { if (hasMore) fetchFeed(nextCursors); };
+  const handleLoadMore = () => { if (hasMore) fetchFeed(nextCursor); };
 
   return (
     <div className="feed-page-container">

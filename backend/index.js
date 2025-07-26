@@ -1,6 +1,12 @@
 // backend/index.js
-// Versión: 11.0 - Perfil Social del Responsable
-// MEJORA: Se añade el nuevo endpoint GET /api/public/users/:userId para obtener los perfiles públicos de los usuarios.
+// Versión: 12.0 - Lógica de Refinamiento
+// IMPLEMENTA:
+// 1. (Feed) El creador ahora ve sus propios posts en el feed.
+// 2. (Feed) El endpoint de creación de post ahora devuelve el objeto del post creado.
+// 3. (Eventos) El endpoint GET /events calcula el estado del evento dinámicamente.
+// 4. (Eventos) El endpoint POST /events asigna el estado inicial correcto.
+// 5. (Eventos) Se añade el endpoint PUT /events/:eventId/details con límite de tiempo.
+// 6. (Eventos) El endpoint PUT /events/:eventId ahora solo gestiona el estado.
 
 require('dotenv').config();
 const express = require('express');
@@ -76,7 +82,7 @@ const authenticateUser = async (req, res, next) => {
 };
 
 // --- Endpoint Raíz ---
-app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v11.0 - Perfil Social del Responsable' }));
+app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v12.0 - Lógica de Refinamiento' }));
 
 // --- Endpoints Públicos (No requieren autenticación) ---
 app.post('/api/register', async (req, res) => {try {const { email, password, name } = req.body;if (!email || !password || !name) {return res.status(400).json({ message: 'Nombre, email y contraseña son requeridos.' });}const userRecord = await auth.createUser({ email, password, displayName: name });const newUser = {name,email,createdAt: new Date().toISOString(),userType: 'personal',profilePictureUrl: '',coverPhotoUrl: '',bio: '',phone: '',location: { country: 'Colombia', department: '', city: '' },privacySettings: { profileVisibility: 'public', showEmail: 'private' }};await db.collection('users').doc(userRecord.uid).set(newUser);res.status(201).json({ message: 'Usuario registrado con éxito', uid: userRecord.uid });} catch (error) {console.error('Error en /api/register:', error);if (error.code === 'auth/email-already-exists') {return res.status(409).json({ message: 'El correo electrónico ya está en uso.' });}if (error.code === 'auth/invalid-password') {return res.status(400).json({ message: 'La contraseña debe tener al menos 6 caracteres.' });}res.status(500).json({ message: 'Error al registrar el usuario.' });}});
@@ -86,7 +92,6 @@ app.get('/api/public/pets/:petId', async (req, res) => {try {const { petId } = r
 // --- A partir de aquí, todos los endpoints requieren autenticación ---
 app.use(authenticateUser);
 
-// --- [NUEVO] Endpoint para Perfiles Públicos de Usuarios ---
 app.get('/api/public/users/:userId', async (req, res) => {
     const { userId } = req.params;
     try {
@@ -98,12 +103,9 @@ app.get('/api/public/users/:userId', async (req, res) => {
         }
 
         const userData = userDoc.data();
-
-        // Obtenemos conteos de seguidores/seguidos
         const followersSnapshot = await userRef.collection('followers').get();
         const followingSnapshot = await userRef.collection('following').get();
 
-        // Filtramos para devolver solo la información pública
         const publicProfile = {
             id: userDoc.id,
             name: userData.name,
@@ -113,7 +115,6 @@ app.get('/api/public/users/:userId', async (req, res) => {
             followingCount: followingSnapshot.size || 0,
         };
 
-        // Obtenemos las mascotas del usuario
         const petsSnapshot = await db.collection('pets').where('ownerId', '==', userId).get();
         const petsList = petsSnapshot.docs.map(doc => ({
             id: doc.id,
@@ -136,62 +137,79 @@ app.get('/api/profile', async (req, res) => {try{const userDoc = await db.collec
 app.put('/api/profile', async (req, res) => {try {const { uid } = req.user;const dataToSave = req.body;if (Object.keys(dataToSave).length === 0) {return res.status(400).json({ message: 'No se proporcionaron datos válidos para actualizar.' });}await db.collection('users').doc(uid).set(dataToSave, { merge: true });res.status(200).json({ message: 'Perfil actualizado con éxito.' });} catch(e) {console.error('Error en /api/profile (PUT):', e);res.status(500).json({ message: 'Error interno del servidor.' });}});
 app.post('/api/profile/picture', upload.single('profilePicture'), async (req, res) => {try {const { uid } = req.user;if (!req.file) return res.status(400).json({ message: 'No se subió ningún archivo.' });const filePath = `profile-pictures/${uid}/${Date.now()}-${req.file.originalname}`;const fileUpload = bucket.file(filePath);const blobStream = fileUpload.createWriteStream({ metadata: { contentType: req.file.mimetype } });blobStream.on('error', (error) => res.status(500).json({ message: 'Error durante la subida del archivo.' }));blobStream.on('finish', async () => {try {await fileUpload.makePublic();const publicUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;await db.collection('users').doc(uid).set({ profilePictureUrl: publicUrl }, { merge: true });res.status(200).json({ message: 'Foto actualizada.', profilePictureUrl: publicUrl });} catch (error) {res.status(500).json({ message: 'Error al procesar el archivo después de subirlo.' });}});blobStream.end(req.file.buffer);} catch (error) {res.status(500).json({ message: 'Error interno del servidor.' });}});
 app.get('/api/pets', async (req, res) => {try {const { uid } = req.user;const petsSnapshot = await db.collection('pets').where('ownerId', '==', uid).get();const petsList = petsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));res.status(200).json(petsList);} catch (error) {console.error('Error en /api/pets (GET):', error);res.status(500).json({ message: 'Error interno del servidor.' });}});
-app.post('/api/pets', async (req, res) => {try {const { uid } = req.user;const { name, breed } = req.body;if (!name) return res.status(400).json({ message: 'El nombre es requerido.' });const petData = {ownerId: uid,name,breed: breed || '',createdAt: new Date().toISOString(),petPictureUrl: '',location: {country: 'Colombia',department: '',city: ''},healthRecord: {birthDate: '',gender: '',}};const petRef = await db.collection('pets').add(petData);res.status(201).json({ message: 'Mascota registrada.', petId: petRef.id });} catch (error) {console.error('Error en /api/pets (POST):', error);res.status(500).json({ message: 'Error interno del servidor.' });}});
+app.post('/api/pets', async (req, res) => {try {const { uid } = req.user;const { name, breed } = req.body;if (!name) return res.status(400).json({ message: 'El nombre es requerido.' });const petData = {ownerId: uid,name,breed: breed || '',createdAt: new Date().toISOString(),petPictureUrl: '',location: {country: 'Colombia',department: '',city: ''},healthRecord: {birthDate: '',gender: '',vaccines: [], medicalHistory: []}};const petRef = await db.collection('pets').add(petData);res.status(201).json({ message: 'Mascota registrada.', petId: petRef.id });} catch (error) {console.error('Error en /api/pets (POST):', error);res.status(500).json({ message: 'Error interno del servidor.' });}});
 app.put('/api/pets/:petId', async (req, res) => {const { uid } = req.user;const { petId } = req.params;const updateData = req.body;try {if (!updateData || Object.keys(updateData).length === 0) {return res.status(400).json({ message: 'No se proporcionaron datos para actualizar.' });}const petRef = db.collection('pets').doc(petId);const petDoc = await petRef.get();if (!petDoc.exists) {return res.status(404).json({ message: 'Mascota no encontrada.' });}if (petDoc.data().ownerId !== uid) {return res.status(403).json({ message: 'No autorizado para modificar esta mascota.' });}await petRef.set(updateData, { merge: true });try {if (updateData.location && updateData.location.city) {const userRef = db.collection('users').doc(uid);const userDoc = await userRef.get();if (userDoc.exists) {const userData = userDoc.data();if (!userData.location || !userData.location.city) {await userRef.set({ location: updateData.location }, { merge: true });}}}} catch (implicitLocationError) {console.error('[IMPLICIT_LOCATION_ERROR] Failed to update user location implicitly:', implicitLocationError);}res.status(200).json({ message: 'Mascota actualizada con éxito.' });} catch (error) {console.error(`[PETS_UPDATE_FATAL] A critical error occurred while updating pet ${petId}:`, error);res.status(500).json({ message: 'Error interno del servidor al actualizar la mascota.' });}});
 app.post('/api/pets/:petId/picture', upload.single('petPicture'), async (req, res) => {try {const { uid } = req.user;if (!req.file) return res.status(400).json({ message: 'No se subió ningún archivo.' });const { petId } = req.params;const petRef = db.collection('pets').doc(petId);const petDoc = await petRef.get();if (!petDoc.exists) {return res.status(404).json({ message: 'Mascota no encontrada.' });}if (petDoc.data().ownerId !== uid) {return res.status(403).json({ message: 'No autorizado para modificar esta mascota.' });}const filePath = `pets-pictures/${petId}/${Date.now()}-${req.file.originalname}`;const fileUpload = bucket.file(filePath);const blobStream = fileUpload.createWriteStream({ metadata: { contentType: req.file.mimetype } });blobStream.on('error', (error) => {console.error("Error en blobStream (mascota):", error);res.status(500).json({ message: 'Error durante la subida del archivo.' });});blobStream.on('finish', async () => {try {await fileUpload.makePublic();const publicUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;await petRef.update({ petPictureUrl: publicUrl });res.status(200).json({ message: 'Foto de mascota actualizada.', petPictureUrl: publicUrl });} catch (error) {console.error("Error al procesar foto de mascota:", error);res.status(500).json({ message: 'Error al procesar el archivo después de subirlo.' });}});blobStream.end(req.file.buffer);} catch (error) {console.error('Error en /api/pets/:petId/picture:', error);res.status(500).json({ message: 'Error interno del servidor.' });}});
 
-// --- Endpoint del Feed Híbrido ---
+// --- [REFINADO] Endpoint del Feed Híbrido ---
 app.get('/api/feed', async (req, res) => {
     const { uid } = req.user;
-    const { followedCursor, discoveryCursor } = req.query;
+    const { cursor } = req.query;
     const POSTS_PER_PAGE = 10;
-    const FOLLOWED_POSTS_RATIO = 0.7;
+
     try {
+        // 1. Obtener la lista de IDs de perfiles que el usuario sigue.
         const followingSnapshot = await db.collection('users').doc(uid).collection('following').get();
         const followedIds = followingSnapshot.docs.map(doc => doc.id);
-        let followedPosts = [];
-        if (followedIds.length > 0) {
-            let followedQuery = db.collection('posts').where('authorId', 'in', followedIds).orderBy('createdAt', 'desc');
-            if (followedCursor) {
-                followedQuery = followedQuery.startAfter(new Date(followedCursor));
-            }
-            const followedSnapshot = await followedQuery.limit(POSTS_PER_PAGE * FOLLOWED_POSTS_RATIO).get();
-            followedPosts = followedSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        // 2. [REFINADO] Incluir el propio UID del usuario para que vea sus posts.
+        const authorsToInclude = [...new Set([...followedIds, uid])];
+
+        let postsQuery;
+        
+        if (authorsToInclude.length > 0) {
+            // 3. Si sigue a alguien (o para verse a sí mismo), construir la consulta principal.
+            postsQuery = db.collection('posts')
+                .where('authorId', 'in', authorsToInclude)
+                .orderBy('createdAt', 'desc');
+        } else {
+            // 4. Si es un usuario nuevo que no sigue a nadie, crear un feed de descubrimiento.
+            // (Esta lógica se puede expandir para ser más inteligente, por ej. por ubicación)
+            postsQuery = db.collection('posts').orderBy('createdAt', 'desc');
         }
-        const discoveryLimit = POSTS_PER_PAGE - followedPosts.length;
-        let discoveryPosts = [];
-        if (discoveryLimit > 0) {
-            let discoveryQuery = db.collection('posts').orderBy('createdAt', 'desc');
-            const exclusionIds = [...followedIds, uid];
-            if (discoveryCursor) {
-                discoveryQuery = discoveryQuery.startAfter(new Date(discoveryCursor));
-            }
-            const discoverySnapshot = await discoveryQuery.limit(discoveryLimit).get();
-            discoveryPosts = discoverySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(post => !exclusionIds.includes(post.authorId));
+
+        if (cursor) {
+            postsQuery = postsQuery.startAfter(new Date(cursor));
         }
-        let combinedPosts = [...followedPosts, ...discoveryPosts];
-        combinedPosts.sort(() => Math.random() - 0.5);
-        const authorIds = [...new Set(combinedPosts.map(p => p.authorId))];
+
+        const postsSnapshot = await postsQuery.limit(POSTS_PER_PAGE).get();
+        const posts = postsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        // 5. Enriquecer los posts con la información del autor (mascota o usuario).
+        const authorIds = [...new Set(posts.map(p => p.authorId))];
         const authorsData = {};
         if (authorIds.length > 0) {
-            const authorPromises = authorIds.map(id => db.collection('users').doc(id).get().then(doc => doc.exists ? doc : db.collection('pets').doc(id).get()));
+            const authorPromises = authorIds.map(id => 
+                db.collection('users').doc(id).get().then(doc => doc.exists ? doc : db.collection('pets').doc(id).get())
+            );
             const authorSnapshots = await Promise.all(authorPromises);
             authorSnapshots.forEach(doc => {
                 if (doc.exists) {
                     const data = doc.data();
-                    authorsData[doc.id] = { id: doc.id, name: data.name, profilePictureUrl: data.profilePictureUrl || data.petPictureUrl || '' };
+                    authorsData[doc.id] = { 
+                        id: doc.id, 
+                        name: data.name, 
+                        profilePictureUrl: data.profilePictureUrl || data.petPictureUrl || '' 
+                    };
                 }
             });
         }
-        const finalPosts = combinedPosts.map(post => ({ ...post, author: authorsData[post.authorId] || { name: 'Autor Desconocido' } }));
-        const nextFollowedCursor = followedPosts.length > 0 ? followedPosts[followedPosts.length - 1].createdAt : null;
-        const nextDiscoveryCursor = discoveryPosts.length > 0 ? discoveryPosts[discoveryPosts.length - 1].createdAt : null;
-        res.status(200).json({ posts: finalPosts, nextCursors: { followedCursor: nextFollowedCursor, discoveryCursor: nextDiscoveryCursor } });
+
+        const finalPosts = posts.map(post => ({ 
+            ...post, 
+            author: authorsData[post.authorId] || { name: 'Autor Desconocido' } 
+        }));
+
+        const nextCursor = posts.length > 0 ? posts[posts.length - 1].createdAt : null;
+        
+        res.status(200).json({ posts: finalPosts, nextCursor });
+
     } catch (error) {
         console.error('Error en GET /api/feed:', error);
         res.status(500).json({ message: 'Error al obtener el feed.' });
     }
 });
+
 
 // --- Endpoints de Publicaciones (Posts) ---
 app.post('/api/posts', upload.single('postImage'), async (req, res) => {
@@ -201,35 +219,40 @@ app.post('/api/posts', upload.single('postImage'), async (req, res) => {
         return res.status(400).json({ message: 'Se requiere una imagen, un texto, un ID de autor y un tipo de autor.' });
     }
     let authorData = {};
+    let authorRef;
+    if (authorType === 'pet') {
+        authorRef = db.collection('pets').doc(authorId);
+    } else {
+        authorRef = db.collection('users').doc(authorId);
+    }
+
     try {
-        if (authorType === 'pet') {
-            const petDoc = await db.collection('pets').doc(authorId).get();
-            if (!petDoc.exists || petDoc.data().ownerId !== uid) {
-                return res.status(403).json({ message: 'No autorizado para publicar en nombre de esta mascota.' });
-            }
-            authorData = petDoc.data();
-        } else {
-            if (authorId !== uid) {
-                return res.status(403).json({ message: 'No autorizado para publicar como este usuario.' });
-            }
-            const userDoc = await db.collection('users').doc(authorId).get();
-            if (!userDoc.exists) {
-                return res.status(404).json({ message: 'Usuario no encontrado.' });
-            }
-            authorData = userDoc.data();
+        const authorDoc = await authorRef.get();
+        if (!authorDoc.exists) {
+            return res.status(404).json({ message: 'Autor no encontrado.' });
         }
+        if (authorType === 'pet' && authorDoc.data().ownerId !== uid) {
+            return res.status(403).json({ message: 'No autorizado para publicar en nombre de esta mascota.' });
+        }
+        if (authorType === 'user' && authorId !== uid) {
+            return res.status(403).json({ message: 'No autorizado para publicar como este usuario.' });
+        }
+        authorData = authorDoc.data();
     } catch (error) {
         console.error('Error al obtener datos del autor:', error);
         return res.status(500).json({ message: 'Error al verificar el autor de la publicación.' });
     }
+    
     const postRef = db.collection('posts').doc();
     const filePath = `posts/${uid}/${postRef.id}/${Date.now()}-${req.file.originalname}`;
     const fileUpload = bucket.file(filePath);
     const blobStream = fileUpload.createWriteStream({ metadata: { contentType: req.file.mimetype } });
+
     blobStream.on('error', (error) => {
         console.error("Error en blobStream (post):", error);
         return res.status(500).json({ message: 'Error durante la subida de la imagen.' });
     });
+
     blobStream.on('finish', async () => {
         try {
             await fileUpload.makePublic();
@@ -245,7 +268,19 @@ app.post('/api/posts', upload.single('postImage'), async (req, res) => {
                 commentsCount: 0
             };
             await postRef.set(newPost);
-            res.status(201).json({ message: 'Publicación creada con éxito.', postId: postRef.id });
+            
+            // [REFINADO] Devolver el post completo y enriquecido.
+            const finalPost = {
+                ...newPost,
+                id: postRef.id,
+                author: {
+                    id: authorId,
+                    name: authorData.name,
+                    profilePictureUrl: authorData.profilePictureUrl || authorData.petPictureUrl || ''
+                }
+            };
+
+            res.status(201).json({ message: 'Publicación creada con éxito.', post: finalPost });
         } catch (error) {
             console.error("Error al crear el documento del post:", error);
             return res.status(500).json({ message: 'Error al guardar la publicación.' });
@@ -351,7 +386,7 @@ app.get('/api/user/saved-posts', async (req, res) => {
     }
 });
 
-// --- Endpoint de Reportes (MODIFICADO para ser Agregado) ---
+// --- Endpoint de Reportes ---
 app.post('/api/reports', async (req, res) => {
     const { uid } = req.user;
     const { contentId, reason } = req.body;
@@ -533,18 +568,32 @@ app.get('/api/event-categories', async (req, res) => {
     }
 });
 
+// [REFINADO] Endpoint de eventos con lógica de estado dinámica
 app.get('/api/events', async (req, res) => {
-    const { status } = req.query;
     try {
         let query = db.collection('events');
-        if (status && ['planned', 'active', 'finished'].includes(status)) {
-            query = query.where('status', '==', status);
-        } else {
-            query = query.where('status', 'in', ['planned', 'active']);
-        }
         const eventsSnapshot = await query.orderBy('startDate', 'asc').get();
-        const events = eventsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        res.status(200).json(events);
+        const now = new Date();
+        
+        const events = eventsSnapshot.docs.map(doc => {
+            const event = { id: doc.id, ...doc.data() };
+            const startDate = new Date(event.startDate);
+            const endDate = new Date(event.endDate);
+
+            let calculatedStatus = 'planned';
+            if (now >= startDate && now <= endDate) {
+                calculatedStatus = 'active';
+            } else if (now > endDate) {
+                calculatedStatus = 'finished';
+            }
+            
+            // Devolvemos el evento con el estado calculado en tiempo real
+            return { ...event, status: calculatedStatus };
+        });
+
+        // Filtramos los eventos finalizados para no enviarlos a la vista principal
+        const activeAndPlannedEvents = events.filter(e => e.status !== 'finished');
+        res.status(200).json(activeAndPlannedEvents);
     } catch (error) {
         console.error('Error al obtener eventos:', error);
         res.status(500).json({ message: 'Error interno al obtener los eventos.' });
@@ -565,9 +614,9 @@ app.get('/api/events/:eventId', async (req, res) => {
     }
 });
 
+// [REFINADO] Endpoint de creación de eventos con estado inicial dinámico
 app.post('/api/events', upload.single('coverImage'), async (req, res) => {
     const { uid } = req.user;
-    // [CORRECCIÓN] Se elimina la llamada síncrona a auth.getUser().
     const { name, description, category, startDate, endDate, locationId, customAddress, customLat, customLng, contactPhone, contactEmail } = req.body;
 
     if (!name || !category || !startDate || !endDate || !req.file) {
@@ -575,7 +624,6 @@ app.post('/api/events', upload.single('coverImage'), async (req, res) => {
     }
 
     try {
-        // [CORRECCIÓN] Obtenemos el perfil del usuario desde Firestore para conseguir el nombre.
         const userDoc = await db.collection('users').doc(uid).get();
         if (!userDoc.exists) {
             return res.status(404).json({ message: 'No se pudo encontrar el perfil del organizador.' });
@@ -597,33 +645,35 @@ app.post('/api/events', upload.single('coverImage'), async (req, res) => {
                 await fileUpload.makePublic();
                 const imageUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
 
+                // [REFINADO] Lógica para determinar el estado inicial
+                const now = new Date();
+                const eventStartDate = new Date(startDate);
+                const initialStatus = now >= eventStartDate ? 'active' : 'planned';
+
                 const newEvent = {
                     name,
                     description,
                     coverImage: imageUrl,
                     organizerId: uid,
-                    organizerName, // [CORRECCIÓN] Usamos el nombre obtenido de Firestore.
+                    organizerName,
                     category,
-                    status: 'planned',
-                    startDate: new Date(startDate).toISOString(),
+                    status: initialStatus, // Asignamos el estado calculado
+                    startDate: eventStartDate.toISOString(),
                     endDate: new Date(endDate).toISOString(),
-                    contact: {
-                        phone: contactPhone || '',
-                        email: contactEmail || ''
-                    },
+                    contact: { phone: contactPhone || '', email: contactEmail || '' },
                     createdAt: new Date().toISOString(),
                 };
 
-                // [CORRECCIÓN] La condición ahora solo requiere las coordenadas.
                 if (locationId) {
                     newEvent.locationId = locationId;
                 } else if (customLat && customLng) {
                     newEvent.customLocation = {
-                        address: customAddress || '', // Guardamos la dirección si existe, si no, un string vacío
+                        address: customAddress || '',
                         coordinates: new admin.firestore.GeoPoint(parseFloat(customLat), parseFloat(customLng))
                     };
                 } else {
-                    return res.status(400).json({ message: 'Se requiere una ubicación (existente o personalizada).' });
+                    // Este caso no debería ocurrir si el frontend valida bien, pero es una salvaguarda.
+                    return res.status(400).json({ message: 'Se requiere una ubicación.' });
                 }
 
                 await eventRef.set(newEvent);
@@ -641,7 +691,8 @@ app.post('/api/events', upload.single('coverImage'), async (req, res) => {
     }
 });
 
-app.put('/api/events/:eventId', async (req, res) => {
+// [REFINADO] Endpoint para actualizar solo el ESTADO de un evento
+app.put('/api/events/:eventId/status', async (req, res) => {
     const { uid } = req.user;
     const { eventId } = req.params;
     const { status } = req.body;
@@ -669,11 +720,56 @@ app.put('/api/events/:eventId', async (req, res) => {
     }
 });
 
-// --- [REFACTORIZADO] Endpoints de Seguimiento (Follow) ---
+// [NUEVO] Endpoint para actualizar los DETALLES de un evento con límite de tiempo
+app.put('/api/events/:eventId/details', async (req, res) => {
+    const { uid } = req.user;
+    const { eventId } = req.params;
+    const updateData = req.body;
+
+    const eventRef = db.collection('events').doc(eventId);
+    try {
+        const eventDoc = await eventRef.get();
+        if (!eventDoc.exists) {
+            return res.status(404).json({ message: 'Evento no encontrado.' });
+        }
+        
+        const eventData = eventDoc.data();
+        if (eventData.organizerId !== uid) {
+            return res.status(403).json({ message: 'No autorizado para modificar este evento.' });
+        }
+
+        // Lógica de ventana de tiempo de 1 hora
+        const oneHourInMs = 60 * 60 * 1000;
+        const createdAt = new Date(eventData.createdAt).getTime();
+        if (Date.now() - createdAt > oneHourInMs) {
+            return res.status(403).json({ message: 'El período de edición de 1 hora para los detalles ha expirado. Solo puedes cambiar el estado.' });
+        }
+
+        // Campos que se pueden editar (excluimos status, organizerId, etc.)
+        const allowedUpdates = {
+            name: updateData.name,
+            description: updateData.description,
+            category: updateData.category,
+            startDate: updateData.startDate,
+            endDate: updateData.endDate,
+            // ... otros campos que permitas editar
+        };
+
+        await eventRef.update(allowedUpdates);
+        res.status(200).json({ message: 'Los detalles del evento han sido actualizados.' });
+
+    } catch (error) {
+        console.error(`Error al actualizar detalles del evento ${eventId}:`, error);
+        res.status(500).json({ message: 'Error interno al actualizar los detalles.' });
+    }
+});
+
+
+// --- Endpoints de Seguimiento (Follow) ---
 app.post('/api/profiles/:profileId/follow', async (req, res) => {
-    const { uid } = req.user; // El que sigue
-    const { profileId } = req.params; // El que será seguido
-    const { profileType } = req.body; // 'pet' o 'user'
+    const { uid } = req.user;
+    const { profileId } = req.params; 
+    const { profileType } = req.body; 
 
     if (uid === profileId) {
         return res.status(400).json({ message: 'No puedes seguirte a ti mismo.' });
@@ -683,7 +779,6 @@ app.post('/api/profiles/:profileId/follow', async (req, res) => {
     }
 
     const currentUserRef = db.collection('users').doc(uid);
-    // La colección del perfil a seguir depende del tipo
     const followedProfileRef = db.collection(profileType === 'pet' ? 'pets' : 'users').doc(profileId);
 
     try {
@@ -692,12 +787,10 @@ app.post('/api/profiles/:profileId/follow', async (req, res) => {
             if (!followedDoc.exists) {
                 throw new Error("El perfil que intentas seguir no existe.");
             }
-            // Añadir a la subcolección 'following' del usuario actual
             t.set(currentUserRef.collection('following').doc(profileId), { 
                 followedAt: new Date(),
                 type: profileType 
             });
-            // Añadir al usuario actual a la subcolección 'followers' del perfil seguido
             t.set(followedProfileRef.collection('followers').doc(uid), { 
                 followedAt: new Date() 
             });
@@ -712,7 +805,7 @@ app.post('/api/profiles/:profileId/follow', async (req, res) => {
 app.delete('/api/profiles/:profileId/unfollow', async (req, res) => {
     const { uid } = req.user;
     const { profileId } = req.params;
-    const { profileType } = req.body; // 'pet' o 'user'
+    const { profileType } = req.body; 
 
     if (!profileType || !['pet', 'user'].includes(profileType)) {
         return res.status(400).json({ message: 'Se requiere un tipo de perfil válido (pet/user).' });
@@ -723,7 +816,6 @@ app.delete('/api/profiles/:profileId/unfollow', async (req, res) => {
 
     try {
         await db.runTransaction(async (t) => {
-            // Simplemente borramos los documentos de las subcolecciones
             t.delete(currentUserRef.collection('following').doc(profileId));
             t.delete(followedProfileRef.collection('followers').doc(uid));
         });
