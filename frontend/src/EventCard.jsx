@@ -1,11 +1,11 @@
 // frontend/src/EventCard.jsx
-// Versión: 1.0 - Tarjeta de Evento
-// Muestra la información principal de un evento comunitario.
+// Versión: 1.1 - Lógica de Clic
+// El botón "Ver Detalles" ahora invoca una función pasada por props.
 
 import React from 'react';
 import { Calendar, Clock, MapPin } from 'lucide-react';
 
-function EventCard({ event }) {
+function EventCard({ event, onDetailsClick }) { // Aceptamos la nueva prop
   const formatDate = (isoString) => {
     return new Date(isoString).toLocaleDateString('es-ES', {
       year: 'numeric', month: 'long', day: 'numeric'
@@ -54,7 +54,8 @@ function EventCard({ event }) {
             </div>
           )}
         </div>
-        <button className="event-card-button">Ver Detalles</button>
+        {/* [REFINADO] El botón ahora tiene una acción */}
+        <button className="event-card-button" onClick={onDetailsClick}>Ver Detalles</button>
       </div>
     </div>
   );
