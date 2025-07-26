@@ -2,23 +2,24 @@
 // Versión: 2.0 - Con Selector de Autor
 // TAREA 2: Se refactoriza completamente para incluir el selector de autor y la lógica dinámica.
 
-import { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useRef } from 'react';
 import { X, UploadCloud } from 'lucide-react';
 import { auth } from './firebase';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-// --- [NUEVO] Componente para el selector de autor ---
+// --- Componente para el selector de autor ---
 const AuthorSelector = ({ userProfile, pets, selectedAuthor, onSelectAuthor }) => {
-  const allProfiles = [userProfile, ...pets];
+  // Aseguramos que el userProfile tenga un 'id' para la key, usando el uid del usuario autenticado.
+  const userProfileWithId = { ...userProfile, id: auth.currentUser.uid };
+  const allProfiles = [userProfileWithId, ...pets];
 
   return (
     <div className="author-selector-container">
       <div className="author-selector-scroll">
         {allProfiles.map(profile => {
           const isSelected = profile.id === selectedAuthor.id;
-          const isUser = !profile.breed; // Una forma de diferenciar usuario de mascota
+          const isUser = !profile.breed;
           const profilePic = isUser ? profile.profilePictureUrl : profile.petPictureUrl;
 
           return (
@@ -41,7 +42,8 @@ const AuthorSelector = ({ userProfile, pets, selectedAuthor, onSelectAuthor }) =
 
 
 function CreatePostModal({ userProfile, pets, onClose, onPostCreated }) {
-    const [selectedAuthor, setSelectedAuthor] = useState(userProfile);
+    const userProfileWithId = { ...userProfile, id: auth.currentUser.uid };
+    const [selectedAuthor, setSelectedAuthor] = useState(userProfileWithId);
     const [caption, setCaption] = useState('');
     const [postImage, setPostImage] = useState(null);
     const [previewImage, setPreviewImage] = useState(null);
@@ -102,7 +104,6 @@ function CreatePostModal({ userProfile, pets, onClose, onPostCreated }) {
         }
     };
     
-    // Placeholder dinámico
     const placeholderText = selectedAuthor.breed 
       ? `¿Qué está haciendo ${selectedAuthor.name}?`
       : `¿Qué estás pensando, ${selectedAuthor.name.split(' ')[0]}?`;

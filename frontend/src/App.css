@@ -1,6 +1,6 @@
 /* frontend/src/App.css */
-/* Versión: 2.8 - Estilos para el Módulo de Eventos (Completo) */
-/* Añade todos los estilos necesarios para EventsPage, EventCard y el toggle del mapa. */
+/* Versión: 3.2 - Estilos para Creación de Posts */
+/* Añade los estilos para el prompt de creación y el selector de autor. */
 
 /* --- Importación de Tipografía --- */
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&display=swap');
@@ -1817,4 +1817,128 @@ input::-ms-clear {
 .inline-profile-link:hover {
   color: var(--primary-accent);
   text-decoration: underline;
+}
+
+
+/* --- ESTILOS PARA EL CARNÉ DE SALUD --- */
+.health-section { margin-top: 1.5rem; }
+.health-section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-color); }
+.health-section-header h4 { margin: 0; font-size: 1.1rem; font-weight: 700; }
+.add-record-button { background-color: var(--primary-accent); color: var(--brand-cream); border: none; border-radius: 6px; padding: 6px 12px; font-size: 0.9rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: background-color 0.2s; }
+.add-record-button:hover { background-color: var(--primary-accent-hover); }
+.record-list { display: flex; flex-direction: column; gap: 10px; }
+.record-card { background-color: var(--background-dark); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; }
+.record-card-info { display: flex; flex-direction: column; gap: 4px; text-align: left; }
+.record-card-info strong { font-size: 1rem; color: var(--text-primary); }
+.record-card-info span { font-size: 0.85rem; color: var(--text-secondary); }
+.record-card-actions button { background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 4px; }
+.record-card-actions button:hover { color: var(--error-red); }
+.empty-health-section { text-align: center; color: var(--text-secondary); font-size: 0.9rem; padding: 1rem; border: 1px dashed var(--border-color); border-radius: 8px; }
+.add-record-form { background-color: var(--background-dark); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; margin-top: 1rem; display: flex; flex-direction: column; gap: 12px; }
+.form-row { display: flex; gap: 12px; }
+.form-row .form-group { flex: 1; margin-bottom: 0; }
+.add-record-form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
+.form-action-button { background: none; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: background-color 0.2s; }
+.form-action-button.save { background-color: var(--primary-accent); color: var(--brand-cream); }
+.form-action-button.save:hover { background-color: var(--primary-accent-hover); }
+.form-action-button.cancel { background-color: var(--border-color); color: var(--text-secondary); }
+.form-action-button.cancel:hover { background-color: #3a3a3c; }
+
+
+/* --- [NUEVO] ESTILOS PARA PROMPT DE CREACIÓN Y SELECTOR DE AUTOR --- */
+.create-post-prompt-container {
+  background-color: var(--background-light);
+  border: 1px solid var(--border-color);
+  border-radius: 15px;
+  padding: 16px;
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 550px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.prompt-profile-pic {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.prompt-input-fake {
+  flex-grow: 1;
+  background-color: var(--background-dark);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  padding: 10px 16px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.2s;
+}
+
+.prompt-input-fake:hover {
+  background-color: #252527;
+}
+
+.author-selector-container {
+  padding: 16px 0 16px 16px;
+  border-bottom: 1px solid var(--border-color);
+  overflow-x: auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;  /* IE 10+ */
+}
+
+.author-selector-container::-webkit-scrollbar {
+  display: none; /* Safari and Chrome */
+}
+
+.author-selector-scroll {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.author-bubble {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  text-decoration: none;
+  color: var(--text-secondary);
+  transition: color 0.2s;
+}
+
+.author-bubble:hover {
+  color: var(--text-primary);
+}
+
+.author-bubble-image {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  padding: 2px;
+  transition: border-color 0.2s;
+}
+
+.author-bubble-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.author-bubble.selected .author-bubble-image {
+  border-color: var(--primary-accent);
+}
+
+.author-bubble-name {
+  font-size: 0.8rem;
+  font-weight: bold;
+  white-space: nowrap;
 }
