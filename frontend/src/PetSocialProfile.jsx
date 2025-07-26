@@ -1,19 +1,21 @@
 // frontend/src/PetSocialProfile.jsx
-// Versión: 3.0 - Creación de Posts Unificada
-// CORRECCIÓN: El botón FAB ahora abre el modal de creación unificado, pasando
-// todos los perfiles y preseleccionando la mascota actual como autor.
+// Versión: 3.1 - Lógica de Edición de Perfil
+// Implementa la lógica para abrir el modal de edición de perfil
+// cuando el usuario es el dueño de la mascota.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { auth } from './firebase';
 import LoadingComponent from './LoadingComponent';
 import CreatePostModal from './CreatePostModal';
+import PetEditModal from './PetEditModal'; // Importamos el modal de edición
 import PostCard from './PostCard';
 import { Plus } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-function PetSocialProfile({ userProfile, pets }) {
+// [REFINADO] Aceptamos las nuevas props: user y onUpdate
+function PetSocialProfile({ user, userProfile, pets, onUpdate }) {
     const { petId } = useParams();
     const [petProfile, setPetProfile] = useState(null);
     const [posts, setPosts] = useState([]);
@@ -23,13 +25,13 @@ function PetSocialProfile({ userProfile, pets }) {
     const [error, setError] = useState('');
     const [isOwner, setIsOwner] = useState(false);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false); // Estado para el modal de edición
     const [isFollowing, setIsFollowing] = useState(false);
     const [followLoading, setFollowLoading] = useState(false);
 
     const fetchData = useCallback(async () => {
         if (!petProfile) setIsLoading(true);
         try {
-            const user = auth.currentUser;
             if (!user) throw new Error("Usuario no autenticado.");
             const idToken = await user.getIdToken();
             
@@ -66,7 +68,7 @@ function PetSocialProfile({ userProfile, pets }) {
         } finally {
             setIsLoading(false);
         }
-    }, [petId, petProfile]);
+    }, [petId, petProfile, user]);
 
     useEffect(() => {
         fetchData();
@@ -75,6 +77,13 @@ function PetSocialProfile({ userProfile, pets }) {
     const handlePostCreated = () => {
       setIsCreateModalOpen(false);
       fetchData();
+    };
+    
+    // [REFINADO] Función para manejar la actualización del perfil de la mascota
+    const handlePetUpdate = () => {
+      setIsEditModalOpen(false);
+      onUpdate(); // Llama a la función del layout para refrescar todo
+      fetchData(); // Vuelve a cargar los datos específicos de este perfil
     };
 
     const handleLikeToggle = async (postId) => {
@@ -144,8 +153,9 @@ function PetSocialProfile({ userProfile, pets }) {
                         </div>
                     </div>
                      <div className="social-profile-actions">
-                        {isOwner ? ( 
-                            <button className="profile-action-button follow">Editar Perfil</button> 
+                        {isOwner ? (
+                            // [REFINADO] El botón ahora abre el modal de edición
+                            <button onClick={() => setIsEditModalOpen(true)} className="profile-action-button follow">Editar Perfil</button> 
                         ) : (
                             <button 
                                 className={`profile-action-button ${isFollowing ? 'following' : 'follow'}`} 
@@ -192,6 +202,16 @@ function PetSocialProfile({ userProfile, pets }) {
                     initialAuthor={petProfile}
                     onClose={() => setIsCreateModalOpen(false)}
                     onPostCreated={handlePostCreated}
+                />
+            )}
+            
+            {/* [REFINADO] Renderizado condicional del modal de edición */}
+            {isEditModalOpen && (
+                <PetEditModal 
+                    pet={petProfile}
+                    user={user}
+                    onClose={() => setIsEditModalOpen(false)}
+                    onUpdate={handlePetUpdate}
                 />
             )}
         </>
