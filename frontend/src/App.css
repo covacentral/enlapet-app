@@ -1558,14 +1558,13 @@ input::-ms-clear {
 }
 
 
-/* --- [CORREGIDO] ESTILOS PARA PESTAÑAS DENTRO DE MODALES --- */
+/* --- [CORREGIDO Y REFINADO] ESTILOS PARA PESTAÑAS DENTRO DE MODALES --- */
 .modal-tabs {
   display: flex;
-  /* [CORRECCIÓN] Se elimina el borde del contenedor principal para evitar el bug visual. */
-  /* border-bottom: 1px solid var(--border-color); */
-  margin: -24px -24px 24px -24px;
+  margin: 0 -24px 24px -24px; /* Se ajusta para unirse con los bordes del modal */
   padding: 0 24px;
-  border-bottom: 1px solid var(--border-color); /* Se mantiene un borde sutil para la separación */
+  position: relative; /* Contenedor de referencia para la línea inferior */
+  border-bottom: 1px solid var(--border-color); /* Línea de base sutil */
 }
 
 .modal-tab-button {
@@ -1576,9 +1575,9 @@ input::-ms-clear {
   font-size: 1rem;
   padding: 16px 20px;
   cursor: pointer;
-  position: relative;
   transition: color 0.2s ease-in-out;
-  border-bottom: 3px solid transparent; /* Borde invisible por defecto */
+  border-bottom: 3px solid transparent; /* Borde invisible para mantener el espacio */
+  margin-bottom: -1px; /* Sube el botón para que su borde se superponga al del contenedor */
 }
 
 .modal-tab-button:hover {
@@ -1590,4 +1589,11 @@ input::-ms-clear {
   border-bottom-color: var(--primary-accent); /* La línea activa ahora es el borde del botón */
 }
 
-/* [CORRECCIÓN] Ya no necesitamos el pseudo-elemento ::after */
+/* [CORRECCIÓN] Se elimina el borde del header cuando hay pestañas para evitar la línea doble */
+.modal-header {
+  border-bottom: 1px solid var(--border-color);
+}
+
+.pet-edit-modal-content .modal-header {
+  border-bottom: none; /* Específicamente quitamos el borde del header en este modal */
+}
