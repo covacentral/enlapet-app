@@ -1,7 +1,7 @@
 // frontend/src/EventDetailModal.jsx
-// Versión: 1.0 - Modal de Detalles y Gestión de Eventos
-// Este nuevo componente muestra toda la información de un evento y
-// permite al organizador gestionar su estado y editar sus detalles.
+// Versión: 1.1 - Lógica de Edición Corregida y UI Mejorada
+// CORRECCIÓN: Se confía en el backend para la validación de la ventana de edición.
+// MEJORA: Se añade un mensaje claro en la UI sobre el tiempo de edición.
 
 import React, { useState, useEffect } from 'react';
 import { auth } from './firebase';
@@ -14,23 +14,43 @@ function EventDetailModal({ event, user, onClose, onUpdate }) {
   const [formData, setFormData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [timeLeft, setTimeLeft] = useState('');
 
   useEffect(() => {
     if (event) {
       setFormData({
         name: event.name,
         description: event.description,
-        startDate: event.startDate.substring(0, 16), // Formato para datetime-local
+        startDate: event.startDate.substring(0, 16),
         endDate: event.endDate.substring(0, 16),
       });
     }
   }, [event]);
 
-  if (!event || !user) return null;
-
   const isOrganizer = event.organizerId === user.uid;
   const oneHourInMs = 60 * 60 * 1000;
-  const isEditable = (Date.now() - new Date(event.createdAt).getTime()) < oneHourInMs;
+  const createdAtTime = new Date(event.createdAt).getTime();
+  const timeSinceCreation = Date.now() - createdAtTime;
+  const isEditable = timeSinceCreation < oneHourInMs;
+
+  useEffect(() => {
+    if (isOrganizer && isEditable) {
+      const interval = setInterval(() => {
+        const remainingMs = oneHourInMs - (Date.now() - createdAtTime);
+        if (remainingMs > 0) {
+          const minutes = Math.floor(remainingMs / 60000);
+          const seconds = Math.floor((remainingMs % 60000) / 1000);
+          setTimeLeft(`${minutes}m ${seconds}s`);
+        } else {
+          setTimeLeft('Tiempo expirado');
+          clearInterval(interval);
+        }
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [isOrganizer, isEditable, createdAtTime]);
+
+  if (!event || !user) return null;
 
   const handleStatusChange = async (newStatus) => {
     setIsLoading(true);
@@ -45,7 +65,7 @@ function EventDetailModal({ event, user, onClose, onUpdate }) {
       const data = await response.json();
       if (!response.ok) throw new Error(data.message);
       setMessage('¡Estado actualizado!');
-      onUpdate(); // Refresca la lista de eventos en la página principal
+      onUpdate();
       setTimeout(() => onClose(), 1500);
     } catch (error) {
       setMessage(`Error: ${error.message}`);
@@ -104,12 +124,11 @@ function EventDetailModal({ event, user, onClose, onUpdate }) {
           {isOrganizer && (
             <div className="organizer-controls" style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-color)' }}>
               <h4>Gestionar Evento</h4>
-              {!isEditable && !isEditMode && (
-                <div className="edit-notice" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', color: 'orange', marginBottom: '1rem' }}>
+              
+              <div className="edit-notice" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', color: isEditable ? 'var(--primary-accent)' : 'orange', marginBottom: '1rem' }}>
                   <AlertCircle size={16} />
-                  <span>El período para editar detalles ha finalizado.</span>
-                </div>
-              )}
+                  {isEditable ? <span>Puedes editar los detalles. Tiempo restante: <strong>{timeLeft}</strong></span> : <span>El período para editar detalles ha finalizado.</span>}
+              </div>
 
               {isEditMode ? (
                 <form onSubmit={handleDetailsUpdate} className="pet-edit-form">
@@ -130,7 +149,7 @@ function EventDetailModal({ event, user, onClose, onUpdate }) {
                 <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                   <button onClick={() => handleStatusChange('active')} disabled={isLoading || event.status === 'active'} className="modal-button">Marcar como Activo</button>
                   <button onClick={() => handleStatusChange('finished')} disabled={isLoading || event.status === 'finished'} className="modal-button cancel">Marcar como Finalizado</button>
-                  <button onClick={() => setIsEditMode(true)} disabled={!isEditable} className="modal-button" title={!isEditable ? 'El período de edición ha expirado' : 'Editar detalles'}>
+                  <button onClick={() => setIsEditMode(true)} disabled={!isEditable || isLoading} className="modal-button" title={!isEditable ? 'El período de edición ha expirado' : 'Editar detalles'}>
                     <Edit size={16}/> Editar Detalles
                   </button>
                 </div>
