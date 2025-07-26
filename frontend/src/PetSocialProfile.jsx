@@ -1,6 +1,7 @@
 // frontend/src/PetSocialProfile.jsx
-// Versión: 2.4 - Sintaxis de Importación Corregida
-// Se corrige un error de sintaxis en la línea de importación de React que causaba un fallo en el build.
+// Versión: 3.0 - Carga de Datos Optimizada
+// OPTIMIZACIÓN: Se simplifica la función fetchData para consumir el endpoint de posts ya enriquecido.
+// Se elimina la lógica de enriquecimiento de posts del lado del cliente.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
@@ -44,17 +45,9 @@ function PetSocialProfile() {
             setIsOwner(user.uid === profileData.pet.ownerId);
 
             if (!postsRes.ok) throw new Error('No se pudieron cargar las publicaciones.');
-            let postsData = await postsRes.json();
-            
-            const enrichedPosts = postsData.map(post => ({
-                ...post,
-                author: {
-                    id: profileData.pet.id,
-                    name: profileData.pet.name,
-                    profilePictureUrl: profileData.pet.petPictureUrl
-                }
-            }));
-            setPosts(enrichedPosts);
+            // [OPTIMIZACIÓN] Los posts ya vienen enriquecidos desde el backend.
+            const postsData = await postsRes.json();
+            setPosts(postsData);
 
             if (!followStatusRes.ok) throw new Error('Error al verificar seguimiento.');
             const followStatusData = await followStatusRes.json();
@@ -82,11 +75,11 @@ function PetSocialProfile() {
         } finally {
             setIsLoading(false);
         }
-    }, [petId, petProfile]);
+    }, [petId]); // Se elimina petProfile de las dependencias para evitar recargas innecesarias
 
     useEffect(() => {
         fetchData();
-    }, [petId]);
+    }, [fetchData]);
 
     const handleLikeToggle = async (postId) => {
         const isCurrentlyLiked = !!likedStatuses[postId];
