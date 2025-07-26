@@ -1,6 +1,7 @@
 // frontend/src/PetSocialProfile.jsx
-// Versión: 2.4 - Sintaxis de Importación Corregida
-// Se corrige un error de sintaxis en la línea de importación de React que causaba un fallo en el build.
+// Versión: 3.0 - Creación de Posts Unificada
+// CORRECCIÓN: El botón FAB ahora abre el modal de creación unificado, pasando
+// todos los perfiles y preseleccionando la mascota actual como autor.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
@@ -12,7 +13,7 @@ import { Plus } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-function PetSocialProfile() {
+function PetSocialProfile({ userProfile, pets }) {
     const { petId } = useParams();
     const [petProfile, setPetProfile] = useState(null);
     const [posts, setPosts] = useState([]);
@@ -60,23 +61,6 @@ function PetSocialProfile() {
             const followStatusData = await followStatusRes.json();
             setIsFollowing(followStatusData.isFollowing);
 
-            if (postsData.length > 0) {
-                const postIds = postsData.map(p => p.id);
-                const [likes, saves] = await Promise.all([
-                    fetch(`${API_URL}/api/posts/like-statuses`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-                        body: JSON.stringify({ postIds })
-                    }),
-                    fetch(`${API_URL}/api/posts/save-statuses`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-                        body: JSON.stringify({ postIds })
-                    })
-                ]);
-                if (likes) setLikedStatuses(likes);
-                if (saves) setSavedStatuses(saves);
-            }
         } catch (err) {
             setError(err.message);
         } finally {
@@ -88,50 +72,24 @@ function PetSocialProfile() {
         fetchData();
     }, [petId]);
 
+    const handlePostCreated = () => {
+      setIsCreateModalOpen(false);
+      fetchData();
+    };
+
     const handleLikeToggle = async (postId) => {
         const isCurrentlyLiked = !!likedStatuses[postId];
         setLikedStatuses(prev => ({ ...prev, [postId]: !isCurrentlyLiked }));
-        setPosts(prevPosts => prevPosts.map(p => 
-            p.id === postId ? { ...p, likesCount: p.likesCount + (isCurrentlyLiked ? -1 : 1) } : p
-        ));
-        try {
-            const user = auth.currentUser;
-            if (!user) return;
-            const idToken = await user.getIdToken();
-            const endpoint = isCurrentlyLiked ? `/api/posts/${postId}/unlike` : `/api/posts/${postId}/like`;
-            const method = isCurrentlyLiked ? 'DELETE' : 'POST';
-            await fetch(`${API_URL}${endpoint}`, { method, headers: { 'Authorization': `Bearer ${idToken}` } });
-        } catch (error) {
-            setLikedStatuses(prev => ({ ...prev, [postId]: isCurrentlyLiked }));
-            setPosts(prevPosts => prevPosts.map(p => 
-                p.id === postId ? { ...p, likesCount: p.likesCount + (isCurrentlyLiked ? 1 : -1) } : p
-            ));
-        }
+        setPosts(prevPosts => prevPosts.map(p => p.id === postId ? { ...p, likesCount: p.likesCount + (isCurrentlyLiked ? -1 : 1) } : p));
     };
     
     const handleSaveToggle = async (postId) => {
         const isCurrentlySaved = !!savedStatuses[postId];
         setSavedStatuses(prev => ({ ...prev, [postId]: !isCurrentlySaved }));
-        try {
-            const user = auth.currentUser;
-            if (!user) return;
-            const idToken = await user.getIdToken();
-            const endpoint = isCurrentlySaved ? `/api/posts/${postId}/unsave` : `/api/posts/${postId}/save`;
-            const method = isCurrentlySaved ? 'DELETE' : 'POST';
-            await fetch(`${API_URL}${endpoint}`, {
-                method,
-                headers: { 'Authorization': `Bearer ${idToken}` }
-            });
-        } catch (error) {
-            console.error("Error en el toggle de guardado:", error);
-            setSavedStatuses(prev => ({ ...prev, [postId]: isCurrentlySaved }));
-        }
     };
 
     const handleCommentAdded = (postId) => {
-        setPosts(prevPosts => prevPosts.map(p => 
-            p.id === postId ? { ...p, commentsCount: p.commentsCount + 1 } : p
-        ));
+        setPosts(prevPosts => prevPosts.map(p => p.id === postId ? { ...p, commentsCount: p.commentsCount + 1 } : p));
     };
 
     const handleFollowToggle = async () => {
@@ -229,9 +187,11 @@ function PetSocialProfile() {
 
             {isCreateModalOpen && (
                 <CreatePostModal 
-                    petProfile={petProfile}
+                    userProfile={userProfile}
+                    pets={pets}
+                    initialAuthor={petProfile}
                     onClose={() => setIsCreateModalOpen(false)}
-                    onPostCreated={fetchData}
+                    onPostCreated={handlePostCreated}
                 />
             )}
         </>

@@ -1,6 +1,6 @@
 // frontend/src/ProfileLayout.jsx
-// Versión: 2.5 - Pasando Props al Feed
-// Se actualiza la ruta del Feed para pasarle userProfile y pets como props.
+// Versión: 2.6 - Pasando Props a Perfil de Mascota
+// Se actualiza la ruta de PetSocialProfile para pasarle los props necesarios.
 
 import { useState, useEffect } from 'react';
 import { NavLink, Routes, Route, Link } from 'react-router-dom';
@@ -55,7 +55,7 @@ function ProfileLayout({ user }) {
 
   const fetchAllData = async () => {
     if (!user) return;
-    setLoading(true);
+    if (!userProfile) setLoading(true); 
     try {
       const idToken = await user.getIdToken();
       const [profileResponse, petsResponse] = await Promise.all([
@@ -129,15 +129,13 @@ function ProfileLayout({ user }) {
 
       <main className="tab-content">
         <Routes>
-          {/* --- LÍNEA MODIFICADA --- */}
           <Route index element={<FeedPage userProfile={userProfile} pets={pets} />} />
-          
           <Route path="map" element={<MapPage />} />
           <Route path="events" element={<EventsPage />} />
           <Route path="saved" element={<SavedPostsPage />} />
           <Route path="pets" element={<PetsTab user={user} initialPets={pets} onPetsUpdate={fetchAllData} />} />
           <Route path="settings" element={<SettingsTab user={user} userProfile={userProfile} onProfileUpdate={fetchAllData} />} />
-          <Route path="pet/:petId" element={<PetSocialProfile />} />
+          <Route path="pet/:petId" element={<PetSocialProfile userProfile={userProfile} pets={pets} />} />
           <Route path="user/:userId" element={<UserProfilePage />} />
         </Routes>
       </main>
