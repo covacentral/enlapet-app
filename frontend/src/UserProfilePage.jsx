@@ -1,6 +1,7 @@
 // frontend/src/UserProfilePage.jsx
-// Versión: 2.0 - Conexión a API y Datos Dinámicos
-// TAREA 3: Se implementa la llamada a la API para obtener y mostrar datos reales del perfil del usuario.
+// Versión: 3.0 - Lógica de Seguimiento Completa
+// TAREA 4: Se implementa la lógica del botón "Seguir", incluyendo la obtención del estado
+// inicial y el envío del 'profileType' correcto a la API.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
@@ -25,7 +26,7 @@ const UserPetCard = ({ pet }) => (
 
 function UserProfilePage() {
   const { userId } = useParams();
-  const [activeTab, setActiveTab] = useState('pets'); // 'posts' o 'pets'
+  const [activeTab, setActiveTab] = useState('pets');
   
   const [userProfile, setUserProfile] = useState(null);
   const [pets, setPets] = useState([]);
@@ -45,21 +46,24 @@ function UserProfilePage() {
       if (!user) throw new Error("Debes iniciar sesión para ver perfiles.");
       const idToken = await user.getIdToken();
 
-      const response = await fetch(`${API_URL}/api/public/users/${userId}`, {
-        headers: { 'Authorization': `Bearer ${idToken}` }
-      });
+      // Obtenemos los datos del perfil y el estado de seguimiento al mismo tiempo
+      const [profileRes, followStatusRes] = await Promise.all([
+        fetch(`${API_URL}/api/public/users/${userId}`, { headers: { 'Authorization': `Bearer ${idToken}` } }),
+        fetch(`${API_URL}/api/profiles/${userId}/follow-status`, { headers: { 'Authorization': `Bearer ${idToken}` } })
+      ]);
 
-      if (!response.ok) {
-        const errorData = await response.json();
+      if (!profileRes.ok) {
+        const errorData = await profileRes.json();
         throw new Error(errorData.message || 'No se pudo cargar el perfil.');
       }
+      if (!followStatusRes.ok) throw new Error('Error al verificar seguimiento.');
 
-      const { userProfile: profileData, pets: petsData } = await response.json();
+      const { userProfile: profileData, pets: petsData } = await profileRes.json();
+      const followStatusData = await followStatusRes.json();
+      
       setUserProfile(profileData);
       setPets(petsData);
-
-      // Aquí iría la lógica para cargar los posts del usuario en el futuro
-      // Por ahora, la pestaña de posts estará vacía.
+      setIsFollowing(followStatusData.isFollowing);
 
     } catch (err) {
       setError(err.message);
@@ -71,6 +75,47 @@ function UserProfilePage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // --- LÓGICA PARA SEGUIR/DEJAR DE SEGUIR ---
+  const handleFollowToggle = async () => {
+    setFollowLoading(true);
+    const user = auth.currentUser;
+    if (!user || isOwnProfile) return;
+    
+    const endpoint = isFollowing 
+        ? `${API_URL}/api/profiles/${userId}/unfollow` 
+        : `${API_URL}/api/profiles/${userId}/follow`;
+    
+    const method = isFollowing ? 'DELETE' : 'POST';
+    
+    try {
+        const idToken = await user.getIdToken();
+        const response = await fetch(endpoint, { 
+            method, 
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}` 
+            },
+            // Enviamos el tipo de perfil correcto
+            body: JSON.stringify({ profileType: 'user' }) 
+        });
+
+        if (!response.ok) throw new Error('La acción no se pudo completar.');
+        
+        // Actualización optimista de la UI
+        setIsFollowing(!isFollowing);
+        setUserProfile(prevProfile => ({
+            ...prevProfile,
+            followersCount: prevProfile.followersCount + (isFollowing ? -1 : 1)
+        }));
+
+    } catch (err) {
+        console.error("Error toggling follow:", err);
+        // En caso de error, podríamos revertir el estado si quisiéramos
+    } finally {
+        setFollowLoading(false);
+    }
+  };
 
 
   if (isLoading) return <LoadingComponent text="Cargando perfil..." />;
@@ -110,6 +155,7 @@ function UserProfilePage() {
               <button 
                 className={`profile-action-button ${isFollowing ? 'following' : 'follow'}`} 
                 disabled={followLoading}
+                onClick={handleFollowToggle}
               >
                 {followLoading ? '...' : (isFollowing ? 'Siguiendo' : 'Seguir')}
               </button>
