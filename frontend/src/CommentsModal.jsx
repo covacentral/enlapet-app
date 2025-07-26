@@ -1,8 +1,9 @@
 // frontend/src/CommentsModal.jsx
-// Versión: 1.1 - Estilo Corregido
-// Utiliza las clases CSS correctas para funcionar como un modal flotante.
+// Versión: 2.0 - Enlaces a Perfiles de Usuario
+// TAREA 5: El nombre del autor de cada comentario ahora enlaza a su perfil público.
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom'; // Importamos Link
 import { auth } from './firebase';
 import LoadingComponent from './LoadingComponent';
 import { X } from 'lucide-react';
@@ -67,7 +68,7 @@ function CommentsModal({ postId, onClose, onCommentAdded }) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="comments-modal-content" onClick={e => e.stopPropagation()}>
-        <div className="comments-modal-header">
+        <div className="modal-header">
           <h2>Comentarios</h2>
           <button onClick={onClose} className="close-button" disabled={isSubmitting}>
             <X size={24} />
@@ -87,7 +88,10 @@ function CommentsModal({ postId, onClose, onCommentAdded }) {
                 className="comment-author-pic"
               />
               <div className="comment-text-content">
-                <strong>{comment.authorName}</strong>
+                {/* --- ENLACE AÑADIDO --- */}
+                <Link to={`/dashboard/user/${comment.authorId}`} className="inline-profile-link">
+                  {comment.authorName}
+                </Link>
                 <p>{comment.text}</p>
               </div>
             </div>
