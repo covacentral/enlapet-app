@@ -1,7 +1,7 @@
 // frontend/src/CreatePostModal.jsx
-// Versión: 2.2 - Lógica de Autor Corregida
-// CORRECCIÓN: Se mejora la lógica en AuthorSelector para diferenciar correctamente
-// entre un usuario y una mascota, solucionando el bug de las burbujas incorrectas.
+// Versión: 2.3 - Devolución de Post Creado
+// La función onPostCreated ahora pasa el objeto del post recién
+// creado para una actualización instantánea de la UI.
 
 import { useState, useRef } from 'react';
 import { X, UploadCloud } from 'lucide-react';
@@ -19,11 +19,7 @@ const AuthorSelector = ({ userProfile, pets, selectedAuthor, onSelectAuthor }) =
       <div className="author-selector-scroll">
         {allProfiles.map(profile => {
           const isSelected = profile.id === selectedAuthor.id;
-          
-          // [CORRECCIÓN] Usamos la presencia de 'ownerId' para identificar a una mascota.
-          // Esto es mucho más fiable que comprobar la ausencia de 'breed'.
           const isUser = !profile.ownerId; 
-          
           const profilePic = isUser ? profile.profilePictureUrl : profile.petPictureUrl;
 
           return (
@@ -72,7 +68,6 @@ function CreatePostModal({ userProfile, pets, initialAuthor, onClose, onPostCrea
         setMessage('Publicando momento...');
 
         const authorType = selectedAuthor.ownerId ? 'pet' : 'user';
-
         const formData = new FormData();
         formData.append('postImage', postImage);
         formData.append('caption', caption);
@@ -95,13 +90,15 @@ function CreatePostModal({ userProfile, pets, initialAuthor, onClose, onPostCrea
             }
 
             setMessage('¡Momento publicado con éxito!');
-            onPostCreated(); 
+            // [REFINADO] Pasamos el objeto del post del backend a la función callback.
+            onPostCreated(data.post); 
             setTimeout(() => {
                 onClose();
             }, 1500);
 
         } catch (error) {
             setMessage(error.message);
+            onPostCreated(null); // Indicamos que no se pudo crear para que el feed se recargue
         } finally {
             setIsLoading(false);
         }

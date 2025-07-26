@@ -1,6 +1,7 @@
 // frontend/src/ProfileLayout.jsx
-// Versión: 2.6 - Pasando Props a Perfil de Mascota
-// Se actualiza la ruta de PetSocialProfile para pasarle los props necesarios.
+// Versión: 2.6 - Pasando Props a Perfiles de Mascota
+// Se pasan las props necesarias a la ruta de PetSocialProfile para
+// habilitar la edición de perfiles desde esa vista.
 
 import { useState, useEffect } from 'react';
 import { NavLink, Routes, Route, Link } from 'react-router-dom';
@@ -131,11 +132,15 @@ function ProfileLayout({ user }) {
         <Routes>
           <Route index element={<FeedPage userProfile={userProfile} pets={pets} />} />
           <Route path="map" element={<MapPage />} />
-          <Route path="events" element={<EventsPage />} />
+          <Route path="events" element={<EventsPage user={user} />} />
           <Route path="saved" element={<SavedPostsPage />} />
           <Route path="pets" element={<PetsTab user={user} initialPets={pets} onPetsUpdate={fetchAllData} />} />
           <Route path="settings" element={<SettingsTab user={user} userProfile={userProfile} onProfileUpdate={fetchAllData} />} />
-          <Route path="pet/:petId" element={<PetSocialProfile userProfile={userProfile} pets={pets} />} />
+          {/* [REFINADO] Pasamos las props necesarias al perfil social de la mascota */}
+          <Route 
+            path="pet/:petId" 
+            element={<PetSocialProfile user={user} userProfile={userProfile} pets={pets} onUpdate={fetchAllData} />} 
+          />
           <Route path="user/:userId" element={<UserProfilePage />} />
         </Routes>
       </main>
