@@ -1,22 +1,27 @@
 // frontend/src/FeedPage.jsx
-// Versión: 1.3 - Gestión de Estado de Guardado (Completo y Corregido)
-// Implementa la lógica para guardar y quitar publicaciones de forma optimista.
+// Versión: 2.0 - Integración de Creación de Posts
+// TAREA 3: Se integra el prompt y el modal para permitir la creación de posts desde el feed.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { auth } from './firebase';
 import PostCard from './PostCard';
 import LoadingComponent from './LoadingComponent';
+import CreatePostPrompt from './CreatePostPrompt'; // Importamos el prompt
+import CreatePostModal from './CreatePostModal';   // Importamos el modal
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-function FeedPage() {
+function FeedPage({ userProfile, pets }) { // Aceptamos props
   const [posts, setPosts] = useState([]);
   const [likedStatuses, setLikedStatuses] = useState({});
-  const [savedStatuses, setSavedStatuses] = useState({}); // ¡NUEVO!
+  const [savedStatuses, setSavedStatuses] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [nextCursors, setNextCursors] = useState({ followedCursor: null, discoveryCursor: null });
   const [hasMore, setHasMore] = useState(true);
+
+  // Nuevo estado para controlar la visibilidad del modal
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const fetchStatuses = async (endpoint, postIds, idToken) => {
     try {
@@ -33,8 +38,11 @@ function FeedPage() {
     }
   };
 
-  const fetchFeed = useCallback(async (cursors) => {
-    setIsLoading(true);
+  const fetchFeed = useCallback(async (cursors, reset = false) => {
+    // Solo mostramos el loader grande en la carga inicial
+    if (reset || posts.length === 0) {
+      setIsLoading(true);
+    }
     setError(null);
     try {
       const user = auth.currentUser;
@@ -52,7 +60,8 @@ function FeedPage() {
       if (!response.ok) throw new Error((await response.json()).message);
 
       const data = await response.json();
-      setPosts(prevPosts => [...prevPosts, ...data.posts]);
+      
+      setPosts(prevPosts => reset ? data.posts : [...prevPosts, ...data.posts]);
       setNextCursors(data.nextCursors);
       if (!data.nextCursors.followedCursor && !data.nextCursors.discoveryCursor) setHasMore(false);
 
@@ -70,73 +79,47 @@ function FeedPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [posts.length]); // Dependemos de posts.length para decidir si mostrar el loader
 
   useEffect(() => {
-    setPosts([]); 
-    fetchFeed({ followedCursor: null, discoveryCursor: null });
-  }, [fetchFeed]);
+    // Carga inicial del feed
+    fetchFeed({ followedCursor: null, discoveryCursor: null }, true);
+  }, []); // El array vacío asegura que esto solo se ejecute una vez al montar
+
+  const handlePostCreated = () => {
+    setIsModalOpen(false);
+    // Refrescamos el feed desde el principio para ver la nueva publicación
+    fetchFeed({ followedCursor: null, discoveryCursor: null }, true);
+  };
 
   const handleLikeToggle = async (postId) => {
     const isCurrentlyLiked = !!likedStatuses[postId];
     setLikedStatuses(prev => ({ ...prev, [postId]: !isCurrentlyLiked }));
-    setPosts(prevPosts => prevPosts.map(p => {
-        if (p.id === postId) {
-            return { ...p, likesCount: p.likesCount + (isCurrentlyLiked ? -1 : 1) };
-        }
-        return p;
-    }));
-
+    setPosts(prevPosts => prevPosts.map(p => p.id === postId ? { ...p, likesCount: p.likesCount + (isCurrentlyLiked ? -1 : 1) } : p));
     try {
-        const user = auth.currentUser;
-        if (!user) return;
+        const user = auth.currentUser; if (!user) return;
         const idToken = await user.getIdToken();
         const endpoint = isCurrentlyLiked ? `/api/posts/${postId}/unlike` : `/api/posts/${postId}/like`;
         const method = isCurrentlyLiked ? 'DELETE' : 'POST';
-
-        await fetch(`${API_URL}${endpoint}`, {
-            method,
-            headers: { 'Authorization': `Bearer ${idToken}` }
-        });
+        await fetch(`${API_URL}${endpoint}`, { method, headers: { 'Authorization': `Bearer ${idToken}` } });
     } catch (error) {
-        console.error("Error en el toggle de like:", error);
         setLikedStatuses(prev => ({ ...prev, [postId]: isCurrentlyLiked }));
-        setPosts(prevPosts => prevPosts.map(p => {
-            if (p.id === postId) {
-                return { ...p, likesCount: p.likesCount + (isCurrentlyLiked ? 1 : -1) };
-            }
-            return p;
-        }));
+        setPosts(prevPosts => prevPosts.map(p => p.id === postId ? { ...p, likesCount: p.likesCount + (isCurrentlyLiked ? 1 : -1) } : p));
     }
   };
 
-  const handleCommentAdded = (postId) => {
-    setPosts(prevPosts => prevPosts.map(p => {
-        if (p.id === postId) {
-            return { ...p, commentsCount: p.commentsCount + 1 };
-        }
-        return p;
-    }));
-  };
-
+  const handleCommentAdded = (postId) => setPosts(prevPosts => prevPosts.map(p => p.id === postId ? { ...p, commentsCount: p.commentsCount + 1 } : p));
   const handleSaveToggle = async (postId) => {
     const isCurrentlySaved = !!savedStatuses[postId];
     setSavedStatuses(prev => ({ ...prev, [postId]: !isCurrentlySaved }));
-
     try {
-        const user = auth.currentUser;
-        if (!user) return;
+        const user = auth.currentUser; if (!user) return;
         const idToken = await user.getIdToken();
         const endpoint = isCurrentlySaved ? `/api/posts/${postId}/unsave` : `/api/posts/${postId}/save`;
         const method = isCurrentlySaved ? 'DELETE' : 'POST';
-
-        await fetch(`${API_URL}${endpoint}`, {
-            method,
-            headers: { 'Authorization': `Bearer ${idToken}` }
-        });
+        await fetch(`${API_URL}${endpoint}`, { method, headers: { 'Authorization': `Bearer ${idToken}` } });
     } catch (error) {
-        console.error("Error en el toggle de guardado:", error);
-        setSavedStatuses(prev => ({ ...prev, [postId]: isCurrentlySaved })); // Revertir
+        setSavedStatuses(prev => ({ ...prev, [postId]: isCurrentlySaved }));
     }
   };
 
@@ -144,7 +127,20 @@ function FeedPage() {
 
   return (
     <div className="feed-page-container">
-      {posts.length > 0 ? (
+      {isModalOpen && (
+        <CreatePostModal 
+          userProfile={userProfile}
+          pets={pets}
+          onClose={() => setIsModalOpen(false)}
+          onPostCreated={handlePostCreated}
+        />
+      )}
+
+      <CreatePostPrompt userProfile={userProfile} onClick={() => setIsModalOpen(true)} />
+
+      {isLoading && posts.length === 0 ? (
+        <LoadingComponent text="Buscando nuevos momentos..." />
+      ) : posts.length > 0 ? (
         <div>
           {posts.map((post) => (
             <PostCard 
@@ -159,32 +155,19 @@ function FeedPage() {
           ))}
         </div>
       ) : (
-        !isLoading && (
-          <div className="text-center text-gray-500 py-16">
-            <h2 className="text-2xl font-bold mb-2">¡Bienvenido a EnlaPet!</h2>
-            <p>Tu feed de inicio está un poco vacío.</p>
-            <p>Empieza a seguir a otras mascotas para no perderte sus momentos.</p>
-          </div>
-        )
-      )}
-
-      {isLoading && <LoadingComponent text="Buscando nuevos momentos..." />}
-      
-      {error && <p className="text-center text-red-500 font-bold my-4">{error}</p>}
-
-      {!isLoading && hasMore && posts.length > 0 && (
-        <div className="text-center mt-8">
-          <button 
-            onClick={handleLoadMore}
-            className="load-more-button"
-          >
-            Ver más momentos
-          </button>
+        <div className="empty-state-message">
+          <h2 style={{fontSize: '1.5rem', fontWeight: 800}}>¡Bienvenido a EnlaPet!</h2>
+          <p>Tu feed de inicio está un poco vacío.</p>
+          <p>Empieza a seguir a otras mascotas para no perderte sus momentos.</p>
         </div>
       )}
+      
+      {error && <p className="response-message error">{error}</p>}
 
-      {!isLoading && !hasMore && (
-        <p className="text-center text-gray-400 mt-10">Has llegado al final. ¡Sigue a más mascotas para descubrir contenido nuevo!</p>
+      {!isLoading && hasMore && posts.length > 0 && (
+        <div style={{textAlign: 'center', marginTop: '2rem'}}>
+          <button onClick={handleLoadMore} className="load-more-button">Ver más momentos</button>
+        </div>
       )}
     </div>
   );

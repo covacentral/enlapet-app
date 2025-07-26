@@ -1,6 +1,6 @@
 // frontend/src/ProfileLayout.jsx
-// Versión: 2.4 - Pestaña de Eventos (Completo)
-// Añade la nueva pestaña "Eventos" y su ruta correspondiente.
+// Versión: 2.5 - Pasando Props al Feed
+// Se actualiza la ruta del Feed para pasarle userProfile y pets como props.
 
 import { useState, useEffect } from 'react';
 import { NavLink, Routes, Route, Link } from 'react-router-dom';
@@ -15,7 +15,7 @@ import EventsPage from './EventsPage.jsx';
 import SettingsTab from './SettingsTab.jsx';
 import PetsTab from './PetsTab.jsx';
 import PetSocialProfile from './PetSocialProfile.jsx';
-import UserProfilePage from './UserProfilePage.jsx'; // Se importa el nuevo componente
+import UserProfilePage from './UserProfilePage.jsx';
 import LoadingComponent from './LoadingComponent.jsx';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -35,16 +35,16 @@ const LogoutIcon = () => (
 );
 
 const ConfirmLogoutModal = ({ onConfirm, onCancel }) => (
-  <div className="modal-overlay">
-    <div className="modal-content">
-      <h3>Cerrar Sesión</h3>
-      <p>¿Estás seguro de que quieres cerrar tu sesión?</p>
-      <div className="modal-actions">
-        <button onClick={onCancel} className="modal-button cancel">Cancelar</button>
-        <button onClick={onConfirm} className="modal-button confirm">Confirmar</button>
-      </div>
+    <div className="modal-backdrop">
+        <div className="modal-content">
+            <h3>Cerrar Sesión</h3>
+            <p>¿Estás seguro de que quieres cerrar tu sesión?</p>
+            <div className="modal-actions">
+                <button onClick={onCancel} className="modal-button cancel">Cancelar</button>
+                <button onClick={onConfirm} className="modal-button confirm">Confirmar</button>
+            </div>
+        </div>
     </div>
-  </div>
 );
 
 function ProfileLayout({ user }) {
@@ -127,20 +127,18 @@ function ProfileLayout({ user }) {
         </div>
       </nav>
 
-      {/* --- SECCIÓN ACTUALIZADA --- */}
       <main className="tab-content">
         <Routes>
-          <Route index element={<FeedPage />} />
+          {/* --- LÍNEA MODIFICADA --- */}
+          <Route index element={<FeedPage userProfile={userProfile} pets={pets} />} />
+          
           <Route path="map" element={<MapPage />} />
           <Route path="events" element={<EventsPage />} />
           <Route path="saved" element={<SavedPostsPage />} />
           <Route path="pets" element={<PetsTab user={user} initialPets={pets} onPetsUpdate={fetchAllData} />} />
           <Route path="settings" element={<SettingsTab user={user} userProfile={userProfile} onProfileUpdate={fetchAllData} />} />
           <Route path="pet/:petId" element={<PetSocialProfile />} />
-          
-          {/* Se añade la nueva ruta para los perfiles de usuario */}
           <Route path="user/:userId" element={<UserProfilePage />} />
-
         </Routes>
       </main>
     </div>
