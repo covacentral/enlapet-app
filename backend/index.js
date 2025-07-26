@@ -1,11 +1,11 @@
 // backend/index.js
-// Versión: 10.1 - Optimización de Endpoints
-// OPTIMIZACIÓN: El endpoint de posts por autor ahora enriquece los posts con los datos del autor.
-// MEJORA: Los endpoints de perfil y mascotas ahora incluyen el conteo de seguidores.
+// Versión: 10.0 - Refactorización Estratégica
+// CORRECCIÓN: Se repara el endpoint POST /api/events para obtener correctamente el nombre del organizador.
+// REFACTOR: Los endpoints de Follow/Unfollow ahora soportan seguir tanto a mascotas como a otros usuarios.
 
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
+const cors =require('cors');
 const admin = require('firebase-admin');
 const multer = require('multer');
 
@@ -77,7 +77,7 @@ const authenticateUser = async (req, res, next) => {
 };
 
 // --- Endpoint Raíz ---
-app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v10.1 - Endpoints Optimizados' }));
+app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v10.0 - Refactor Estratégico' }));
 
 // --- Endpoints Públicos (No requieren autenticación) ---
 app.post('/api/register', async (req, res) => {try {const { email, password, name } = req.body;if (!email || !password || !name) {return res.status(400).json({ message: 'Nombre, email y contraseña son requeridos.' });}const userRecord = await auth.createUser({ email, password, displayName: name });const newUser = {name,email,createdAt: new Date().toISOString(),userType: 'personal',profilePictureUrl: '',coverPhotoUrl: '',bio: '',phone: '',location: { country: 'Colombia', department: '', city: '' },privacySettings: { profileVisibility: 'public', showEmail: 'private' }};await db.collection('users').doc(userRecord.uid).set(newUser);res.status(201).json({ message: 'Usuario registrado con éxito', uid: userRecord.uid });} catch (error) {console.error('Error en /api/register:', error);if (error.code === 'auth/email-already-exists') {return res.status(409).json({ message: 'El correo electrónico ya está en uso.' });}if (error.code === 'auth/invalid-password') {return res.status(400).json({ message: 'La contraseña debe tener al menos 6 caracteres.' });}res.status(500).json({ message: 'Error al registrar el usuario.' });}});
@@ -88,53 +88,10 @@ app.get('/api/public/pets/:petId', async (req, res) => {try {const { petId } = r
 app.use(authenticateUser);
 
 // --- Endpoints de Gestión de Perfil y Mascotas ---
-app.get('/api/profile', async (req, res) => {
-    try {
-        const userRef = db.collection('users').doc(req.user.uid);
-        const userDoc = await userRef.get();
-        if (!userDoc.exists) return res.status(404).json({ message: 'Perfil no encontrado.' });
-
-        // [MEJORA] Obtenemos el conteo de seguidores y seguidos
-        const followersSnapshot = await userRef.collection('followers').get();
-        const followingSnapshot = await userRef.collection('following').get();
-
-        const profileData = {
-            ...userDoc.data(),
-            followersCount: followersSnapshot.size || 0,
-            followingCount: followingSnapshot.size || 0,
-        };
-
-        res.status(200).json(profileData);
-    } catch(e) {
-        console.error('Error en GET /api/profile:', e);
-        res.status(500).json({ message: 'Error interno del servidor.' });
-    }
-});
+app.get('/api/profile', async (req, res) => {try{const userDoc = await db.collection('users').doc(req.user.uid).get();if (!userDoc.exists) return res.status(404).json({ message: 'Perfil no encontrado.' });res.status(200).json(userDoc.data());}catch(e){res.status(500).json({ message: 'Error interno del servidor.' })}});
 app.put('/api/profile', async (req, res) => {try {const { uid } = req.user;const dataToSave = req.body;if (Object.keys(dataToSave).length === 0) {return res.status(400).json({ message: 'No se proporcionaron datos válidos para actualizar.' });}await db.collection('users').doc(uid).set(dataToSave, { merge: true });res.status(200).json({ message: 'Perfil actualizado con éxito.' });} catch(e) {console.error('Error en /api/profile (PUT):', e);res.status(500).json({ message: 'Error interno del servidor.' });}});
 app.post('/api/profile/picture', upload.single('profilePicture'), async (req, res) => {try {const { uid } = req.user;if (!req.file) return res.status(400).json({ message: 'No se subió ningún archivo.' });const filePath = `profile-pictures/${uid}/${Date.now()}-${req.file.originalname}`;const fileUpload = bucket.file(filePath);const blobStream = fileUpload.createWriteStream({ metadata: { contentType: req.file.mimetype } });blobStream.on('error', (error) => res.status(500).json({ message: 'Error durante la subida del archivo.' }));blobStream.on('finish', async () => {try {await fileUpload.makePublic();const publicUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;await db.collection('users').doc(uid).set({ profilePictureUrl: publicUrl }, { merge: true });res.status(200).json({ message: 'Foto actualizada.', profilePictureUrl: publicUrl });} catch (error) {res.status(500).json({ message: 'Error al procesar el archivo después de subirlo.' });}});blobStream.end(req.file.buffer);} catch (error) {res.status(500).json({ message: 'Error interno del servidor.' });}});
-app.get('/api/pets', async (req, res) => {
-    try {
-        const { uid } = req.user;
-        const petsSnapshot = await db.collection('pets').where('ownerId', '==', uid).get();
-        
-        // [MEJORA] Obtenemos el conteo de seguidores para cada mascota
-        const petsListPromises = petsSnapshot.docs.map(async (doc) => {
-            const petData = doc.data();
-            const followersSnapshot = await db.collection('pets').doc(doc.id).collection('followers').get();
-            return { 
-                id: doc.id, 
-                ...petData,
-                followersCount: followersSnapshot.size || 0,
-            };
-        });
-
-        const petsList = await Promise.all(petsListPromises);
-        res.status(200).json(petsList);
-    } catch (error) {
-        console.error('Error en /api/pets (GET):', error);
-        res.status(500).json({ message: 'Error interno del servidor.' });
-    }
-});
+app.get('/api/pets', async (req, res) => {try {const { uid } = req.user;const petsSnapshot = await db.collection('pets').where('ownerId', '==', uid).get();const petsList = petsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));res.status(200).json(petsList);} catch (error) {console.error('Error en /api/pets (GET):', error);res.status(500).json({ message: 'Error interno del servidor.' });}});
 app.post('/api/pets', async (req, res) => {try {const { uid } = req.user;const { name, breed } = req.body;if (!name) return res.status(400).json({ message: 'El nombre es requerido.' });const petData = {ownerId: uid,name,breed: breed || '',createdAt: new Date().toISOString(),petPictureUrl: '',location: {country: 'Colombia',department: '',city: ''},healthRecord: {birthDate: '',gender: '',}};const petRef = await db.collection('pets').add(petData);res.status(201).json({ message: 'Mascota registrada.', petId: petRef.id });} catch (error) {console.error('Error en /api/pets (POST):', error);res.status(500).json({ message: 'Error interno del servidor.' });}});
 app.put('/api/pets/:petId', async (req, res) => {const { uid } = req.user;const { petId } = req.params;const updateData = req.body;try {if (!updateData || Object.keys(updateData).length === 0) {return res.status(400).json({ message: 'No se proporcionaron datos para actualizar.' });}const petRef = db.collection('pets').doc(petId);const petDoc = await petRef.get();if (!petDoc.exists) {return res.status(404).json({ message: 'Mascota no encontrada.' });}if (petDoc.data().ownerId !== uid) {return res.status(403).json({ message: 'No autorizado para modificar esta mascota.' });}await petRef.set(updateData, { merge: true });try {if (updateData.location && updateData.location.city) {const userRef = db.collection('users').doc(uid);const userDoc = await userRef.get();if (userDoc.exists) {const userData = userDoc.data();if (!userData.location || !userData.location.city) {await userRef.set({ location: updateData.location }, { merge: true });}}}} catch (implicitLocationError) {console.error('[IMPLICIT_LOCATION_ERROR] Failed to update user location implicitly:', implicitLocationError);}res.status(200).json({ message: 'Mascota actualizada con éxito.' });} catch (error) {console.error(`[PETS_UPDATE_FATAL] A critical error occurred while updating pet ${petId}:`, error);res.status(500).json({ message: 'Error interno del servidor al actualizar la mascota.' });}});
 app.post('/api/pets/:petId/picture', upload.single('petPicture'), async (req, res) => {try {const { uid } = req.user;if (!req.file) return res.status(400).json({ message: 'No se subió ningún archivo.' });const { petId } = req.params;const petRef = db.collection('pets').doc(petId);const petDoc = await petRef.get();if (!petDoc.exists) {return res.status(404).json({ message: 'Mascota no encontrada.' });}if (petDoc.data().ownerId !== uid) {return res.status(403).json({ message: 'No autorizado para modificar esta mascota.' });}const filePath = `pets-pictures/${petId}/${Date.now()}-${req.file.originalname}`;const fileUpload = bucket.file(filePath);const blobStream = fileUpload.createWriteStream({ metadata: { contentType: req.file.mimetype } });blobStream.on('error', (error) => {console.error("Error en blobStream (mascota):", error);res.status(500).json({ message: 'Error durante la subida del archivo.' });});blobStream.on('finish', async () => {try {await fileUpload.makePublic();const publicUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;await petRef.update({ petPictureUrl: publicUrl });res.status(200).json({ message: 'Foto de mascota actualizada.', petPictureUrl: publicUrl });} catch (error) {console.error("Error al procesar foto de mascota:", error);res.status(500).json({ message: 'Error al procesar el archivo después de subirlo.' });}});blobStream.end(req.file.buffer);} catch (error) {console.error('Error en /api/pets/:petId/picture:', error);res.status(500).json({ message: 'Error interno del servidor.' });}});
@@ -252,37 +209,7 @@ app.post('/api/posts', upload.single('postImage'), async (req, res) => {
     });
     blobStream.end(req.file.buffer);
 });
-app.get('/api/posts/by-author/:authorId', async (req, res) => {
-    try {
-        const { authorId } = req.params;
-        
-        // [OPTIMIZACIÓN] Obtenemos el perfil del autor primero
-        const authorDoc = await db.collection('pets').doc(authorId).get();
-        if (!authorDoc.exists) {
-            // Podríamos añadir lógica para buscar en usuarios si fuera necesario
-            return res.status(404).json({ message: 'Autor no encontrado.' });
-        }
-        const authorData = {
-            id: authorDoc.id,
-            name: authorDoc.data().name,
-            profilePictureUrl: authorDoc.data().petPictureUrl || ''
-        };
-
-        const postsQuery = await db.collection('posts').where('authorId', '==', authorId).orderBy('createdAt', 'desc').get();
-        
-        // [OPTIMIZACIÓN] Mapeamos y enriquecemos los posts en el backend
-        const posts = postsQuery.docs.map(doc => ({ 
-            id: doc.id, 
-            ...doc.data(),
-            author: authorData // Adjuntamos los datos del autor a cada post
-        }));
-
-        res.status(200).json(posts);
-    } catch (error) {
-        console.error(`Error fetching posts for author ${req.params.authorId}:`, error);
-        res.status(500).json({ message: 'Error al obtener las publicaciones.' });
-    }
-});
+app.get('/api/posts/by-author/:authorId', async (req, res) => {try {const { authorId } = req.params;const postsQuery = await db.collection('posts').where('authorId', '==', authorId).orderBy('createdAt', 'desc').get();const posts = postsQuery.docs.map(doc => ({ id: doc.id, ...doc.data() }));res.status(200).json(posts);} catch (error) {console.error(`Error fetching posts for author ${req.params.authorId}:`, error);res.status(500).json({ message: 'Error al obtener las publicaciones.' });}});
 app.post('/api/posts/:postId/like', async (req, res) => {const { uid } = req.user;const { postId } = req.params;const postRef = db.collection('posts').doc(postId);const likeRef = postRef.collection('likes').doc(uid);try {await db.runTransaction(async (t) => {const likeDoc = await t.get(likeRef);if (likeDoc.exists) {return;}t.set(likeRef, { likedAt: new Date() });t.update(postRef, { likesCount: admin.firestore.FieldValue.increment(1) });});res.status(200).json({ message: 'Like añadido.' });} catch (error) {console.error('Error al dar like:', error);res.status(500).json({ message: 'No se pudo añadir el like.' });}});
 app.delete('/api/posts/:postId/unlike', async (req, res) => {const { uid } = req.user;const { postId } = req.params;const postRef = db.collection('posts').doc(postId);const likeRef = postRef.collection('likes').doc(uid);try {await db.runTransaction(async (t) => {const likeDoc = await t.get(likeRef);if (!likeDoc.exists) {return;}t.delete(likeRef);t.update(postRef, { likesCount: admin.firestore.FieldValue.increment(-1) });});res.status(200).json({ message: 'Like eliminado.' });} catch (error) {console.error('Error al quitar like:', error);res.status(500).json({ message: 'No se pudo quitar el like.' });}});
 app.post('/api/posts/like-statuses', async (req, res) => {const { uid } = req.user;const { postIds } = req.body;if (!Array.isArray(postIds) || postIds.length === 0) return res.status(200).json({});try {const likePromises = postIds.map(postId => db.collection('posts').doc(postId).collection('likes').doc(uid).get());const likeSnapshots = await Promise.all(likePromises);const statuses = {};likeSnapshots.forEach((doc, index) => {const postId = postIds[index];statuses[postId] = doc.exists;});res.status(200).json(statuses);} catch (error) {console.error('Error al verificar estados de likes:', error);res.status(500).json({ message: 'No se pudieron verificar los likes.' });}});
@@ -596,6 +523,7 @@ app.get('/api/events/:eventId', async (req, res) => {
 
 app.post('/api/events', upload.single('coverImage'), async (req, res) => {
     const { uid } = req.user;
+    // [CORRECCIÓN] Se elimina la llamada síncrona a auth.getUser().
     const { name, description, category, startDate, endDate, locationId, customAddress, customLat, customLng, contactPhone, contactEmail } = req.body;
 
     if (!name || !category || !startDate || !endDate || !req.file) {
@@ -603,6 +531,7 @@ app.post('/api/events', upload.single('coverImage'), async (req, res) => {
     }
 
     try {
+        // [CORRECCIÓN] Obtenemos el perfil del usuario desde Firestore para conseguir el nombre.
         const userDoc = await db.collection('users').doc(uid).get();
         if (!userDoc.exists) {
             return res.status(404).json({ message: 'No se pudo encontrar el perfil del organizador.' });
@@ -629,7 +558,7 @@ app.post('/api/events', upload.single('coverImage'), async (req, res) => {
                     description,
                     coverImage: imageUrl,
                     organizerId: uid,
-                    organizerName,
+                    organizerName, // [CORRECCIÓN] Usamos el nombre obtenido de Firestore.
                     category,
                     status: 'planned',
                     startDate: new Date(startDate).toISOString(),
@@ -649,6 +578,7 @@ app.post('/api/events', upload.single('coverImage'), async (req, res) => {
                         coordinates: new admin.firestore.GeoPoint(parseFloat(customLat), parseFloat(customLng))
                     };
                 } else {
+                    // Si no hay ubicación, no se debería llegar aquí si el frontend valida, pero es una buena salvaguarda.
                     return res.status(400).json({ message: 'Se requiere una ubicación (existente o personalizada).' });
                 }
 
@@ -697,9 +627,9 @@ app.put('/api/events/:eventId', async (req, res) => {
 
 // --- [REFACTORIZADO] Endpoints de Seguimiento (Follow) ---
 app.post('/api/profiles/:profileId/follow', async (req, res) => {
-    const { uid } = req.user;
-    const { profileId } = req.params;
-    const { profileType } = req.body;
+    const { uid } = req.user; // El que sigue
+    const { profileId } = req.params; // El que será seguido
+    const { profileType } = req.body; // 'pet' o 'user'
 
     if (uid === profileId) {
         return res.status(400).json({ message: 'No puedes seguirte a ti mismo.' });
@@ -709,6 +639,7 @@ app.post('/api/profiles/:profileId/follow', async (req, res) => {
     }
 
     const currentUserRef = db.collection('users').doc(uid);
+    // La colección del perfil a seguir depende del tipo
     const followedProfileRef = db.collection(profileType === 'pet' ? 'pets' : 'users').doc(profileId);
 
     try {
@@ -717,10 +648,12 @@ app.post('/api/profiles/:profileId/follow', async (req, res) => {
             if (!followedDoc.exists) {
                 throw new Error("El perfil que intentas seguir no existe.");
             }
+            // Añadir a la subcolección 'following' del usuario actual
             t.set(currentUserRef.collection('following').doc(profileId), { 
                 followedAt: new Date(),
                 type: profileType 
             });
+            // Añadir al usuario actual a la subcolección 'followers' del perfil seguido
             t.set(followedProfileRef.collection('followers').doc(uid), { 
                 followedAt: new Date() 
             });
@@ -735,7 +668,7 @@ app.post('/api/profiles/:profileId/follow', async (req, res) => {
 app.delete('/api/profiles/:profileId/unfollow', async (req, res) => {
     const { uid } = req.user;
     const { profileId } = req.params;
-    const { profileType } = req.body;
+    const { profileType } = req.body; // 'pet' o 'user'
 
     if (!profileType || !['pet', 'user'].includes(profileType)) {
         return res.status(400).json({ message: 'Se requiere un tipo de perfil válido (pet/user).' });
@@ -746,6 +679,7 @@ app.delete('/api/profiles/:profileId/unfollow', async (req, res) => {
 
     try {
         await db.runTransaction(async (t) => {
+            // Simplemente borramos los documentos de las subcolecciones
             t.delete(currentUserRef.collection('following').doc(profileId));
             t.delete(followedProfileRef.collection('followers').doc(uid));
         });
