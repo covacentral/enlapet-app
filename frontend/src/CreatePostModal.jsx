@@ -1,6 +1,6 @@
 // frontend/src/CreatePostModal.jsx
-// Versión: 2.0 - Con Selector de Autor
-// TAREA 2: Se refactoriza completamente para incluir el selector de autor y la lógica dinámica.
+// Versión: 2.1 - Acepta Autor Inicial
+// MEJORA: El modal ahora puede recibir un 'initialAuthor' para preseleccionar un perfil.
 
 import { useState, useRef } from 'react';
 import { X, UploadCloud } from 'lucide-react';
@@ -10,7 +10,6 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 // --- Componente para el selector de autor ---
 const AuthorSelector = ({ userProfile, pets, selectedAuthor, onSelectAuthor }) => {
-  // Aseguramos que el userProfile tenga un 'id' para la key, usando el uid del usuario autenticado.
   const userProfileWithId = { ...userProfile, id: auth.currentUser.uid };
   const allProfiles = [userProfileWithId, ...pets];
 
@@ -40,10 +39,9 @@ const AuthorSelector = ({ userProfile, pets, selectedAuthor, onSelectAuthor }) =
   );
 };
 
-
-function CreatePostModal({ userProfile, pets, onClose, onPostCreated }) {
+function CreatePostModal({ userProfile, pets, initialAuthor, onClose, onPostCreated }) {
     const userProfileWithId = { ...userProfile, id: auth.currentUser.uid };
-    const [selectedAuthor, setSelectedAuthor] = useState(userProfileWithId);
+    const [selectedAuthor, setSelectedAuthor] = useState(initialAuthor || userProfileWithId);
     const [caption, setCaption] = useState('');
     const [postImage, setPostImage] = useState(null);
     const [previewImage, setPreviewImage] = useState(null);
