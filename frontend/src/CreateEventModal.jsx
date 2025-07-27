@@ -1,7 +1,9 @@
 // frontend/src/CreateEventModal.jsx
-// Versión: 1.2 - Corrección de Zona Horaria (Implementación Final)
-// CORRIGE: Se asegura que las fechas y horas locales del usuario se conviertan
-// a un string ISO 8601 (UTC) antes de ser enviadas al backend.
+// Versión: 1.3 - Corrección Definitiva de Zona Horaria
+// CORRIGE: Se elimina la función auxiliar 'getLocalDateTimeString' y se reemplaza
+// por un formateador explícito que construye la cadena 'YYYY-MM-DDTHH:mm' a partir de
+// los componentes de la fecha local, eliminando la ambigüedad del navegador y
+// solucionando el bug del desfase horario de forma definitiva.
 
 import React, { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
@@ -28,17 +30,23 @@ function LocationPicker({ onLocationSelect }) {
   return position ? <Marker position={position}></Marker> : null;
 }
 
-const getLocalDateTimeString = (date) => {
-    const offset = date.getTimezoneOffset() * 60000;
-    const localISOTime = new Date(date - offset).toISOString().slice(0, 16);
-    return localISOTime;
+// [NUEVO] Helper explícito para formatear una fecha a 'YYYY-MM-DDTHH:mm' en la zona horaria local.
+const toLocalISOString = (date) => {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
+
 
 function CreateEventModal({ onClose, onEventCreated }) {
   const [formData, setFormData] = useState({
     name: '', description: '', category: '', 
-    startDate: getLocalDateTimeString(new Date()), 
-    endDate: getLocalDateTimeString(new Date(Date.now() + 3600 * 1000)),
+    // [CORRECCIÓN] Se utiliza el nuevo helper para establecer los valores iniciales.
+    startDate: toLocalISOString(new Date()), 
+    endDate: toLocalISOString(new Date(Date.now() + 3600 * 1000)),
     customAddress: '', contactPhone: '', contactEmail: ''
   });
   const [coverImage, setCoverImage] = useState(null);
@@ -104,7 +112,7 @@ function CreateEventModal({ onClose, onEventCreated }) {
     formPayload.append('description', formData.description);
     formPayload.append('category', formData.category);
     
-    // [CORRECCIÓN] Convertir la fecha local del input a un string ISO 8601 (UTC)
+    // La lógica de conversión aquí es correcta y ahora se basa en un valor inicial fiable.
     formPayload.append('startDate', new Date(formData.startDate).toISOString());
     formPayload.append('endDate', new Date(formData.endDate).toISOString());
 
@@ -161,18 +169,18 @@ function CreateEventModal({ onClose, onEventCreated }) {
           </div>
           <div className="form-group">
             <label htmlFor="name">Nombre del Evento</label>
-            <input type="text" id="name" name="name" onChange={handleChange} required />
+            <input type="text" id="name" name="name" value={formData.name} onChange={handleChange} required />
           </div>
           <div className="form-group">
             <label htmlFor="category">Categoría del Evento</label>
-            <select id="category" name="category" onChange={handleChange} required value={formData.category}>
+            <select id="category" name="category" value={formData.category} onChange={handleChange} required >
               <option value="" disabled>Selecciona una categoría...</option>
               {eventCategories.map(cat => <option key={cat.id} value={cat.key}>{cat.name}</option>)}
             </select>
           </div>
           <div className="form-group">
             <label htmlFor="description">Descripción</label>
-            <textarea id="description" name="description" rows="4" onChange={handleChange} required></textarea>
+            <textarea id="description" name="description" rows="4" value={formData.description} onChange={handleChange} required></textarea>
           </div>
           <div className="form-row">
             <div className="form-group">
@@ -198,7 +206,7 @@ function CreateEventModal({ onClose, onEventCreated }) {
           </div>
           <div className="form-group">
             <label htmlFor="customAddress">Dirección (Opcional)</label>
-            <input type="text" id="customAddress" name="customAddress" onChange={handleChange} />
+            <input type="text" id="customAddress" name="customAddress" value={formData.customAddress} onChange={handleChange} />
           </div>
           <div className="modal-footer">
             {message && <p className="response-message">{message}</p>}
