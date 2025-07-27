@@ -1,8 +1,10 @@
 // backend/index.js
-// Versión: 12.3 - Corrección Crítica de Eventos
-// CORRIGE:
-// 1. (Fechas) Se ajusta el endpoint de creación de eventos para que acepte directamente strings ISO 8601 desde el frontend, solucionando el bug de zona horaria.
-// 2. (Estados) Se modifica la lógica de obtención de eventos para que los estados 'finished' y 'cancelled' sean permanentes y no se recalculen dinámicamente.
+// Versión: 12.4 - Sistema de Reportes Mejorado
+// CORRIGE: El endpoint de reportes ahora lee y guarda el 'contentType'.
+// MEJORA:
+// 1. El documento del reporte ahora incluye una vista previa del contenido (nombre o caption).
+// 2. Se guarda el ID del autor del contenido para una fácil identificación.
+// 3. Se añade lógica para prevenir que un mismo usuario reporte el mismo contenido varias veces.
 
 require('dotenv').config();
 const express = require('express');
@@ -78,7 +80,7 @@ const authenticateUser = async (req, res, next) => {
 };
 
 // --- Endpoint Raíz ---
-app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v12.3 - Corrección Eventos' }));
+app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v12.4 - Reportes Mejorados' }));
 
 // --- Endpoints Públicos (No requieren autenticación) ---
 app.post('/api/register', async (req, res) => {try {const { email, password, name } = req.body;if (!email || !password || !name) {return res.status(400).json({ message: 'Nombre, email y contraseña son requeridos.' });}const userRecord = await auth.createUser({ email, password, displayName: name });const newUser = {name,email,createdAt: new Date().toISOString(),userType: 'personal',profilePictureUrl: '',coverPhotoUrl: '',bio: '',phone: '',location: { country: 'Colombia', department: '', city: '' },privacySettings: { profileVisibility: 'public', showEmail: 'private' }};await db.collection('users').doc(userRecord.uid).set(newUser);res.status(201).json({ message: 'Usuario registrado con éxito', uid: userRecord.uid });} catch (error) {console.error('Error en /api/register:', error);if (error.code === 'auth/email-already-exists') {return res.status(409).json({ message: 'El correo electrónico ya está en uso.' });}if (error.code === 'auth/invalid-password') {return res.status(400).json({ message: 'La contraseña debe tener al menos 6 caracteres.' });}res.status(500).json({ message: 'Error al registrar el usuario.' });}});
@@ -89,7 +91,7 @@ app.get('/api/public/pets/:petId', async (req, res) => {try {const { petId } = r
 // --- A partir de aquí, todos los endpoints requieren autenticación ---
 app.use(authenticateUser);
 
-// ... (endpoints de perfil, mascotas, posts, etc. sin cambios)
+// ... (Todos los demás endpoints permanecen sin cambios)
 app.get('/api/public/users/:userId', async (req, res) => {
     const { userId } = req.params;
     try {
@@ -305,32 +307,64 @@ app.get('/api/user/saved-posts', async (req, res) => {
         res.status(500).json({ message: 'Error al obtener las publicaciones guardadas.' });
     }
 });
+
+// --- [INICIO] Endpoint de Reportes Corregido y Mejorado ---
 app.post('/api/reports', async (req, res) => {
     const { uid } = req.user;
-    const { contentId, reason } = req.body;
+    const { contentId, contentType, reason } = req.body;
 
-    if (!contentId || !reason) {
-        return res.status(400).json({ message: 'Se requiere ID del contenido y una razón para el reporte.' });
+    if (!contentId || !reason || !contentType) {
+        return res.status(400).json({ message: 'Se requiere ID, tipo de contenido y una razón para el reporte.' });
     }
 
     const reportRef = db.collection('reports').doc(contentId);
 
     try {
+        let contentPreview = {};
+        if (contentType === 'post') {
+            const doc = await db.collection('posts').doc(contentId).get();
+            if (doc.exists) {
+                contentPreview = {
+                    authorId: doc.data().authorId,
+                    preview: doc.data().caption.substring(0, 100)
+                };
+            }
+        } else if (contentType === 'event') {
+            const doc = await db.collection('events').doc(contentId).get();
+            if (doc.exists) {
+                contentPreview = {
+                    authorId: doc.data().organizerId,
+                    preview: doc.data().name
+                };
+            }
+        }
+
         await db.runTransaction(async (transaction) => {
             const reportDoc = await transaction.get(reportRef);
 
             if (!reportDoc.exists) {
                 const newReport = {
+                    contentType: contentType,
+                    ...contentPreview,
                     totalReports: 1,
                     reasons: { [reason]: 1 },
+                    reporters: [uid],
                     status: 'pending',
                     lastReportedAt: new Date().toISOString(),
                 };
                 transaction.set(reportRef, newReport);
             } else {
+                const reporterList = reportDoc.data().reporters || [];
+                if (reporterList.includes(uid)) {
+                    // Si el usuario ya reportó, no hacemos nada.
+                    // Podríamos devolver un mensaje específico si quisiéramos.
+                    return; 
+                }
+
                 const updateData = {
                     totalReports: admin.firestore.FieldValue.increment(1),
                     [`reasons.${reason}`]: admin.firestore.FieldValue.increment(1),
+                    reporters: admin.firestore.FieldValue.arrayUnion(uid),
                     lastReportedAt: new Date().toISOString(),
                 };
                 transaction.update(reportRef, updateData);
@@ -343,6 +377,8 @@ app.post('/api/reports', async (req, res) => {
         res.status(500).json({ message: 'Error interno al procesar el reporte.' });
     }
 });
+// --- [FIN] Endpoint de Reportes Corregido y Mejorado ---
+
 app.get('/api/location-categories', async (req, res) => {
     try {
         const categoriesSnapshot = await db.collection('location_categories').where('isOfficial', '==', true).get();
@@ -544,7 +580,6 @@ app.get('/api/event-categories', async (req, res) => {
     }
 });
 
-// [CORRECCIÓN] Endpoint de eventos con lógica de estado dinámica y vistas de finalizados/cancelados
 app.get('/api/events', async (req, res) => {
     const { view } = req.query; // 'finished', 'cancelled', o por defecto
     try {
@@ -555,7 +590,6 @@ app.get('/api/events', async (req, res) => {
         const events = eventsSnapshot.docs.map(doc => {
             const event = { id: doc.id, ...doc.data() };
             
-            // [CORRECCIÓN] Respetar estados finales (finished y cancelled)
             if (event.status === 'cancelled' || event.status === 'finished') {
                 return event;
             }
@@ -567,8 +601,6 @@ app.get('/api/events', async (req, res) => {
             if (now >= startDate && now <= endDate) {
                 calculatedStatus = 'active';
             } else if (now > endDate) {
-                // Si el tiempo ya pasó, se considera finalizado automáticamente.
-                // No se guarda en BD para no sobrescribir un estado manual.
                 calculatedStatus = 'finished';
             }
             
@@ -600,7 +632,6 @@ app.get('/api/events/:eventId', async (req, res) => {
         }
         const event = { id: eventDoc.id, ...eventDoc.data() };
         
-        // [CORRECCIÓN] Respetar estados finales también en la vista de detalle
         if (event.status !== 'cancelled' && event.status !== 'finished') {
             const now = new Date();
             const startDate = new Date(event.startDate);
@@ -649,7 +680,6 @@ app.post('/api/events', upload.single('coverImage'), async (req, res) => {
 
                 const now = new Date();
                 const eventStartDate = new Date(startDate);
-                // [CORRECCIÓN] El estado inicial se calcula en base a la fecha de inicio convertida
                 const initialStatus = now >= eventStartDate ? 'active' : 'planned';
 
                 const newEvent = {
@@ -660,7 +690,6 @@ app.post('/api/events', upload.single('coverImage'), async (req, res) => {
                     organizerName,
                     category,
                     status: initialStatus,
-                    // [CORRECCIÓN] Se guardan directamente los strings ISO 8601 UTC recibidos del frontend
                     startDate: startDate,
                     endDate: endDate,
                     contact: { phone: contactPhone || '', email: contactEmail || '' },
@@ -776,7 +805,6 @@ app.put('/api/events/:eventId/details', upload.single('coverImage'), async (req,
     }
 });
 
-// ... (endpoints de follow, etc. sin cambios)
 app.post('/api/profiles/:profileId/follow', async (req, res) => {
     const { uid } = req.user;
     const { profileId } = req.params; 
