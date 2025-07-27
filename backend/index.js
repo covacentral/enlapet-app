@@ -1,11 +1,8 @@
 // backend/index.js
-// Versión: 12.2 - Refinamiento Mayor de Eventos y Feed
-// IMPLEMENTA:
-// 1. (Feed) Se restaura y mejora la lógica del feed HÍBRIDO.
-// 2. (Eventos) Se corrige el endpoint PUT /events/:eventId/details para que acepte multipart/form-data y todos los campos editables.
-// 3. (Eventos) Se añade el estado 'cancelled' y la lógica para manejarlo en todos los endpoints relevantes.
-// 4. (Eventos) Se expande el parámetro `view` en GET /api/events para incluir 'cancelled'.
-// 5. (Eventos) Se asegura que las fechas se manejen consistentemente como ISO strings (UTC).
+// Versión: 12.3 - Corrección Crítica de Eventos
+// CORRIGE:
+// 1. (Fechas) Se ajusta el endpoint de creación de eventos para que acepte directamente strings ISO 8601 desde el frontend, solucionando el bug de zona horaria.
+// 2. (Estados) Se modifica la lógica de obtención de eventos para que los estados 'finished' y 'cancelled' sean permanentes y no se recalculen dinámicamente.
 
 require('dotenv').config();
 const express = require('express');
@@ -81,10 +78,9 @@ const authenticateUser = async (req, res, next) => {
 };
 
 // --- Endpoint Raíz ---
-app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v12.2 - Refinamiento Mayor' }));
+app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v12.3 - Corrección Eventos' }));
 
 // --- Endpoints Públicos (No requieren autenticación) ---
-// ... (sin cambios en /register, /auth/google, /public/pets/:petId)
 app.post('/api/register', async (req, res) => {try {const { email, password, name } = req.body;if (!email || !password || !name) {return res.status(400).json({ message: 'Nombre, email y contraseña son requeridos.' });}const userRecord = await auth.createUser({ email, password, displayName: name });const newUser = {name,email,createdAt: new Date().toISOString(),userType: 'personal',profilePictureUrl: '',coverPhotoUrl: '',bio: '',phone: '',location: { country: 'Colombia', department: '', city: '' },privacySettings: { profileVisibility: 'public', showEmail: 'private' }};await db.collection('users').doc(userRecord.uid).set(newUser);res.status(201).json({ message: 'Usuario registrado con éxito', uid: userRecord.uid });} catch (error) {console.error('Error en /api/register:', error);if (error.code === 'auth/email-already-exists') {return res.status(409).json({ message: 'El correo electrónico ya está en uso.' });}if (error.code === 'auth/invalid-password') {return res.status(400).json({ message: 'La contraseña debe tener al menos 6 caracteres.' });}res.status(500).json({ message: 'Error al registrar el usuario.' });}});
 app.post('/api/auth/google', async (req, res) => {const { idToken } = req.body;if (!idToken) return res.status(400).json({ message: 'Se requiere el idToken de Google.' });try {const decodedToken = await auth.verifyIdToken(idToken);const { uid, name, email, picture } = decodedToken;const userRef = db.collection('users').doc(uid);const userDoc = await userRef.get();if (!userDoc.exists) {const newUser = {name,email,createdAt: new Date().toISOString(),userType: 'personal',profilePictureUrl: picture || '',coverPhotoUrl: '',bio: '',phone: '',location: { country: 'Colombia', department: '', city: '' },privacySettings: { profileVisibility: 'public', showEmail: 'private' }};await userRef.set(newUser);return res.status(201).json({ message: 'Usuario registrado y autenticado con Google.', uid });} else {return res.status(200).json({ message: 'Usuario autenticado con Google.', uid });}} catch (error) {console.error('Error en /api/auth/google:', error);res.status(500).json({ message: 'Error en la autenticación con Google.' });}});
 app.get('/api/public/pets/:petId', async (req, res) => {try {const { petId } = req.params;const petDoc = await db.collection('pets').doc(petId).get();if (!petDoc.exists) return res.status(404).json({ message: 'Mascota no encontrada.' });const petData = petDoc.data();const userDoc = await db.collection('users').doc(petData.ownerId).get();let ownerData = { id: petData.ownerId, name: 'Responsable', phone: 'No disponible' };if (userDoc.exists) {const fullOwnerData = userDoc.data();ownerData = {id: petData.ownerId, name: fullOwnerData.name,phone: fullOwnerData.phone || 'No proporcionado'};}const publicProfile = {pet: { ...petData, id: petDoc.id }, owner: ownerData};res.status(200).json(publicProfile);} catch (error) {console.error('Error en /api/public/pets/:petId:', error);res.status(500).json({ message: 'Error interno del servidor.' });}});
@@ -93,7 +89,7 @@ app.get('/api/public/pets/:petId', async (req, res) => {try {const { petId } = r
 // --- A partir de aquí, todos los endpoints requieren autenticación ---
 app.use(authenticateUser);
 
-// ... (sin cambios en endpoints de perfil, mascotas, posts, etc.)
+// ... (endpoints de perfil, mascotas, posts, etc. sin cambios)
 app.get('/api/public/users/:userId', async (req, res) => {
     const { userId } = req.params;
     try {
@@ -475,7 +471,7 @@ app.post('/api/locations/:locationId/review', async (req, res) => {
     }
 });
 
-// --- [REFINADO] Endpoint del Feed Híbrido Restaurado ---
+// --- Endpoint del Feed Híbrido ---
 app.get('/api/feed', async (req, res) => {
     const { uid } = req.user;
     const { cursor } = req.query;
@@ -510,7 +506,6 @@ app.get('/api/feed', async (req, res) => {
         }
 
         let combinedPosts = [...followedPosts, ...discoveryPosts];
-        // Mezclamos para que no sea tan predecible
         combinedPosts.sort(() => Math.random() - 0.5);
 
         const authorIds = [...new Set(combinedPosts.map(p => p.authorId))];
@@ -560,8 +555,8 @@ app.get('/api/events', async (req, res) => {
         const events = eventsSnapshot.docs.map(doc => {
             const event = { id: doc.id, ...doc.data() };
             
-            // Si el evento ya está cancelado, respetamos ese estado.
-            if (event.status === 'cancelled') {
+            // [CORRECCIÓN] Respetar estados finales (finished y cancelled)
+            if (event.status === 'cancelled' || event.status === 'finished') {
                 return event;
             }
 
@@ -572,6 +567,8 @@ app.get('/api/events', async (req, res) => {
             if (now >= startDate && now <= endDate) {
                 calculatedStatus = 'active';
             } else if (now > endDate) {
+                // Si el tiempo ya pasó, se considera finalizado automáticamente.
+                // No se guarda en BD para no sobrescribir un estado manual.
                 calculatedStatus = 'finished';
             }
             
@@ -603,7 +600,8 @@ app.get('/api/events/:eventId', async (req, res) => {
         }
         const event = { id: eventDoc.id, ...eventDoc.data() };
         
-        if (event.status !== 'cancelled') {
+        // [CORRECCIÓN] Respetar estados finales también en la vista de detalle
+        if (event.status !== 'cancelled' && event.status !== 'finished') {
             const now = new Date();
             const startDate = new Date(event.startDate);
             const endDate = new Date(event.endDate);
@@ -651,6 +649,7 @@ app.post('/api/events', upload.single('coverImage'), async (req, res) => {
 
                 const now = new Date();
                 const eventStartDate = new Date(startDate);
+                // [CORRECCIÓN] El estado inicial se calcula en base a la fecha de inicio convertida
                 const initialStatus = now >= eventStartDate ? 'active' : 'planned';
 
                 const newEvent = {
@@ -661,8 +660,9 @@ app.post('/api/events', upload.single('coverImage'), async (req, res) => {
                     organizerName,
                     category,
                     status: initialStatus,
-                    startDate: eventStartDate.toISOString(),
-                    endDate: new Date(endDate).toISOString(),
+                    // [CORRECCIÓN] Se guardan directamente los strings ISO 8601 UTC recibidos del frontend
+                    startDate: startDate,
+                    endDate: endDate,
                     contact: { phone: contactPhone || '', email: contactEmail || '' },
                     createdAt: new Date().toISOString(),
                 };
@@ -693,7 +693,6 @@ app.post('/api/events', upload.single('coverImage'), async (req, res) => {
     }
 });
 
-// [REFINADO] Endpoint de actualización de estado ahora incluye 'cancelled'
 app.put('/api/events/:eventId/status', async (req, res) => {
     const { uid } = req.user;
     const { eventId } = req.params;
@@ -722,7 +721,6 @@ app.put('/api/events/:eventId/status', async (req, res) => {
     }
 });
 
-// [CORRECCIÓN Y EXPANSIÓN] Endpoint para actualizar detalles, ahora con multipart/form-data
 app.put('/api/events/:eventId/details', upload.single('coverImage'), async (req, res) => {
     const { uid } = req.user;
     const { eventId } = req.params;
@@ -778,7 +776,7 @@ app.put('/api/events/:eventId/details', upload.single('coverImage'), async (req,
     }
 });
 
-// ... (sin cambios en endpoints de follow, etc.)
+// ... (endpoints de follow, etc. sin cambios)
 app.post('/api/profiles/:profileId/follow', async (req, res) => {
     const { uid } = req.user;
     const { profileId } = req.params; 
