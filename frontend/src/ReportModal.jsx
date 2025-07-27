@@ -1,6 +1,6 @@
 // frontend/src/ReportModal.jsx
-// Versión: 1.0 - Modal para Reportar Contenido
-// Permite a los usuarios seleccionar una razón y enviar un reporte.
+// Versión: 1.1 - Genérico para Contenido
+// MEJORA: El modal ahora acepta contentType y se adapta para reportar posts o eventos.
 
 import React, { useState } from 'react';
 import { auth } from './firebase';
@@ -16,7 +16,7 @@ const REPORT_REASONS = [
   "Otro motivo"
 ];
 
-function ReportModal({ post, onClose }) {
+function ReportModal({ contentId, contentType, contentCreatorName, onClose }) {
   const [selectedReason, setSelectedReason] = useState('');
   const [step, setStep] = useState(1); // 1: Seleccionar razón, 2: Confirmación
   const [isLoading, setIsLoading] = useState(false);
@@ -36,8 +36,8 @@ function ReportModal({ post, onClose }) {
       const idToken = await user.getIdToken();
 
       const payload = {
-        contentId: post.id,
-        contentType: 'post',
+        contentId: contentId,
+        contentType: contentType, // 'post' o 'event'
         reason: selectedReason,
       };
 
@@ -60,11 +60,13 @@ function ReportModal({ post, onClose }) {
     }
   };
 
+  const contentTypeName = contentType === 'post' ? 'publicación' : 'evento';
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="report-modal-content" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>{step === 1 ? 'Reportar Publicación' : 'Reporte Enviado'}</h2>
+          <h2>{step === 1 ? `Reportar ${contentTypeName}` : 'Reporte Enviado'}</h2>
           <button onClick={onClose} className="close-button">
             <X size={24} />
           </button>
@@ -73,7 +75,7 @@ function ReportModal({ post, onClose }) {
         {step === 1 ? (
           <>
             <div className="modal-body">
-              <p className="report-description">Ayúdanos a entender el problema. ¿Por qué estás reportando esta publicación de <strong>{post.author.name}</strong>?</p>
+              <p className="report-description">Ayúdanos a entender el problema. ¿Por qué estás reportando est{contentType === 'post' ? 'a' : 'e'} {contentTypeName} de <strong>{contentCreatorName}</strong>?</p>
               <div className="report-reasons-list">
                 {REPORT_REASONS.map(reason => (
                   <button 
