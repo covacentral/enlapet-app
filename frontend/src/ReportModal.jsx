@@ -1,6 +1,7 @@
 // frontend/src/ReportModal.jsx
-// Versión: 1.1 - Genérico para Contenido
-// MEJORA: El modal ahora acepta contentType y se adapta para reportar posts o eventos.
+// Versión: 1.2 - Robustez y Claridad Mejoradas
+// MEJORA: Se ajusta el texto para que sea más claro y se manejan mejor los casos
+// donde las props no se reciben, evitando comportamientos inesperados.
 
 import React, { useState } from 'react';
 import { auth } from './firebase';
@@ -18,13 +19,14 @@ const REPORT_REASONS = [
 
 function ReportModal({ contentId, contentType, contentCreatorName, onClose }) {
   const [selectedReason, setSelectedReason] = useState('');
-  const [step, setStep] = useState(1); // 1: Seleccionar razón, 2: Confirmación
+  const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmitReport = async () => {
-    if (!selectedReason) {
-      setError('Por favor, selecciona un motivo.');
+    // [MEJORA] Verificación más robusta al inicio
+    if (!selectedReason || !contentId || !contentType) {
+      setError('Error: No se pudo identificar el contenido a reportar. Inténtalo de nuevo.');
       return;
     }
     setIsLoading(true);
@@ -37,7 +39,7 @@ function ReportModal({ contentId, contentType, contentCreatorName, onClose }) {
 
       const payload = {
         contentId: contentId,
-        contentType: contentType, // 'post' o 'event'
+        contentType: contentType,
         reason: selectedReason,
       };
 
@@ -51,7 +53,7 @@ function ReportModal({ contentId, contentType, contentCreatorName, onClose }) {
         throw new Error((await response.json()).message || 'No se pudo enviar el reporte.');
       }
       
-      setStep(2); // Cambiar a la vista de confirmación
+      setStep(2);
 
     } catch (err) {
       setError(err.message);
@@ -75,7 +77,12 @@ function ReportModal({ contentId, contentType, contentCreatorName, onClose }) {
         {step === 1 ? (
           <>
             <div className="modal-body">
-              <p className="report-description">Ayúdanos a entender el problema. ¿Por qué estás reportando est{contentType === 'post' ? 'a' : 'e'} {contentTypeName} de <strong>{contentCreatorName}</strong>?</p>
+              {/* [MEJORA] Texto más claro y dinámico */}
+              <p className="report-description">
+                Ayúdanos a entender el problema. ¿Por qué estás reportando est{contentType === 'post' ? 'a' : 'e'} {contentTypeName} 
+                {contentCreatorName ? ` de ` : ''}
+                <strong>{contentCreatorName || ''}</strong>?
+              </p>
               <div className="report-reasons-list">
                 {REPORT_REASONS.map(reason => (
                   <button 

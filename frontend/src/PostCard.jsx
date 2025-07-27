@@ -1,6 +1,7 @@
 // frontend/src/PostCard.jsx
-// Versión: 2.0 - Enlaces de Autor Dinámicos
-// TAREA 5: El enlace del autor ahora dirige al perfil de mascota o de usuario según el 'authorType'.
+// Versión: 2.1 - Corrección de Sistema de Reportes
+// CORRIGE: Se asegura de pasar todas las props necesarias (contentId, contentType, contentCreatorName)
+// al ReportModal para que los reportes de publicaciones funcionen correctamente.
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
@@ -26,7 +27,6 @@ function PostCard({ post, isLiked, isSaved, onLikeToggle, onSaveToggle, onCommen
 
   if (!post || !post.author) return null;
 
-  // --- LÓGICA DE ENLACE DINÁMICO ---
   const authorProfileLink = post.authorType === 'pet'
     ? `/dashboard/pet/${post.author.id}`
     : `/dashboard/user/${post.author.id}`;
@@ -47,7 +47,16 @@ function PostCard({ post, isLiked, isSaved, onLikeToggle, onSaveToggle, onCommen
   return (
     <>
       {isCommentsModalOpen && ( <CommentsModal postId={post.id} onClose={() => setIsCommentsModalOpen(false)} onCommentAdded={onCommentAdded} /> )}
-      {isReportModalOpen && ( <ReportModal post={post} onClose={() => setIsReportModalOpen(false)} /> )}
+      
+      {/* [CORRECCIÓN] Se pasan las props correctas al ReportModal */}
+      {isReportModalOpen && ( 
+        <ReportModal 
+          contentId={post.id}
+          contentType="post"
+          contentCreatorName={post.author.name}
+          onClose={() => setIsReportModalOpen(false)} 
+        /> 
+      )}
 
       <div className="post-card-container">
         <div className="post-card-header">
