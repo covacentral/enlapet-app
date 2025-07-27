@@ -1,6 +1,6 @@
 // frontend/src/CreateEventModal.jsx
-// Versión: 1.0 - Modal para Crear Eventos
-// Formulario completo para que los usuarios creen nuevos eventos comunitarios.
+// Versión: 1.1 - Corrección de Zona Horaria
+// CORRECCIÓN: Se asegura que las fechas y horas se manejen en la zona horaria local del usuario para evitar discrepancias.
 
 import React, { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
@@ -27,9 +27,18 @@ function LocationPicker({ onLocationSelect }) {
   return position ? <Marker position={position}></Marker> : null;
 }
 
+// [NUEVO] Helper para formatear la fecha a la zona horaria local para el input
+const getLocalDateTimeString = (date) => {
+    const offset = date.getTimezoneOffset() * 60000;
+    const localISOTime = new Date(date - offset).toISOString().slice(0, 16);
+    return localISOTime;
+};
+
 function CreateEventModal({ onClose, onEventCreated }) {
   const [formData, setFormData] = useState({
-    name: '', description: '', category: '', startDate: '', endDate: '',
+    name: '', description: '', category: '', 
+    startDate: getLocalDateTimeString(new Date()), 
+    endDate: getLocalDateTimeString(new Date(Date.now() + 3600 * 1000)), // Default a 1 hora después
     customAddress: '', contactPhone: '', contactEmail: ''
   });
   const [coverImage, setCoverImage] = useState(null);
@@ -162,14 +171,14 @@ function CreateEventModal({ onClose, onEventCreated }) {
             <label htmlFor="description">Descripción</label>
             <textarea id="description" name="description" rows="4" onChange={handleChange} required></textarea>
           </div>
-          <div className="form-group-row">
+          <div className="form-row">
             <div className="form-group">
               <label htmlFor="startDate">Fecha y Hora de Inicio</label>
-              <input type="datetime-local" id="startDate" name="startDate" onChange={handleChange} required />
+              <input type="datetime-local" id="startDate" name="startDate" value={formData.startDate} onChange={handleChange} required />
             </div>
             <div className="form-group">
               <label htmlFor="endDate">Fecha y Hora de Fin</label>
-              <input type="datetime-local" id="endDate" name="endDate" onChange={handleChange} required />
+              <input type="datetime-local" id="endDate" name="endDate" value={formData.endDate} onChange={handleChange} required />
             </div>
           </div>
           <div className="form-group">
