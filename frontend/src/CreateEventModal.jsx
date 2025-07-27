@@ -1,6 +1,7 @@
 // frontend/src/CreateEventModal.jsx
-// Versión: 1.1 - Corrección de Zona Horaria
-// CORRECCIÓN: Se asegura que las fechas y horas se manejen en la zona horaria local del usuario para evitar discrepancias.
+// Versión: 1.2 - Corrección de Zona Horaria (Implementación Final)
+// CORRIGE: Se asegura que las fechas y horas locales del usuario se conviertan
+// a un string ISO 8601 (UTC) antes de ser enviadas al backend.
 
 import React, { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
@@ -27,7 +28,6 @@ function LocationPicker({ onLocationSelect }) {
   return position ? <Marker position={position}></Marker> : null;
 }
 
-// [NUEVO] Helper para formatear la fecha a la zona horaria local para el input
 const getLocalDateTimeString = (date) => {
     const offset = date.getTimezoneOffset() * 60000;
     const localISOTime = new Date(date - offset).toISOString().slice(0, 16);
@@ -38,7 +38,7 @@ function CreateEventModal({ onClose, onEventCreated }) {
   const [formData, setFormData] = useState({
     name: '', description: '', category: '', 
     startDate: getLocalDateTimeString(new Date()), 
-    endDate: getLocalDateTimeString(new Date(Date.now() + 3600 * 1000)), // Default a 1 hora después
+    endDate: getLocalDateTimeString(new Date(Date.now() + 3600 * 1000)),
     customAddress: '', contactPhone: '', contactEmail: ''
   });
   const [coverImage, setCoverImage] = useState(null);
@@ -103,8 +103,11 @@ function CreateEventModal({ onClose, onEventCreated }) {
     formPayload.append('name', formData.name);
     formPayload.append('description', formData.description);
     formPayload.append('category', formData.category);
-    formPayload.append('startDate', formData.startDate);
-    formPayload.append('endDate', formData.endDate);
+    
+    // [CORRECCIÓN] Convertir la fecha local del input a un string ISO 8601 (UTC)
+    formPayload.append('startDate', new Date(formData.startDate).toISOString());
+    formPayload.append('endDate', new Date(formData.endDate).toISOString());
+
     formPayload.append('customAddress', formData.customAddress);
     formPayload.append('customLat', coordinates.latitude);
     formPayload.append('customLng', coordinates.longitude);
