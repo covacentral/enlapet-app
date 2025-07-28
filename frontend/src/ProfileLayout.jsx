@@ -1,14 +1,15 @@
 // frontend/src/ProfileLayout.jsx
-// Versión: 2.6 - Pasando Props a Perfiles de Mascota
-// Se pasan las props necesarias a la ruta de PetSocialProfile para
-// habilitar la edición de perfiles desde esa vista.
+// Versión: 3.1 - Cabecera de Presentación Restaurada
+// CAMBIOS:
+// - Se reintroduce la cabecera con la información del usuario y las burbujas de mascotas.
+// - Se importa y renderiza el nuevo componente MainHeader.
 
-import { useState, useEffect } from 'react';
-import { NavLink, Routes, Route, Link } from 'react-router-dom';
-import { signOut } from "firebase/auth";
+import { useState, useEffect, useCallback } from 'react';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import { auth } from './firebase';
 import './App.css';
 
+// Importación de Páginas
 import FeedPage from './FeedPage.jsx';
 import SavedPostsPage from './SavedPostsPage.jsx';
 import MapPage from './MapPage.jsx';
@@ -17,44 +18,25 @@ import SettingsTab from './SettingsTab.jsx';
 import PetsTab from './PetsTab.jsx';
 import PetSocialProfile from './PetSocialProfile.jsx';
 import UserProfilePage from './UserProfilePage.jsx';
+import NotificationsPage from './NotificationsPage.jsx';
+
+// Importación de Componentes
 import LoadingComponent from './LoadingComponent.jsx';
+import BottomNavBar from './BottomNavBar.jsx';
+import CreatePostModal from './CreatePostModal.jsx';
+import MainHeader from './MainHeader.jsx'; // [NUEVO] Importamos la cabecera
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-
-const PetBubble = ({ pet }) => (
-  <Link to={`/dashboard/pet/${pet.id}`} className="pet-bubble" title={pet.name}>
-    {pet.petPictureUrl ? <img src={pet.petPictureUrl} alt={pet.name} /> : <span>🐾</span>}
-  </Link>
-);
-
-const LogoutIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-    <polyline points="16 17 21 12 16 7" />
-    <line x1="21" y1="12" x2="9" y2="12" />
-  </svg>
-);
-
-const ConfirmLogoutModal = ({ onConfirm, onCancel }) => (
-    <div className="modal-backdrop">
-        <div className="modal-content">
-            <h3>Cerrar Sesión</h3>
-            <p>¿Estás seguro de que quieres cerrar tu sesión?</p>
-            <div className="modal-actions">
-                <button onClick={onCancel} className="modal-button cancel">Cancelar</button>
-                <button onClick={onConfirm} className="modal-button confirm">Confirmar</button>
-            </div>
-        </div>
-    </div>
-);
 
 function ProfileLayout({ user }) {
   const [userProfile, setUserProfile] = useState(null);
   const [pets, setPets] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const navigate = useNavigate();
 
-  const fetchAllData = async () => {
+  const fetchCoreData = useCallback(async () => {
     if (!user) return;
     if (!userProfile) setLoading(true); 
     try {
@@ -63,87 +45,95 @@ function ProfileLayout({ user }) {
         fetch(`${API_URL}/api/profile`, { headers: { 'Authorization': `Bearer ${idToken}` } }),
         fetch(`${API_URL}/api/pets`, { headers: { 'Authorization': `Bearer ${idToken}` } }),
       ]);
+      if (!profileResponse.ok || !petsResponse.ok) throw new Error("No se pudieron cargar los datos del perfil.");
+      
       const profileData = await profileResponse.json();
       const petsData = await petsResponse.json();
-      if (!profileResponse.ok) throw new Error(profileData.message);
-      if (!petsResponse.ok) throw new Error(petsData.message);
       setUserProfile(profileData);
       setPets(petsData);
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error("Error fetching core data:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, userProfile]);
 
-  useEffect(() => {
-    fetchAllData();
+  const fetchUnreadCount = useCallback(async () => {
+    if (!user) return;
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch(`${API_URL}/api/notifications/unread-count`, { headers: { 'Authorization': `Bearer ${idToken}` } });
+      if (response.ok) {
+        const data = await response.json();
+        setUnreadCount(data.count);
+      }
+    } catch (error) {
+      console.error("Error fetching unread count:", error);
+    }
   }, [user]);
 
-  const handleLogout = async () => {
-    await signOut(auth);
+  useEffect(() => {
+    fetchCoreData();
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 60000);
+    return () => clearInterval(interval);
+  }, [fetchCoreData, fetchUnreadCount]);
+
+  const handleMarkAsRead = async () => {
+    setUnreadCount(0);
+    try {
+      const idToken = await user.getIdToken();
+      await fetch(`${API_URL}/api/notifications/mark-as-read`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${idToken}` }
+      });
+    } catch (error) {
+      console.error("Error marking notifications as read:", error);
+      fetchUnreadCount();
+    }
+  };
+
+  const handlePostCreated = (newPost) => {
+    setIsCreateModalOpen(false);
+    if (newPost) {
+      navigate('/dashboard');
+    }
   };
 
   if (loading) return <LoadingComponent text="Cargando tu universo EnlaPet..." />;
 
   return (
     <div className="profile-container">
-      {showLogoutConfirm && ( <ConfirmLogoutModal onConfirm={handleLogout} onCancel={() => setShowLogoutConfirm(false)} /> )}
-      
-      <header className="main-header">
-        <div className="user-profile-section">
-          <h2>{userProfile?.name}</h2>
-          <div className="profile-picture-container">
-            {userProfile && userProfile.profilePictureUrl ? (
-              <img src={userProfile.profilePictureUrl} alt="Perfil" className="profile-picture" />
-            ) : (
-              <div className="profile-picture-placeholder">👤</div>
-            )}
-          </div>
-          <p className="profile-bio">{userProfile?.bio || 'Sin biografía.'}</p>
-        </div>
-        <div className="user-pets-section">
-          <h1 className="header-brand-title">enlapet</h1>
-          <div className="pet-bubbles-container">
-            {pets.length > 0 ? (
-              pets.map(pet => <PetBubble key={pet.id} pet={pet} />)
-            ) : (
-              <p className="no-pets-header">Añade tu primera mascota</p>
-            )}
-          </div>
-        </div>
-      </header>
+      {isCreateModalOpen && (
+        <CreatePostModal 
+          userProfile={userProfile}
+          pets={pets}
+          onClose={() => setIsCreateModalOpen(false)}
+          onPostCreated={handlePostCreated}
+        />
+      )}
 
-      <nav className="profile-tabs profile-tabs-six">
-        <NavLink to="/dashboard" end className={({ isActive }) => isActive ? 'active' : ''}>Inicio</NavLink>
-        <NavLink to="/dashboard/map" className={({ isActive }) => isActive ? 'active' : ''}>Mapa</NavLink>
-        <NavLink to="/dashboard/events" className={({ isActive }) => isActive ? 'active' : ''}>Eventos</NavLink>
-        <NavLink to="/dashboard/saved" className={({ isActive }) => isActive ? 'active' : ''}>Guardados</NavLink>
-        <NavLink to="/dashboard/pets" className={({ isActive }) => isActive ? 'active' : ''}>Mascotas</NavLink>
-        <div className="profile-tab-wrapper">
-          <NavLink to="/dashboard/settings" className={({ isActive }) => `profile-main-button ${isActive ? 'active' : ''}`}>Perfil</NavLink>
-          <button onClick={() => setShowLogoutConfirm(true)} className="logout-icon-button" title="Cerrar sesión">
-            <LogoutIcon />
-          </button>
-        </div>
-      </nav>
+      {/* [NUEVO] Cabecera de presentación restaurada */}
+      <MainHeader userProfile={userProfile} pets={pets} />
 
       <main className="tab-content">
         <Routes>
           <Route index element={<FeedPage userProfile={userProfile} pets={pets} />} />
           <Route path="map" element={<MapPage />} />
           <Route path="events" element={<EventsPage user={user} />} />
+          <Route path="notifications" element={<NotificationsPage onMarkAsRead={handleMarkAsRead} />} />
           <Route path="saved" element={<SavedPostsPage />} />
-          <Route path="pets" element={<PetsTab user={user} initialPets={pets} onPetsUpdate={fetchAllData} />} />
-          <Route path="settings" element={<SettingsTab user={user} userProfile={userProfile} onProfileUpdate={fetchAllData} />} />
-          {/* [REFINADO] Pasamos las props necesarias al perfil social de la mascota */}
-          <Route 
-            path="pet/:petId" 
-            element={<PetSocialProfile user={user} userProfile={userProfile} pets={pets} onUpdate={fetchAllData} />} 
-          />
+          <Route path="pets" element={<PetsTab user={user} initialPets={pets} onPetsUpdate={fetchCoreData} />} />
+          <Route path="settings" element={<SettingsTab user={user} userProfile={userProfile} onProfileUpdate={fetchCoreData} />} />
+          <Route path="pet/:petId" element={<PetSocialProfile user={user} userProfile={userProfile} pets={pets} onUpdate={fetchCoreData} />} />
           <Route path="user/:userId" element={<UserProfilePage />} />
         </Routes>
       </main>
+
+      <BottomNavBar 
+        unreadCount={unreadCount}
+        onOpenCreatePost={() => setIsCreateModalOpen(true)}
+      />
     </div>
   );
 }

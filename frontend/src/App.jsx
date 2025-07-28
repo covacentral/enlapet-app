@@ -1,6 +1,6 @@
 // frontend/src/App.jsx
-// Versión: 2.3 - Rutas Anidadas
-// Habilita las rutas anidadas para el dashboard.
+// Versión: 2.4 - Añadida Ruta de Notificaciones
+// Se añade la ruta para la nueva página de notificaciones.
 
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
@@ -44,7 +44,6 @@ function App() {
       <Routes>
         <Route path="/pet/:petId" element={<PetProfile />} />
         
-        {/* [MODIFICADO] La ruta del dashboard ahora acepta sub-rutas con "/*" */}
         <Route 
           path="/dashboard/*" 
           element={
