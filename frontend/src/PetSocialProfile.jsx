@@ -1,20 +1,18 @@
 // frontend/src/PetSocialProfile.jsx
-// Versión: 3.1 - Lógica de Edición de Perfil
-// Implementa la lógica para abrir el modal de edición de perfil
-// cuando el usuario es el dueño de la mascota.
+// Versión: 3.2 - Limpieza de UI
+// ELIMINADO: Se quita el botón flotante de creación de posts, ya que ahora
+// esta función está centralizada en la barra de navegación inferior.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { auth } from './firebase';
 import LoadingComponent from './LoadingComponent';
 import CreatePostModal from './CreatePostModal';
-import PetEditModal from './PetEditModal'; // Importamos el modal de edición
+import PetEditModal from './PetEditModal';
 import PostCard from './PostCard';
-import { Plus } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-// [REFINADO] Aceptamos las nuevas props: user y onUpdate
 function PetSocialProfile({ user, userProfile, pets, onUpdate }) {
     const { petId } = useParams();
     const [petProfile, setPetProfile] = useState(null);
@@ -25,7 +23,7 @@ function PetSocialProfile({ user, userProfile, pets, onUpdate }) {
     const [error, setError] = useState('');
     const [isOwner, setIsOwner] = useState(false);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false); // Estado para el modal de edición
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isFollowing, setIsFollowing] = useState(false);
     const [followLoading, setFollowLoading] = useState(false);
 
@@ -68,22 +66,21 @@ function PetSocialProfile({ user, userProfile, pets, onUpdate }) {
         } finally {
             setIsLoading(false);
         }
-    }, [petId, petProfile, user]);
+    }, [petId, user]);
 
     useEffect(() => {
         fetchData();
-    }, [petId]);
+    }, [fetchData]);
 
     const handlePostCreated = () => {
       setIsCreateModalOpen(false);
       fetchData();
     };
     
-    // [REFINADO] Función para manejar la actualización del perfil de la mascota
     const handlePetUpdate = () => {
       setIsEditModalOpen(false);
-      onUpdate(); // Llama a la función del layout para refrescar todo
-      fetchData(); // Vuelve a cargar los datos específicos de este perfil
+      onUpdate();
+      fetchData();
     };
 
     const handleLikeToggle = async (postId) => {
@@ -154,7 +151,6 @@ function PetSocialProfile({ user, userProfile, pets, onUpdate }) {
                     </div>
                      <div className="social-profile-actions">
                         {isOwner ? (
-                            // [REFINADO] El botón ahora abre el modal de edición
                             <button onClick={() => setIsEditModalOpen(true)} className="profile-action-button follow">Editar Perfil</button> 
                         ) : (
                             <button 
@@ -189,12 +185,6 @@ function PetSocialProfile({ user, userProfile, pets, onUpdate }) {
                 )}
             </main>
 
-            {isOwner && (
-                <button className="create-post-fab" title="Crear Momento" onClick={() => setIsCreateModalOpen(true)}>
-                    <Plus />
-                </button>
-            )}
-
             {isCreateModalOpen && (
                 <CreatePostModal 
                     userProfile={userProfile}
@@ -205,7 +195,6 @@ function PetSocialProfile({ user, userProfile, pets, onUpdate }) {
                 />
             )}
             
-            {/* [REFINADO] Renderizado condicional del modal de edición */}
             {isEditModalOpen && (
                 <PetEditModal 
                     pet={petProfile}
