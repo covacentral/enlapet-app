@@ -1,6 +1,7 @@
 /* frontend/src/App.css */
-/* Versión: 3.2 - Estilos para Creación de Posts */
-/* Añade los estilos para el prompt de creación y el selector de autor. */
+/* Versión: 3.3 - Navegación Inferior Corregida y Estilos Unificados */
+/* CORRIGE: La simetría y el centrado de la barra de navegación inferior. */
+/* MANTIENE: Todos los estilos previos de la aplicación. */
 
 /* --- Importación de Tipografía --- */
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&display=swap');
@@ -545,29 +546,6 @@ input::-ms-clear {
 }
 .profile-action-button.following:hover {
   background-color: #3a3a3c;
-}
-
-.create-post-fab {
-  position: fixed;
-  bottom: 2rem;
-  right: 2rem;
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  background-color: var(--primary-accent);
-  color: var(--brand-cream);
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.4);
-  cursor: pointer;
-  transition: transform 0.2s ease, background-color 0.2s ease;
-  z-index: 500;
-}
-.create-post-fab:hover {
-  transform: scale(1.1);
-  background-color: var(--primary-accent-hover);
 }
 
 /* --- ESTILOS DEL FEED Y POSTS --- */
@@ -1262,12 +1240,12 @@ input::-ms-clear {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
-  flex-wrap: wrap; /* Permite que los elementos pasen a la siguiente línea */
-  gap: 10px; /* Añade espacio entre los elementos cuando se envuelven */
+  flex-wrap: wrap; 
+  gap: 10px;
 }
 
 .map-header .tab-title {
-  width: 100%; /* Ocupa todo el ancho en la primera línea */
+  width: 100%; 
   text-align: left;
 }
 
@@ -1354,7 +1332,7 @@ input::-ms-clear {
 }
 
 
-    /* --- [NUEVO] ESTILOS PARA EL MÓDULO DE EVENTOS --- */
+    /* --- ESTILOS PARA EL MÓDULO DE EVENTOS --- */
 
     .map-view-toggle {
       display: flex;
@@ -1501,7 +1479,7 @@ input::-ms-clear {
       gap: 8px;
     }
     .event-card-button {
-      margin-top: auto; /* Empuja el botón hacia abajo */
+      margin-top: auto;
       background-color: var(--primary-accent);
       color: var(--brand-cream);
       border: none;
@@ -1558,13 +1536,13 @@ input::-ms-clear {
 }
 
 
-/* --- [CORREGIDO Y REFINADO] ESTILOS PARA PESTAÑAS DENTRO DE MODALES --- */
+/* --- ESTILOS PARA PESTAÑAS DENTRO DE MODALES --- */
 .modal-tabs {
   display: flex;
-  margin: 0 -24px 24px -24px; /* Se ajusta para unirse con los bordes del modal */
+  margin: 0 -24px 24px -24px;
   padding: 0 24px;
-  position: relative; /* Contenedor de referencia para la línea inferior */
-  border-bottom: 1px solid var(--border-color); /* Línea de base sutil */
+  position: relative;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .modal-tab-button {
@@ -1576,8 +1554,8 @@ input::-ms-clear {
   padding: 16px 20px;
   cursor: pointer;
   transition: color 0.2s ease-in-out;
-  border-bottom: 3px solid transparent; /* Borde invisible para mantener el espacio */
-  margin-bottom: -1px; /* Sube el botón para que su borde se superponga al del contenedor */
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1px;
 }
 
 .modal-tab-button:hover {
@@ -1586,19 +1564,18 @@ input::-ms-clear {
 
 .modal-tab-button.active {
   color: var(--primary-accent);
-  border-bottom-color: var(--primary-accent); /* La línea activa ahora es el borde del botón */
+  border-bottom-color: var(--primary-accent);
 }
 
-/* [CORRECCIÓN] Se elimina el borde del header cuando hay pestañas para evitar la línea doble */
 .modal-header {
   border-bottom: 1px solid var(--border-color);
 }
 
 .pet-edit-modal-content .modal-header {
-  border-bottom: none; /* Específicamente quitamos el borde del header en este modal */
+  border-bottom: none;
 }
 
-/* --- [NUEVO] ESTILOS PARA EL CARNÉ DE SALUD --- */
+/* --- ESTILOS PARA EL CARNÉ DE SALUD --- */
 .health-section {
   margin-top: 1.5rem;
 }
@@ -1691,7 +1668,7 @@ input::-ms-clear {
   border-radius: 8px;
 }
 
-/* --- [NUEVO] ESTILOS PARA FORMULARIOS DEL CARNÉ DE SALUD --- */
+/* --- ESTILOS PARA FORMULARIOS DEL CARNÉ DE SALUD --- */
 .add-record-form {
   background-color: var(--background-dark);
   border: 1px solid var(--border-color);
@@ -1747,7 +1724,7 @@ input::-ms-clear {
 }
 
 
-/* --- [NUEVO] ESTILOS PARA EL PERFIL DE USUARIO PÚBLICO --- */
+/* --- ESTILOS PARA EL PERFIL DE USUARIO PÚBLICO --- */
 .profile-content {
   background-color: var(--background-light);
   padding: 1.5rem;
@@ -1806,7 +1783,7 @@ input::-ms-clear {
   color: var(--text-secondary);
 }
 
-/* --- [NUEVO] ESTILOS PARA ENLACES DE PERFIL EN LÍNEA --- */
+/* --- ESTILOS PARA ENLACES DE PERFIL EN LÍNEA --- */
 .inline-profile-link {
   color: var(--text-primary);
   text-decoration: none;
@@ -1819,33 +1796,7 @@ input::-ms-clear {
   text-decoration: underline;
 }
 
-
-/* --- ESTILOS PARA EL CARNÉ DE SALUD --- */
-.health-section { margin-top: 1.5rem; }
-.health-section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-color); }
-.health-section-header h4 { margin: 0; font-size: 1.1rem; font-weight: 700; }
-.add-record-button { background-color: var(--primary-accent); color: var(--brand-cream); border: none; border-radius: 6px; padding: 6px 12px; font-size: 0.9rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: background-color 0.2s; }
-.add-record-button:hover { background-color: var(--primary-accent-hover); }
-.record-list { display: flex; flex-direction: column; gap: 10px; }
-.record-card { background-color: var(--background-dark); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; }
-.record-card-info { display: flex; flex-direction: column; gap: 4px; text-align: left; }
-.record-card-info strong { font-size: 1rem; color: var(--text-primary); }
-.record-card-info span { font-size: 0.85rem; color: var(--text-secondary); }
-.record-card-actions button { background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 4px; }
-.record-card-actions button:hover { color: var(--error-red); }
-.empty-health-section { text-align: center; color: var(--text-secondary); font-size: 0.9rem; padding: 1rem; border: 1px dashed var(--border-color); border-radius: 8px; }
-.add-record-form { background-color: var(--background-dark); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; margin-top: 1rem; display: flex; flex-direction: column; gap: 12px; }
-.form-row { display: flex; gap: 12px; }
-.form-row .form-group { flex: 1; margin-bottom: 0; }
-.add-record-form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
-.form-action-button { background: none; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: background-color 0.2s; }
-.form-action-button.save { background-color: var(--primary-accent); color: var(--brand-cream); }
-.form-action-button.save:hover { background-color: var(--primary-accent-hover); }
-.form-action-button.cancel { background-color: var(--border-color); color: var(--text-secondary); }
-.form-action-button.cancel:hover { background-color: #3a3a3c; }
-
-
-/* --- [NUEVO] ESTILOS PARA PROMPT DE CREACIÓN Y SELECTOR DE AUTOR --- */
+/* --- ESTILOS PARA PROMPT DE CREACIÓN Y SELECTOR DE AUTOR --- */
 .create-post-prompt-container {
   background-color: var(--background-light);
   border: 1px solid var(--border-color);
@@ -1888,12 +1839,12 @@ input::-ms-clear {
   padding: 16px 0 16px 16px;
   border-bottom: 1px solid var(--border-color);
   overflow-x: auto;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none;  /* IE 10+ */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .author-selector-container::-webkit-scrollbar {
-  display: none; /* Safari and Chrome */
+  display: none;
 }
 
 .author-selector-scroll {
@@ -1943,76 +1894,7 @@ input::-ms-clear {
   white-space: nowrap;
 }
 
-/* --- [NUEVO] ESTILOS PARA LA BARRA DE NAVEGACIÓN INFERIOR --- */
-.bottom-nav-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 60px;
-  background-color: var(--background-light);
-  border-top: 1px solid var(--border-color);
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  z-index: 1000;
-  max-width: 1280px; /* Para mantener la consistencia con #root */
-  margin: 0 auto;
-}
-
-.nav-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  flex-grow: 1;
-  height: 100%;
-  text-decoration: none;
-  color: var(--text-secondary);
-  position: relative;
-  transition: color 0.2s ease-in-out;
-}
-
-.nav-item.active {
-  color: var(--primary-accent);
-}
-
-.nav-item:hover {
-  color: var(--text-primary);
-}
-
-.nav-item .nav-icon {
-  margin-bottom: 2px;
-}
-
-.nav-item .nav-label {
-  font-size: 0.7rem;
-  font-weight: bold;
-}
-
-.notification-badge {
-  position: absolute;
-  top: 8px;
-  right: calc(50% - 20px);
-  background-color: var(--error-red);
-  color: white;
-  border-radius: 50%;
-  width: 18px;
-  height: 18px;
-  font-size: 0.7rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  border: 2px solid var(--background-light);
-}
-
-/* Ajuste para que el contenido no quede debajo de la barra */
-.profile-container {
-  padding-bottom: 70px; /* Espacio para la barra de navegación */
-}
-
-/* --- [NUEVO] ESTILOS PARA LA PÁGINA DE NOTIFICACIONES --- */
+/* --- ESTILOS PARA LA PÁGINA DE NOTIFICACIONES --- */
 .notifications-page {
   background-color: var(--background-light);
   padding: 25px;
@@ -2043,7 +1925,7 @@ input::-ms-clear {
 }
 
 .notification-item.unread {
-  background-color: rgba(155, 137, 179, 0.1); /* Tinte de --primary-accent */
+  background-color: rgba(155, 137, 179, 0.1);
 }
 
 .notification-actor-pic {
@@ -2062,4 +1944,87 @@ input::-ms-clear {
   font-size: 0.8rem;
   color: var(--text-secondary);
   margin-top: 4px;
+}
+
+/* --- [INICIO] ESTILOS CORREGIDOS PARA LA BARRA DE NAVEGACIÓN INFERIOR --- */
+.bottom-nav-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background-color: var(--background-light);
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: center; /* Centrar el contenido horizontalmente */
+  align-items: stretch; /* Estirar los items para que ocupen toda la altura */
+  z-index: 1000;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 10px; /* Añadir un pequeño padding lateral */
+  box-sizing: border-box;
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 0px; /* Distribución equitativa: grow, shrink, basis */
+  min-width: 0; /* Previene que los items se desborden en pantallas pequeñas */
+  height: 100%;
+  text-decoration: none;
+  color: var(--text-secondary);
+  position: relative;
+  transition: color 0.2s ease-in-out;
+  background: none; /* Asegurar que los botones no tengan fondo */
+  border: none; /* Asegurar que los botones no tengan borde */
+  cursor: pointer;
+  padding: 0;
+}
+
+/* Estilo específico para el botón central de 'Crear' */
+.nav-item.create-post-button {
+  flex-grow: 0; /* No crece para mantener su tamaño */
+  flex-shrink: 0;
+  flex-basis: 60px; /* Un ancho base fijo */
+  margin: 0 10px; /* Espacio a los lados */
+}
+
+.nav-item.active {
+  color: var(--primary-accent);
+}
+
+.nav-item:hover {
+  color: var(--text-primary);
+}
+
+.nav-item .nav-icon {
+  margin-bottom: 2px;
+}
+
+.nav-item .nav-label {
+  font-size: 0.7rem;
+  font-weight: bold;
+}
+
+.notification-badge {
+  position: absolute;
+  top: 8px;
+  right: calc(50% - 22px); /* Ajustado para mejor posicionamiento */
+  background-color: var(--error-red);
+  color: white;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  border: 2px solid var(--background-light);
+}
+
+.profile-container {
+  padding-bottom: 70px; /* Espacio para la barra de navegación */
 }

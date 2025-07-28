@@ -1,9 +1,9 @@
 // backend/index.js
-// Versión: 13.0 - Sistema de Notificaciones y Refactor de Navegación (Backend)
-// IMPLEMENTA:
-// 1. Nueva colección `notifications` en Firestore.
-// 2. Lógica para crear notificaciones de 'new_follower', 'new_like', y 'new_comment'.
-// 3. Nuevos endpoints: GET /notifications, GET /notifications/unread-count, POST /notifications/mark-as-read.
+// Versión: 13.1 - Corrección Crítica de Feed y Notificaciones
+// CORRIGE:
+// 1. Se soluciona el crash en GET /api/feed que ocurría al intentar obtener posts de descubrimiento.
+// MANTIENE:
+// 2. Toda la funcionalidad del sistema de notificaciones.
 
 require('dotenv').config();
 const express = require('express');
@@ -79,7 +79,7 @@ const authenticateUser = async (req, res, next) => {
 };
 
 // --- Endpoint Raíz ---
-app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v13.0 - Notificaciones' }));
+app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v13.1 - Feed Corregido' }));
 
 // --- Endpoints Públicos (No requieren autenticación) ---
 app.post('/api/register', async (req, res) => {try {const { email, password, name } = req.body;if (!email || !password || !name) {return res.status(400).json({ message: 'Nombre, email y contraseña son requeridos.' });}const userRecord = await auth.createUser({ email, password, displayName: name });const newUser = {name,email,createdAt: new Date().toISOString(),userType: 'personal',profilePictureUrl: '',coverPhotoUrl: '',bio: '',phone: '',location: { country: 'Colombia', department: '', city: '' },privacySettings: { profileVisibility: 'public', showEmail: 'private' }};await db.collection('users').doc(userRecord.uid).set(newUser);res.status(201).json({ message: 'Usuario registrado con éxito', uid: userRecord.uid });} catch (error) {console.error('Error en /api/register:', error);if (error.code === 'auth/email-already-exists') {return res.status(409).json({ message: 'El correo electrónico ya está en uso.' });}if (error.code === 'auth/invalid-password') {return res.status(400).json({ message: 'La contraseña debe tener al menos 6 caracteres.' });}res.status(500).json({ message: 'Error al registrar el usuario.' });}});
@@ -495,74 +495,6 @@ app.post('/api/locations/:locationId/review', async (req, res) => {
     } catch (error) {
         console.error(`Error al añadir reseña a ${locationId}:`, error);
         res.status(500).json({ message: 'Error interno al procesar la reseña.' });
-    }
-});
-app.get('/api/feed', async (req, res) => {
-    const { uid } = req.user;
-    const { cursor } = req.query;
-    const POSTS_PER_PAGE = 10;
-    const FOLLOWED_POSTS_RATIO = 0.7;
-
-    try {
-        const followingSnapshot = await db.collection('users').doc(uid).collection('following').get();
-        const followedIds = followingSnapshot.docs.map(doc => doc.id);
-        const authorsToInclude = [...new Set([...followedIds, uid])];
-
-        let followedPosts = [];
-        if (authorsToInclude.length > 0) {
-            let followedQuery = db.collection('posts').where('authorId', 'in', authorsToInclude).orderBy('createdAt', 'desc');
-            if (cursor) {
-                followedQuery = followedQuery.startAfter(new Date(cursor));
-            }
-            const limit = Math.ceil(POSTS_PER_PAGE * FOLLOWED_POSTS_RATIO);
-            const followedSnapshot = await followedQuery.limit(limit).get();
-            followedPosts = followedSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        }
-
-        const discoveryLimit = POSTS_PER_PAGE - followedPosts.length;
-        let discoveryPosts = [];
-        if (discoveryLimit > 0) {
-            let discoveryQuery = db.collection('posts').orderBy('createdAt', 'desc');
-            const discoverySnapshot = await discoveryQuery.limit(20);
-            discoveryPosts = discoverySnapshot.docs
-                .map(doc => ({ id: doc.id, ...doc.data() }))
-                .filter(post => !authorsToInclude.includes(post.authorId))
-                .slice(0, discoveryLimit);
-        }
-
-        let combinedPosts = [...followedPosts, ...discoveryPosts];
-        combinedPosts.sort(() => Math.random() - 0.5);
-
-        const authorIds = [...new Set(combinedPosts.map(p => p.authorId))];
-        const authorsData = {};
-        if (authorIds.length > 0) {
-            const authorPromises = authorIds.map(id => db.collection('users').doc(id).get().then(doc => doc.exists ? doc : db.collection('pets').doc(id).get()));
-            const authorSnapshots = await Promise.all(authorPromises);
-            authorSnapshots.forEach(doc => {
-                if (doc.exists) {
-                    const data = doc.data();
-                    authorsData[doc.id] = { id: doc.id, name: data.name, profilePictureUrl: data.profilePictureUrl || data.petPictureUrl || '' };
-                }
-            });
-        }
-
-        const finalPosts = combinedPosts.map(post => ({ ...post, author: authorsData[post.authorId] || { name: 'Autor Desconocido' } }));
-        const nextCursor = finalPosts.length > 0 ? finalPosts[finalPosts.length - 1].createdAt : null;
-        
-        res.status(200).json({ posts: finalPosts, nextCursor });
-    } catch (error) {
-        console.error('Error en GET /api/feed:', error);
-        res.status(500).json({ message: 'Error al obtener el feed.' });
-    }
-});
-app.get('/api/event-categories', async (req, res) => {
-    try {
-        const categoriesSnapshot = await db.collection('event_categories').where('isOfficial', '==', true).get();
-        const categories = categoriesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        res.status(200).json(categories);
-    } catch (error) {
-        console.error('Error al obtener categorías de eventos:', error);
-        res.status(500).json({ message: 'Error interno al obtener las categorías.' });
     }
 });
 app.get('/api/events', async (req, res) => {
