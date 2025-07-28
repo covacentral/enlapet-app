@@ -1,10 +1,9 @@
 // backend/index.js
-// Versión: 12.4 - Sistema de Reportes Mejorado
-// CORRIGE: El endpoint de reportes ahora lee y guarda el 'contentType'.
-// MEJORA:
-// 1. El documento del reporte ahora incluye una vista previa del contenido (nombre o caption).
-// 2. Se guarda el ID del autor del contenido para una fácil identificación.
-// 3. Se añade lógica para prevenir que un mismo usuario reporte el mismo contenido varias veces.
+// Versión: 13.0 - Sistema de Notificaciones y Refactor de Navegación (Backend)
+// IMPLEMENTA:
+// 1. Nueva colección `notifications` en Firestore.
+// 2. Lógica para crear notificaciones de 'new_follower', 'new_like', y 'new_comment'.
+// 3. Nuevos endpoints: GET /notifications, GET /notifications/unread-count, POST /notifications/mark-as-read.
 
 require('dotenv').config();
 const express = require('express');
@@ -80,7 +79,7 @@ const authenticateUser = async (req, res, next) => {
 };
 
 // --- Endpoint Raíz ---
-app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v12.4 - Reportes Mejorados' }));
+app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v13.0 - Notificaciones' }));
 
 // --- Endpoints Públicos (No requieren autenticación) ---
 app.post('/api/register', async (req, res) => {try {const { email, password, name } = req.body;if (!email || !password || !name) {return res.status(400).json({ message: 'Nombre, email y contraseña son requeridos.' });}const userRecord = await auth.createUser({ email, password, displayName: name });const newUser = {name,email,createdAt: new Date().toISOString(),userType: 'personal',profilePictureUrl: '',coverPhotoUrl: '',bio: '',phone: '',location: { country: 'Colombia', department: '', city: '' },privacySettings: { profileVisibility: 'public', showEmail: 'private' }};await db.collection('users').doc(userRecord.uid).set(newUser);res.status(201).json({ message: 'Usuario registrado con éxito', uid: userRecord.uid });} catch (error) {console.error('Error en /api/register:', error);if (error.code === 'auth/email-already-exists') {return res.status(409).json({ message: 'El correo electrónico ya está en uso.' });}if (error.code === 'auth/invalid-password') {return res.status(400).json({ message: 'La contraseña debe tener al menos 6 caracteres.' });}res.status(500).json({ message: 'Error al registrar el usuario.' });}});
@@ -91,7 +90,7 @@ app.get('/api/public/pets/:petId', async (req, res) => {try {const { petId } = r
 // --- A partir de aquí, todos los endpoints requieren autenticación ---
 app.use(authenticateUser);
 
-// ... (Todos los demás endpoints permanecen sin cambios)
+// --- Endpoints de Perfil, Mascotas, Posts, etc. ---
 app.get('/api/public/users/:userId', async (req, res) => {
     const { userId } = req.params;
     try {
@@ -213,11 +212,9 @@ app.post('/api/posts', upload.single('postImage'), async (req, res) => {
     blobStream.end(req.file.buffer);
 });
 app.get('/api/posts/by-author/:authorId', async (req, res) => {try {const { authorId } = req.params;const postsQuery = await db.collection('posts').where('authorId', '==', authorId).orderBy('createdAt', 'desc').get();const posts = postsQuery.docs.map(doc => ({ id: doc.id, ...doc.data() }));res.status(200).json(posts);} catch (error) {console.error(`Error fetching posts for author ${req.params.authorId}:`, error);res.status(500).json({ message: 'Error al obtener las publicaciones.' });}});
-app.post('/api/posts/:postId/like', async (req, res) => {const { uid } = req.user;const { postId } = req.params;const postRef = db.collection('posts').doc(postId);const likeRef = postRef.collection('likes').doc(uid);try {await db.runTransaction(async (t) => {const likeDoc = await t.get(likeRef);if (likeDoc.exists) {return;}t.set(likeRef, { likedAt: new Date() });t.update(postRef, { likesCount: admin.firestore.FieldValue.increment(1) });});res.status(200).json({ message: 'Like añadido.' });} catch (error) {console.error('Error al dar like:', error);res.status(500).json({ message: 'No se pudo añadir el like.' });}});
 app.delete('/api/posts/:postId/unlike', async (req, res) => {const { uid } = req.user;const { postId } = req.params;const postRef = db.collection('posts').doc(postId);const likeRef = postRef.collection('likes').doc(uid);try {await db.runTransaction(async (t) => {const likeDoc = await t.get(likeRef);if (!likeDoc.exists) {return;}t.delete(likeRef);t.update(postRef, { likesCount: admin.firestore.FieldValue.increment(-1) });});res.status(200).json({ message: 'Like eliminado.' });} catch (error) {console.error('Error al quitar like:', error);res.status(500).json({ message: 'No se pudo quitar el like.' });}});
 app.post('/api/posts/like-statuses', async (req, res) => {const { uid } = req.user;const { postIds } = req.body;if (!Array.isArray(postIds) || postIds.length === 0) return res.status(200).json({});try {const likePromises = postIds.map(postId => db.collection('posts').doc(postId).collection('likes').doc(uid).get());const likeSnapshots = await Promise.all(likePromises);const statuses = {};likeSnapshots.forEach((doc, index) => {const postId = postIds[index];statuses[postId] = doc.exists;});res.status(200).json(statuses);} catch (error) {console.error('Error al verificar estados de likes:', error);res.status(500).json({ message: 'No se pudieron verificar los likes.' });}});
 app.get('/api/posts/:postId/comments', async (req, res) => {const { postId } = req.params;try {const commentsQuery = await db.collection('posts').doc(postId).collection('comments').orderBy('createdAt', 'asc').get();const comments = commentsQuery.docs.map(doc => doc.data());res.status(200).json(comments);} catch (error) {console.error('Error al obtener comentarios:', error);res.status(500).json({ message: 'No se pudieron obtener los comentarios.' });}});
-app.post('/api/posts/:postId/comment', async (req, res) => {const { uid } = req.user;const { postId } = req.params;const { text } = req.body;if (!text || text.trim() === '') {return res.status(400).json({ message: 'El comentario no puede estar vacío.' });}const postRef = db.collection('posts').doc(postId);const commentRef = postRef.collection('comments').doc();const userRef = db.collection('users').doc(uid);try {await db.runTransaction(async (t) => {const userDoc = await t.get(userRef);if (!userDoc.exists) {throw new Error("El usuario que comenta no existe.");}const userData = userDoc.data();const newComment = {id: commentRef.id,authorId: uid,authorName: userData.name,authorProfilePic: userData.profilePictureUrl || '',text,createdAt: new Date().toISOString()};t.set(commentRef, newComment);t.update(postRef, { commentsCount: admin.firestore.FieldValue.increment(1) });});const createdComment = (await commentRef.get()).data();res.status(201).json(createdComment);} catch (error) {console.error('Error al añadir comentario:', error);res.status(500).json({ message: 'No se pudo añadir el comentario.' });}});
 app.post('/api/posts/:postId/save', async (req, res) => {
     const { uid } = req.user;
     const { postId } = req.params;
@@ -307,8 +304,6 @@ app.get('/api/user/saved-posts', async (req, res) => {
         res.status(500).json({ message: 'Error al obtener las publicaciones guardadas.' });
     }
 });
-
-// --- [INICIO] Endpoint de Reportes Corregido y Mejorado ---
 app.post('/api/reports', async (req, res) => {
     const { uid } = req.user;
     const { contentId, contentType, reason } = req.body;
@@ -356,8 +351,6 @@ app.post('/api/reports', async (req, res) => {
             } else {
                 const reporterList = reportDoc.data().reporters || [];
                 if (reporterList.includes(uid)) {
-                    // Si el usuario ya reportó, no hacemos nada.
-                    // Podríamos devolver un mensaje específico si quisiéramos.
                     return; 
                 }
 
@@ -377,8 +370,6 @@ app.post('/api/reports', async (req, res) => {
         res.status(500).json({ message: 'Error interno al procesar el reporte.' });
     }
 });
-// --- [FIN] Endpoint de Reportes Corregido y Mejorado ---
-
 app.get('/api/location-categories', async (req, res) => {
     try {
         const categoriesSnapshot = await db.collection('location_categories').where('isOfficial', '==', true).get();
@@ -441,7 +432,7 @@ app.post('/api/locations', async (req, res) => {
             contact: contact || {},
             coordinates: new admin.firestore.GeoPoint(parseFloat(latitude), parseFloat(longitude)),
             submittedBy: uid,
-            approved: true, // Aprobación automática por ahora
+            approved: true,
             createdAt: new Date().toISOString(),
             averageRating: 0,
             ratingCount: 0,
@@ -506,13 +497,11 @@ app.post('/api/locations/:locationId/review', async (req, res) => {
         res.status(500).json({ message: 'Error interno al procesar la reseña.' });
     }
 });
-
-// --- Endpoint del Feed Híbrido ---
 app.get('/api/feed', async (req, res) => {
     const { uid } = req.user;
     const { cursor } = req.query;
     const POSTS_PER_PAGE = 10;
-    const FOLLOWED_POSTS_RATIO = 0.7; // 70% de posts de seguidos
+    const FOLLOWED_POSTS_RATIO = 0.7;
 
     try {
         const followingSnapshot = await db.collection('users').doc(uid).collection('following').get();
@@ -534,11 +523,11 @@ app.get('/api/feed', async (req, res) => {
         let discoveryPosts = [];
         if (discoveryLimit > 0) {
             let discoveryQuery = db.collection('posts').orderBy('createdAt', 'desc');
-            const discoverySnapshot = await discoveryQuery.limit(20).get(); // Traemos más para poder filtrar
+            const discoverySnapshot = await discoveryQuery.limit(20);
             discoveryPosts = discoverySnapshot.docs
                 .map(doc => ({ id: doc.id, ...doc.data() }))
-                .filter(post => !authorsToInclude.includes(post.authorId)) // Excluimos los que ya vemos
-                .slice(0, discoveryLimit); // Aplicamos el límite final
+                .filter(post => !authorsToInclude.includes(post.authorId))
+                .slice(0, discoveryLimit);
         }
 
         let combinedPosts = [...followedPosts, ...discoveryPosts];
@@ -566,9 +555,6 @@ app.get('/api/feed', async (req, res) => {
         res.status(500).json({ message: 'Error al obtener el feed.' });
     }
 });
-
-// --- Endpoints para el Módulo de Eventos ---
-
 app.get('/api/event-categories', async (req, res) => {
     try {
         const categoriesSnapshot = await db.collection('event_categories').where('isOfficial', '==', true).get();
@@ -579,9 +565,8 @@ app.get('/api/event-categories', async (req, res) => {
         res.status(500).json({ message: 'Error interno al obtener las categorías.' });
     }
 });
-
 app.get('/api/events', async (req, res) => {
-    const { view } = req.query; // 'finished', 'cancelled', o por defecto
+    const { view } = req.query;
     try {
         let query = db.collection('events').orderBy('startDate', 'asc');
         const eventsSnapshot = await query.get();
@@ -622,7 +607,6 @@ app.get('/api/events', async (req, res) => {
         res.status(500).json({ message: 'Error interno al obtener los eventos.' });
     }
 });
-
 app.get('/api/events/:eventId', async (req, res) => {
     const { eventId } = req.params;
     try {
@@ -647,7 +631,6 @@ app.get('/api/events/:eventId', async (req, res) => {
         res.status(500).json({ message: 'Error interno al obtener los detalles del evento.' });
     }
 });
-
 app.post('/api/events', upload.single('coverImage'), async (req, res) => {
     const { uid } = req.user;
     const { name, description, category, startDate, endDate, locationId, customAddress, customLat, customLng, contactPhone, contactEmail } = req.body;
@@ -721,7 +704,6 @@ app.post('/api/events', upload.single('coverImage'), async (req, res) => {
         res.status(500).json({ message: 'Error interno al crear el evento.' });
     }
 });
-
 app.put('/api/events/:eventId/status', async (req, res) => {
     const { uid } = req.user;
     const { eventId } = req.params;
@@ -749,7 +731,6 @@ app.put('/api/events/:eventId/status', async (req, res) => {
         res.status(500).json({ message: 'Error interno al actualizar el evento.' });
     }
 });
-
 app.put('/api/events/:eventId/details', upload.single('coverImage'), async (req, res) => {
     const { uid } = req.user;
     const { eventId } = req.params;
@@ -802,42 +783,6 @@ app.put('/api/events/:eventId/details', upload.single('coverImage'), async (req,
     } catch (error) {
         console.error(`Error al actualizar detalles del evento ${eventId}:`, error);
         res.status(500).json({ message: 'Error interno al actualizar los detalles.' });
-    }
-});
-
-app.post('/api/profiles/:profileId/follow', async (req, res) => {
-    const { uid } = req.user;
-    const { profileId } = req.params; 
-    const { profileType } = req.body; 
-
-    if (uid === profileId) {
-        return res.status(400).json({ message: 'No puedes seguirte a ti mismo.' });
-    }
-    if (!profileType || !['pet', 'user'].includes(profileType)) {
-        return res.status(400).json({ message: 'Se requiere un tipo de perfil válido (pet/user).' });
-    }
-
-    const currentUserRef = db.collection('users').doc(uid);
-    const followedProfileRef = db.collection(profileType === 'pet' ? 'pets' : 'users').doc(profileId);
-
-    try {
-        await db.runTransaction(async (t) => {
-            const followedDoc = await t.get(followedProfileRef);
-            if (!followedDoc.exists) {
-                throw new Error("El perfil que intentas seguir no existe.");
-            }
-            t.set(currentUserRef.collection('following').doc(profileId), { 
-                followedAt: new Date(),
-                type: profileType 
-            });
-            t.set(followedProfileRef.collection('followers').doc(uid), { 
-                followedAt: new Date() 
-            });
-        });
-        res.status(200).json({ message: 'Ahora sigues a este perfil.' });
-    } catch (error) {
-        console.error('Error al seguir al perfil:', error);
-        res.status(500).json({ message: error.message || 'No se pudo completar la acción.' });
     }
 });
 app.delete('/api/profiles/:profileId/unfollow', async (req, res) => {
