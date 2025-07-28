@@ -1,10 +1,8 @@
 // frontend/src/ProfileLayout.jsx
-// Versión: 3.0 - Refactor de Navegación e Integración de Notificaciones
-// CAMBIOS MAYORES:
-// - Se elimina por completo la cabecera y la barra de pestañas superior.
-// - Se integra el nuevo componente BottomNavBar para una navegación fija inferior.
-// - Se añade la lógica para obtener el conteo de notificaciones no leídas y pasarlo a la barra.
-// - Se gestiona la apertura del modal de creación de posts desde la barra.
+// Versión: 3.1 - Cabecera de Presentación Restaurada
+// CAMBIOS:
+// - Se reintroduce la cabecera con la información del usuario y las burbujas de mascotas.
+// - Se importa y renderiza el nuevo componente MainHeader.
 
 import { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
@@ -20,12 +18,13 @@ import SettingsTab from './SettingsTab.jsx';
 import PetsTab from './PetsTab.jsx';
 import PetSocialProfile from './PetSocialProfile.jsx';
 import UserProfilePage from './UserProfilePage.jsx';
-import NotificationsPage from './NotificationsPage.jsx'; // Nuevo
+import NotificationsPage from './NotificationsPage.jsx';
 
 // Importación de Componentes
 import LoadingComponent from './LoadingComponent.jsx';
-import BottomNavBar from './BottomNavBar.jsx'; // Nuevo
-import CreatePostModal from './CreatePostModal.jsx'; // Nuevo
+import BottomNavBar from './BottomNavBar.jsx';
+import CreatePostModal from './CreatePostModal.jsx';
+import MainHeader from './MainHeader.jsx'; // [NUEVO] Importamos la cabecera
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -76,13 +75,12 @@ function ProfileLayout({ user }) {
   useEffect(() => {
     fetchCoreData();
     fetchUnreadCount();
-    // Refrescar el contador cada 1 minuto
     const interval = setInterval(fetchUnreadCount, 60000);
     return () => clearInterval(interval);
   }, [fetchCoreData, fetchUnreadCount]);
 
   const handleMarkAsRead = async () => {
-    setUnreadCount(0); // Actualización optimista de la UI
+    setUnreadCount(0);
     try {
       const idToken = await user.getIdToken();
       await fetch(`${API_URL}/api/notifications/mark-as-read`, {
@@ -91,16 +89,14 @@ function ProfileLayout({ user }) {
       });
     } catch (error) {
       console.error("Error marking notifications as read:", error);
-      fetchUnreadCount(); // Si falla, volvemos a obtener el conteo real
+      fetchUnreadCount();
     }
   };
 
   const handlePostCreated = (newPost) => {
     setIsCreateModalOpen(false);
     if (newPost) {
-      // Redirigir al feed para ver la nueva publicación
       navigate('/dashboard');
-      // Podríamos incluso insertar el post en el estado del feed si fuera necesario
     }
   };
 
@@ -117,18 +113,18 @@ function ProfileLayout({ user }) {
         />
       )}
 
+      {/* [NUEVO] Cabecera de presentación restaurada */}
+      <MainHeader userProfile={userProfile} pets={pets} />
+
       <main className="tab-content">
         <Routes>
           <Route index element={<FeedPage userProfile={userProfile} pets={pets} />} />
           <Route path="map" element={<MapPage />} />
           <Route path="events" element={<EventsPage user={user} />} />
           <Route path="notifications" element={<NotificationsPage onMarkAsRead={handleMarkAsRead} />} />
-          
-          {/* Rutas que antes estaban en el menú superior, ahora se acceden desde otros lugares */}
           <Route path="saved" element={<SavedPostsPage />} />
           <Route path="pets" element={<PetsTab user={user} initialPets={pets} onPetsUpdate={fetchCoreData} />} />
           <Route path="settings" element={<SettingsTab user={user} userProfile={userProfile} onProfileUpdate={fetchCoreData} />} />
-          
           <Route path="pet/:petId" element={<PetSocialProfile user={user} userProfile={userProfile} pets={pets} onUpdate={fetchCoreData} />} />
           <Route path="user/:userId" element={<UserProfilePage />} />
         </Routes>
