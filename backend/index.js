@@ -1,9 +1,7 @@
 // backend/index.js
-// Versión: 13.1 - Corrección Crítica de Feed y Notificaciones
-// CORRIGE:
-// 1. Se soluciona el crash en GET /api/feed que ocurría al intentar obtener posts de descubrimiento.
-// MANTIENE:
-// 2. Toda la funcionalidad del sistema de notificaciones.
+// Versión: 13.2 - Corrección Definitiva del Feed
+// NOTA DE ARQUITECTURA: El endpoint /api/feed requiere un índice compuesto en Firestore
+// para funcionar. Colección: 'posts', Campos: 'authorId' (Ascendente), 'createdAt' (Descendente).
 
 require('dotenv').config();
 const express = require('express');
@@ -65,21 +63,21 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 *
 
 // --- Middleware de Autenticación ---
 const authenticateUser = async (req, res, next) => {
-  const idToken = req.headers.authorization?.split('Bearer ')[1];
-  if (!idToken) {
-    return res.status(401).json({ message: 'No autenticado. Se requiere un token.' });
-  }
-  try {
-    req.user = await auth.verifyIdToken(idToken);
-    next();
-  } catch (error) {
-    console.error('Error de autenticación de token:', error);
-    return res.status(401).json({ message: 'Token inválido o expirado.' });
-  }
-};
+    const idToken = req.headers.authorization?.split('Bearer ')[1];
+    if (!idToken) {
+      return res.status(401).json({ message: 'No autenticado. Se requiere un token.' });
+    }
+    try {
+      req.user = await auth.verifyIdToken(idToken);
+      next();
+    } catch (error) {
+      console.error('Error de autenticación de token:', error);
+      return res.status(401).json({ message: 'Token inválido o expirado.' });
+    }
+  };
 
 // --- Endpoint Raíz ---
-app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v13.1 - Feed Corregido' }));
+app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v13.2 - Feed Definitivo' }));
 
 // --- Endpoints Públicos (No requieren autenticación) ---
 app.post('/api/register', async (req, res) => {try {const { email, password, name } = req.body;if (!email || !password || !name) {return res.status(400).json({ message: 'Nombre, email y contraseña son requeridos.' });}const userRecord = await auth.createUser({ email, password, displayName: name });const newUser = {name,email,createdAt: new Date().toISOString(),userType: 'personal',profilePictureUrl: '',coverPhotoUrl: '',bio: '',phone: '',location: { country: 'Colombia', department: '', city: '' },privacySettings: { profileVisibility: 'public', showEmail: 'private' }};await db.collection('users').doc(userRecord.uid).set(newUser);res.status(201).json({ message: 'Usuario registrado con éxito', uid: userRecord.uid });} catch (error) {console.error('Error en /api/register:', error);if (error.code === 'auth/email-already-exists') {return res.status(409).json({ message: 'El correo electrónico ya está en uso.' });}if (error.code === 'auth/invalid-password') {return res.status(400).json({ message: 'La contraseña debe tener al menos 6 caracteres.' });}res.status(500).json({ message: 'Error al registrar el usuario.' });}});
@@ -89,6 +87,73 @@ app.get('/api/public/pets/:petId', async (req, res) => {try {const { petId } = r
 
 // --- A partir de aquí, todos los endpoints requieren autenticación ---
 app.use(authenticateUser);
+
+// --- [INICIO] Endpoint de Feed Corregido y Simplificado ---
+app.get('/api/feed', async (req, res) => {
+    const { uid } = req.user;
+    const { cursor } = req.query;
+    const POSTS_PER_PAGE = 10;
+
+    try {
+        const followingSnapshot = await db.collection('users').doc(uid).collection('following').get();
+        const followedIds = followingSnapshot.docs.map(doc => doc.id);
+        const authorsToInclude = [...new Set([...followedIds, uid])];
+
+        let postsQuery = db.collection('posts').orderBy('createdAt', 'desc');
+
+        // Si el usuario sigue a alguien, el feed principal será de ellos.
+        if (authorsToInclude.length > 1) { // > 1 para contar más que solo a sí mismo
+            postsQuery = postsQuery.where('authorId', 'in', authorsToInclude);
+        }
+        // Si no sigue a nadie, la consulta traerá los posts más recientes de todos (feed de descubrimiento).
+
+        if (cursor) {
+            const cursorDoc = await db.collection('posts').doc(cursor).get();
+            if (cursorDoc.exists) {
+                postsQuery = postsQuery.startAfter(cursorDoc);
+            }
+        }
+
+        const postsSnapshot = await postsQuery.limit(POSTS_PER_PAGE).get();
+        const posts = postsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        const lastVisible = postsSnapshot.docs[postsSnapshot.docs.length - 1];
+        const nextCursor = lastVisible ? lastVisible.id : null;
+
+        // Enriquecer posts con datos del autor
+        const authorIds = [...new Set(posts.map(p => p.authorId))];
+        const authorsData = {};
+        if (authorIds.length > 0) {
+            const authorPromises = authorIds.map(id => 
+                db.collection('users').doc(id).get().then(doc => {
+                    if (doc.exists) return doc;
+                    return db.collection('pets').doc(id).get();
+                })
+            );
+            const authorSnapshots = await Promise.all(authorPromises);
+            authorSnapshots.forEach(doc => {
+                if (doc.exists) {
+                    const data = doc.data();
+                    authorsData[doc.id] = { 
+                        id: doc.id, 
+                        name: data.name, 
+                        profilePictureUrl: data.profilePictureUrl || data.petPictureUrl || '' 
+                    };
+                }
+            });
+        }
+
+        const finalPosts = posts.map(post => ({
+            ...post,
+            author: authorsData[post.authorId] || { name: 'Autor Desconocido' }
+        }));
+        
+        res.status(200).json({ posts: finalPosts, nextCursor });
+    } catch (error) {
+        console.error('Error en GET /api/feed:', error);
+        res.status(500).json({ message: 'Error al obtener el feed.' });
+    }
+});
 
 // --- Endpoints de Perfil, Mascotas, Posts, etc. ---
 app.get('/api/public/users/:userId', async (req, res) => {
