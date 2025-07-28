@@ -752,5 +752,66 @@ app.get('/api/profiles/:profileId/follow-status', async (req, res) => {
     }
 });
 
+// --- [INICIO] Endpoints de Notificaciones ---
+
+app.get('/api/notifications', async (req, res) => {
+    const { uid } = req.user;
+    try {
+        const snapshot = await db.collection('notifications')
+            .where('recipientId', '==', uid)
+            .orderBy('createdAt', 'desc')
+            .limit(30)
+            .get();
+        
+        const notifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        res.status(200).json(notifications);
+    } catch (error) {
+        console.error('Error al obtener notificaciones:', error);
+        res.status(500).json({ message: 'Error al obtener notificaciones.' });
+    }
+});
+
+app.get('/api/notifications/unread-count', async (req, res) => {
+    const { uid } = req.user;
+    try {
+        const snapshot = await db.collection('notifications')
+            .where('recipientId', '==', uid)
+            .where('read', '==', false)
+            .get();
+            
+        res.status(200).json({ count: snapshot.size });
+    } catch (error) {
+        console.error('Error al contar notificaciones no leídas:', error);
+        res.status(500).json({ message: 'Error al contar notificaciones.' });
+    }
+});
+
+app.post('/api/notifications/mark-as-read', async (req, res) => {
+    const { uid } = req.user;
+    try {
+        const snapshot = await db.collection('notifications')
+            .where('recipientId', '==', uid)
+            .where('read', '==', false)
+            .get();
+
+        if (snapshot.empty) {
+            return res.status(200).json({ message: 'No hay notificaciones nuevas para marcar.' });
+        }
+
+        const batch = db.batch();
+        snapshot.docs.forEach(doc => {
+            batch.update(doc.ref, { read: true });
+        });
+        await batch.commit();
+
+        res.status(200).json({ message: 'Notificaciones marcadas como leídas.' });
+    } catch (error) {
+        console.error('Error al marcar notificaciones como leídas:', error);
+        res.status(500).json({ message: 'Error al actualizar notificaciones.' });
+    }
+});
+// --- [FIN] Endpoints de Notificaciones ---
+
+
 // --- Iniciar Servidor ---
 app.listen(PORT, () => console.log(`Servidor corriendo en el puerto ${PORT}`));
