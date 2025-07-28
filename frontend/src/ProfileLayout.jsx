@@ -1,8 +1,7 @@
 // frontend/src/ProfileLayout.jsx
-// Versión: 3.1 - Cabecera de Presentación Restaurada
-// CAMBIOS:
-// - Se reintroduce la cabecera con la información del usuario y las burbujas de mascotas.
-// - Se importa y renderiza el nuevo componente MainHeader.
+// Versión: 3.2 - Corrección de Bucle de Notificaciones
+// CORRIGE: Se envuelve la función `handleMarkAsRead` en un `useCallback` para
+// prevenir un bucle de renderizado infinito en la página de notificaciones.
 
 import { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
@@ -24,7 +23,7 @@ import NotificationsPage from './NotificationsPage.jsx';
 import LoadingComponent from './LoadingComponent.jsx';
 import BottomNavBar from './BottomNavBar.jsx';
 import CreatePostModal from './CreatePostModal.jsx';
-import MainHeader from './MainHeader.jsx'; // [NUEVO] Importamos la cabecera
+import MainHeader from './MainHeader.jsx';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -79,7 +78,7 @@ function ProfileLayout({ user }) {
     return () => clearInterval(interval);
   }, [fetchCoreData, fetchUnreadCount]);
 
-  const handleMarkAsRead = async () => {
+  const handleMarkAsRead = useCallback(async () => {
     setUnreadCount(0);
     try {
       const idToken = await user.getIdToken();
@@ -91,7 +90,7 @@ function ProfileLayout({ user }) {
       console.error("Error marking notifications as read:", error);
       fetchUnreadCount();
     }
-  };
+  }, [user, fetchUnreadCount]);
 
   const handlePostCreated = (newPost) => {
     setIsCreateModalOpen(false);
@@ -113,7 +112,6 @@ function ProfileLayout({ user }) {
         />
       )}
 
-      {/* [NUEVO] Cabecera de presentación restaurada */}
       <MainHeader userProfile={userProfile} pets={pets} />
 
       <main className="tab-content">
