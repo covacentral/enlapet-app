@@ -154,6 +154,7 @@ app.get('/api/feed', async (req, res) => {
         res.status(500).json({ message: 'Error al obtener el feed.' });
     }
 });
+// --- [FIN] Endpoint de Feed Corregido ---
 
 // --- Endpoints de Perfil, Mascotas, Posts, etc. ---
 app.get('/api/public/users/:userId', async (req, res) => {
