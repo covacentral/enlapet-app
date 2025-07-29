@@ -1,105 +1,96 @@
-// frontend/src/PostCard.jsx
-// Versión: 2.1 - Corrección de Sistema de Reportes
-// CORRIGE: Se asegura de pasar todas las props necesarias (contentId, contentType, contentCreatorName)
-// al ReportModal para que los reportes de publicaciones funcionen correctamente.
-
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, MessageCircle, Bookmark, MoreVertical } from 'lucide-react';
-import CommentsModal from './CommentsModal';
-import ReportModal from './ReportModal';
+import useAuth from './hooks/useAuth';
+import api from './services/api';
 
-function PostCard({ post, isLiked, isSaved, onLikeToggle, onSaveToggle, onCommentAdded }) {
-  const [isCommentsModalOpen, setIsCommentsModalOpen] = useState(false);
-  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const menuRef = useRef(null);
+// Asumo que tienes estos iconos o componentes, ajústalos si es necesario
+import { Heart, MessageCircle, Bookmark, MoreHorizontal } from 'lucide-react';
+
+const PostCard = ({ post }) => {
+  // --- LOG DE DEPURACIÓN CRÍTICO ---
+  // Esto nos mostrará la estructura exacta del post que estamos recibiendo.
+  console.log('[PostCard] Renderizando con los siguientes datos de post:', post);
+
+  const [author, setAuthor] = useState(null);
+  const { user } = useAuth();
 
   useEffect(() => {
-    function handleClickOutside(event) {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setIsMenuOpen(false);
+    const fetchAuthor = async () => {
+      console.log(`[PostCard ${post.id}] Iniciando fetchAuthor para authorId: ${post.authorId}`);
+      if (!post || !post.authorId) {
+        console.error(`[PostCard ${post.id}] Error: El post no tiene authorId.`);
+        return;
       }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [menuRef]);
-
-  if (!post || !post.author) return null;
-
-  const authorProfileLink = post.authorType === 'pet'
-    ? `/dashboard/pet/${post.author.id}`
-    : `/dashboard/user/${post.author.id}`;
-
-  const profilePic = post.author.profilePictureUrl || 'https://placehold.co/100x100/E2E8F0/4A5568?text=:)';
-  const postDate = new Date(post.createdAt).toLocaleDateString('es-ES', {
-    year: 'numeric', month: 'long', day: 'numeric'
-  });
-
-  const handleLikeClick = (e) => { e.preventDefault(); e.stopPropagation(); onLikeToggle(post.id); };
-  const handleSaveClick = (e) => { e.preventDefault(); e.stopPropagation(); onSaveToggle(post.id); };
-  
-  const handleOpenReportModal = () => {
-    setIsMenuOpen(false);
-    setIsReportModalOpen(true);
-  };
-
-  return (
-    <>
-      {isCommentsModalOpen && ( <CommentsModal postId={post.id} onClose={() => setIsCommentsModalOpen(false)} onCommentAdded={onCommentAdded} /> )}
       
-      {/* [CORRECCIÓN] Se pasan las props correctas al ReportModal */}
-      {isReportModalOpen && ( 
-        <ReportModal 
-          contentId={post.id}
-          contentType="post"
-          contentCreatorName={post.author.name}
-          onClose={() => setIsReportModalOpen(false)} 
-        /> 
-      )}
+      try {
+        // Asumimos que el autor es siempre un usuario por ahora.
+        // La lógica para diferenciar entre usuario y mascota se puede añadir después.
+        const response = await api.get(`/public/users/${post.authorId}`);
+        console.log(`[PostCard ${post.id}] Respuesta de /public/users/${post.authorId}:`, response);
+        setAuthor(response.data);
+      } catch (error) {
+        console.error(`[PostCard ${post.id}] ERROR FATAL al obtener el autor:`, error);
+      }
+    };
 
-      <div className="post-card-container">
-        <div className="post-card-header">
-          <Link to={authorProfileLink} className="post-author-info">
-            <img src={profilePic} alt={post.author.name} className="post-author-pic"/>
-            <span className="post-author-name">{post.author.name}</span>
+    fetchAuthor();
+  }, [post]);
+
+  // --- RENDERIZADO SEGURO ---
+  // Envolvemos todo en un try...catch para evitar que un error aquí rompa toda la app.
+  try {
+    if (!post || !author) {
+      // Muestra un loader o un placeholder mientras se carga el autor.
+      return <div>Cargando post...</div>;
+    }
+
+    return (
+      <div className="post-card">
+        <div className="post-header">
+          <Link to={`/profile/${author.id}`} className="author-link">
+            <img 
+              src={author.profilePictureUrl || 'https://placehold.co/50x50/EFEFEF/333333?text=A'} 
+              alt={author.name} 
+              className="author-avatar"
+            />
+            <span className="author-name">{author.name || 'Usuario Desconocido'}</span>
           </Link>
-          
-          <div className="post-menu-container" ref={menuRef}>
-            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="action-button">
-              <MoreVertical size={20} />
-            </button>
-            {isMenuOpen && (
-              <div className="post-menu-dropdown">
-                <button onClick={handleOpenReportModal}>Reportar publicación</button>
-              </div>
-            )}
+          <button className="post-options-button">
+            <MoreHorizontal size={20} />
+          </button>
+        </div>
+        
+        {post.imageUrl && (
+          <div className="post-image-container">
+            <img src={post.imageUrl} alt="Contenido del post" className="post-image" />
           </div>
+        )}
+
+        <div className="post-content">
+          <p>{post.text}</p>
         </div>
 
-        <div className="post-image-wrapper">
-          <img src={post.imageUrl} alt={post.caption} />
-        </div>
-        <div className="post-card-body">
-          <div className="post-actions">
-            <button onClick={handleLikeClick} className={`action-button ${isLiked ? 'liked' : ''}`} aria-label="Dar Me Gusta">
-              <Heart size={20} fill={isLiked ? 'currentColor' : 'none'} />
-              <span>{post.likesCount}</span>
-            </button>
-            <button onClick={() => setIsCommentsModalOpen(true)} className="action-button" aria-label="Comentar">
-              <MessageCircle size={20} />
-              <span>{post.commentsCount}</span>
-            </button>
-            <button onClick={handleSaveClick} className={`action-button save-button ${isSaved ? 'saved' : ''}`} aria-label="Guardar">
-              <Bookmark size={20} fill={isSaved ? 'currentColor' : 'none'} />
-            </button>
-          </div>
-          <p className="post-caption">{post.caption}</p>
-          <p className="post-date">{postDate}</p>
+        <div className="post-actions">
+          <button className="action-button">
+            <Heart size={22} />
+            <span>{post.likesCount || 0}</span>
+          </button>
+          <button className="action-button">
+            <MessageCircle size={22} />
+            <span>{post.commentsCount || 0}</span>
+          </button>
+          <button className="action-button bookmark">
+            <Bookmark size={22} />
+          </button>
         </div>
       </div>
-    </>
-  );
-}
+    );
+  } catch (renderError) {
+    console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+    console.error(`[PostCard ${post?.id}] ERROR FATAL DURANTE EL RENDERIZADO:`, renderError);
+    console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+    return <div style={{color: 'red', border: '1px solid red', padding: '10px', margin: '10px'}}>Ocurrió un error al mostrar este post.</div>;
+  }
+};
 
 export default PostCard;
