@@ -1,14 +1,19 @@
-import { StrictMode } from 'react';
-import { createRoot } from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom'; // 1. Importamos el BrowserRouter
-import './index.css';
+import React from 'react';
+import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
-import 'leaflet/dist/leaflet.css';
-createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    {/* 2. Envolvemos nuestra App con el BrowserRouter */}
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
-  </StrictMode>,
+import './index.css';
+import { AuthProvider } from './context/AuthContext.jsx'; // Importamos el provider
+import { BrowserRouter as Router } from 'react-router-dom';
+
+// Envolvemos toda la aplicación con nuestro AuthProvider para que
+// todos los componentes hijos puedan acceder al contexto de autenticación.
+// También la envolvemos con el Router para habilitar el enrutamiento.
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <Router>
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+    </Router>
+  </React.StrictMode>,
 );
