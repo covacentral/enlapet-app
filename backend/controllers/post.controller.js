@@ -1,5 +1,6 @@
 // backend/controllers/post.controller.js
 // Lógica de negocio para todo lo relacionado con publicaciones (posts).
+// VERSIÓN CORREGIDA: Restaura la lógica de feed híbrido (seguidos + descubrimiento).
 
 const { db, bucket } = require('../config/firebase');
 const { createNotification } = require('../services/notification.service');
@@ -19,27 +20,62 @@ const getFeed = async (req, res) => {
         const followedIds = followingSnapshot.docs.map(doc => doc.id);
         const authorsToInclude = [...new Set([...followedIds, uid])];
 
-        let query = db.collection('posts').orderBy('createdAt', 'desc');
+        let posts = [];
+        const fetchedPostIds = new Set();
 
-        // Solo aplicamos el filtro de autores si el usuario sigue a alguien.
-        if (authorsToInclude.length > 1) {
-             query = query.where('authorId', 'in', authorsToInclude);
-        }
-       
-        if (cursor) {
-            const cursorDoc = await db.collection('posts').doc(cursor).get();
-            if(cursorDoc.exists) {
-                query = query.startAfter(cursorDoc);
+        // --- PASO 1: Prioridad a Tus Conexiones ---
+        // Buscamos publicaciones de las cuentas que el usuario sigue (incluyéndose a sí mismo).
+        if (authorsToInclude.length > 0) {
+            let followedQuery = db.collection('posts')
+                .where('authorId', 'in', authorsToInclude)
+                .orderBy('createdAt', 'desc')
+                .limit(POSTS_PER_PAGE);
+            
+            if (cursor) {
+                const cursorDoc = await db.collection('posts').doc(cursor).get();
+                if(cursorDoc.exists) {
+                    followedQuery = followedQuery.startAfter(cursorDoc);
+                }
             }
+            
+            const followedSnapshot = await followedQuery.get();
+            followedSnapshot.docs.forEach(doc => {
+                if (!fetchedPostIds.has(doc.id)) {
+                    posts.push({ id: doc.id, ...doc.data() });
+                    fetchedPostIds.add(doc.id);
+                }
+            });
         }
 
-        const snapshot = await query.limit(POSTS_PER_PAGE).get();
-        
-        let posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        const lastVisible = snapshot.docs[snapshot.docs.length - 1];
-        const nextCursor = lastVisible ? lastVisible.id : null;
+        // --- PASO 2: Relleno con Descubrimiento Comunitario ---
+        // Si no tenemos suficientes posts, buscamos más en toda la comunidad.
+        const remainingLimit = POSTS_PER_PAGE - posts.length;
+        if (remainingLimit > 0) {
+            let discoveryQuery = db.collection('posts')
+                .orderBy('createdAt', 'desc')
+                .limit(remainingLimit + 5); // Pedimos algunos extra para filtrar duplicados
 
-        // Enriquecer posts con datos del autor
+            const discoverySnapshot = await discoveryQuery.get();
+            discoverySnapshot.docs.forEach(doc => {
+                // Añadimos solo si no hemos alcanzado el límite y si el post no fue añadido previamente.
+                if (posts.length < POSTS_PER_PAGE && !fetchedPostIds.has(doc.id)) {
+                    posts.push({ id: doc.id, ...doc.data() });
+                    fetchedPostIds.add(doc.id);
+                }
+            });
+        }
+        
+        // --- PASO 3: Orden Cronológico Final ---
+        posts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        
+        // Asegurarnos de no devolver más posts de los solicitados
+        if (posts.length > POSTS_PER_PAGE) {
+            posts = posts.slice(0, POSTS_PER_PAGE);
+        }
+
+        const nextCursor = posts.length > 0 ? posts[posts.length - 1].id : null;
+
+        // --- PASO 4: Enriquecimiento de Datos ---
         const authorIds = [...new Set(posts.map(p => p.authorId))];
         const authorsData = {};
 
@@ -337,7 +373,6 @@ const getSavedPosts = async (req, res) => {
         
         const postIds = savedSnapshot.docs.map(doc => doc.id);
         
-        // Firestore 'in' query supports up to 30 elements
         const postChunks = [];
         for (let i = 0; i < postIds.length; i += 30) {
             postChunks.push(postIds.slice(i, i + 30));
