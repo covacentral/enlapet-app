@@ -8,11 +8,11 @@ const PostCard = ({ post: initialPost }) => {
   // Usamos un estado local para el post para poder actualizarlo (ej. el contador de likes)
   const [post, setPost] = useState(initialPost);
   const [author, setAuthor] = useState(null);
-  const [isLiked, setIsLiked] = useState(false);
+  const [isLiked, setIsLiked] = useState(false); // Estado para saber si al usuario actual le gusta
   const { user } = useAuth();
 
   useEffect(() => {
-    // Lógica para obtener el autor (como la teníamos antes)
+    // Lógica para obtener el autor (sea usuario o mascota)
     const fetchAuthor = async () => {
       if (!post || !post.authorId || !post.authorType) return;
       
@@ -28,51 +28,43 @@ const PostCard = ({ post: initialPost }) => {
       }
     };
     
-    // Lógica para verificar si al usuario actual ya le gusta este post
+    // TODO: El backend debería indicarnos si el post ya tiene like del usuario.
+    // Por ahora, lo inicializamos en false.
     const checkIfLiked = () => {
-        // Esta es una simulación. En una app real, el backend debería
-        // decirnos si el usuario ya ha dado like a este post.
-        // Por ahora, asumimos que no le ha dado like.
-        // TODO: Obtener el estado real del like desde el backend.
         setIsLiked(false);
     }
 
     fetchAuthor();
     checkIfLiked();
-  }, [post.id]); // Dependemos del ID del post
+  }, [post.id]); // Se ejecuta si el post cambia
 
   const handleLike = async () => {
-    // Implementación de "Optimistic Update" para una mejor UX.
-    // 1. Actualizamos la UI inmediatamente.
-    setIsLiked(!isLiked);
-    setPost(prevPost => ({
-        ...prevPost,
-        likesCount: isLiked ? prevPost.likesCount - 1 : prevPost.likesCount + 1
+    // "Optimistic Update" para una UX fluida
+    setIsLiked(currentState => !currentState);
+    setPost(currentPost => ({
+        ...currentPost,
+        likesCount: isLiked ? currentPost.likesCount - 1 : currentPost.likesCount + 1
     }));
 
-    // 2. Hacemos la llamada a la API en segundo plano.
     try {
-        if (isLiked) {
-            // Si ya le gustaba, llamamos a la ruta para quitar el like.
-            await api.delete(`/posts/${post.id}/like`);
-        } else {
-            // Si no le gustaba, llamamos a la ruta para dar like.
-            await api.post(`/posts/${post.id}/like`);
-        }
+      if (isLiked) {
+        await api.delete(`/posts/${post.id}/like`);
+      } else {
+        await api.post(`/posts/${post.id}/like`);
+      }
     } catch (error) {
-        // 3. Si la API falla, revertimos el cambio en la UI y mostramos un error.
-        console.error("Error al actualizar el like:", error);
-        setIsLiked(!isLiked); // Revertimos el estado del botón
-        setPost(prevPost => ({ // Revertimos el contador
-            ...prevPost,
-            likesCount: isLiked ? prevPost.likesCount + 1 : prevPost.likesCount - 1
-        }));
-        // Aquí podríamos mostrar una notificación de error al usuario.
+      console.error("Error al actualizar el like:", error);
+      // Revertimos el cambio si la API falla
+      setIsLiked(currentState => !currentState);
+      setPost(currentPost => ({
+        ...currentPost,
+        likesCount: isLiked ? currentPost.likesCount + 1 : currentPost.likesCount - 1
+      }));
     }
   };
 
   if (!post || !author) {
-    return <div>Cargando publicación...</div>;
+    return <div className="loading-placeholder">Cargando publicación...</div>;
   }
 
   const profileLink = post.authorType === 'pet' ? `/pet/${author.id}/social` : `/profile/${author.id}`;

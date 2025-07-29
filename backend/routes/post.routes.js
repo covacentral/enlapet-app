@@ -10,12 +10,12 @@ const {
   addComment,
   getComments,
   followProfile,
-  unfollowProfile
+  unfollowProfile,
+  getPostsByUser // <-- Importamos la nueva función
 } = require('../controllers/post.controller'); // Importaremos los controladores de posts
 const { protect } = require('../middlewares/auth.middleware');
 
 // --- Configuración de Multer para la subida de imágenes ---
-// Usamos almacenamiento en memoria para procesar la imagen antes de subirla a Firebase Storage.
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
@@ -24,6 +24,10 @@ const upload = multer({ storage: storage });
 // Ruta para crear una nueva publicación (incluye subida de imagen)
 // POST /api/posts
 router.post('/posts', protect, upload.single('image'), createPost);
+
+// Ruta para obtener todos los posts de un usuario específico
+// GET /api/posts/user/:userId
+router.get('/posts/user/:userId', getPostsByUser); // <-- NUEVA RUTA
 
 // Ruta para dar "like" a una publicación
 // POST /api/posts/:postId/like

@@ -1,17 +1,33 @@
 import React, { useState, useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css'; // Importa los estilos de Leaflet
+import L from 'leaflet'; // Importa Leaflet para manejar un bug con los iconos
+
 import api from './services/api';
 import LoadingComponent from './LoadingComponent';
+
+// --- Corrección para el icono por defecto de Leaflet ---
+// Webpack a veces no carga los iconos correctamente. Esta es la solución estándar.
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
+});
+// --- Fin de la corrección ---
 
 const MapPage = () => {
   const [locations, setLocations] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Posición inicial del mapa (centrado en Bogotá, Colombia)
+  const initialPosition = [4.60971, -74.08175];
+
   useEffect(() => {
     const fetchLocations = async () => {
       setIsLoading(true);
       try {
-        // Llamamos al endpoint correcto que sí existe en nuestro backend
         const response = await api.get('/locations');
         setLocations(response.data);
       } catch (err) {
@@ -23,7 +39,7 @@ const MapPage = () => {
     };
 
     fetchLocations();
-  }, []); // El array vacío asegura que la llamada se haga solo una vez
+  }, []);
 
   if (isLoading) {
     return <LoadingComponent />;
@@ -40,22 +56,25 @@ const MapPage = () => {
         <button className="add-location-button">+ Sugerir Lugar</button>
       </div>
 
-      {/* Placeholder para el mapa interactivo que se implementará en el futuro */}
-      <div className="map-placeholder">
-        <p>El mapa interactivo se mostrará aquí.</p>
-      </div>
-
-      <div className="locations-list">
-        <h3>Lugares Destacados:</h3>
-        {locations.length > 0 ? (
-          <ul>
-            {locations.map(loc => (
-              <li key={loc.id}>{loc.name} - ({loc.category})</li>
-            ))}
-          </ul>
-        ) : (
-          <p style={{ textAlign: 'center', marginTop: '20px' }}>No hay lugares sugeridos todavía.</p>
-        )}
+      <div className="map-container-wrapper">
+        <MapContainer center={initialPosition} zoom={6} style={{ height: '100%', width: '100%' }}>
+          <TileLayer
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          />
+          {locations.map(loc => (
+            // Asegurarse que las coordenadas existan y tengan el formato correcto
+            loc.coordinates && loc.coordinates.latitude && loc.coordinates.longitude && (
+              <Marker key={loc.id} position={[loc.coordinates.latitude, loc.coordinates.longitude]}>
+                <Popup>
+                  <strong>{loc.name}</strong><br />
+                  {loc.description}<br />
+                  <small>Categoría: {loc.category}</small>
+                </Popup>
+              </Marker>
+            )
+          ))}
+        </MapContainer>
       </div>
     </div>
   );

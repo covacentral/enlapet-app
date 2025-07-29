@@ -1,175 +1,129 @@
-// frontend/src/CreatePostModal.jsx
-// Versión: 2.3 - Devolución de Post Creado
-// La función onPostCreated ahora pasa el objeto del post recién
-// creado para una actualización instantánea de la UI.
+import React, { useState, useEffect } from 'react';
+import useAuth from './hooks/useAuth';
+import api from './services/api';
+import { X } from 'lucide-react';
 
-import { useState, useRef } from 'react';
-import { X, UploadCloud } from 'lucide-react';
-import { auth } from './firebase';
+const CreatePostModal = ({ onClose }) => {
+  const { user } = useAuth();
+  const [text, setText] = useState('');
+  const [image, setImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [pets, setPets] = useState([]);
+  const [authorProfile, setAuthorProfile] = useState(null); // Perfil seleccionado para publicar
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+  // Al abrir el modal, cargamos las mascotas del usuario para el selector
+  useEffect(() => {
+    const fetchUserPets = async () => {
+      try {
+        const response = await api.get('/pets');
+        setPets(response.data);
+        // Por defecto, el autor es el propio usuario
+        setAuthorProfile({ id: user.uid, name: user.name, type: 'user' });
+      } catch (err) {
+        console.error("Error al cargar las mascotas del usuario:", err);
+      }
+    };
+    fetchUserPets();
+  }, [user]);
 
-// --- Componente para el selector de autor ---
-const AuthorSelector = ({ userProfile, pets, selectedAuthor, onSelectAuthor }) => {
-  const userProfileWithId = { ...userProfile, id: auth.currentUser.uid };
-  const allProfiles = [userProfileWithId, ...pets];
+  const handleImageChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setImage(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!text || !authorProfile) {
+      setError('El texto y el autor son requeridos.');
+      return;
+    }
+    setIsLoading(true);
+    setError('');
+
+    // FormData es la forma estándar de enviar archivos e información de formulario.
+    const formData = new FormData();
+    formData.append('text', text);
+    formData.append('profileId', authorProfile.id);
+    formData.append('authorType', authorProfile.type);
+    if (image) {
+      formData.append('image', image);
+    }
+
+    try {
+      await api.post('/posts', formData);
+      // TODO: Idealmente, aquí deberíamos invalidar el query del feed para que se actualice.
+      // Por ahora, simplemente cerramos el modal.
+      onClose();
+    } catch (err) {
+      console.error("Error al crear el post:", err);
+      setError('No se pudo crear la publicación. Inténtalo de nuevo.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
-    <div className="author-selector-container">
-      <div className="author-selector-scroll">
-        {allProfiles.map(profile => {
-          const isSelected = profile.id === selectedAuthor.id;
-          const isUser = !profile.ownerId; 
-          const profilePic = isUser ? profile.profilePictureUrl : profile.petPictureUrl;
-
-          return (
-            <div 
-              key={profile.id} 
-              className={`author-bubble ${isSelected ? 'selected' : ''}`}
-              onClick={() => onSelectAuthor(profile)}
+    <div className="modal-overlay">
+      <div className="modal-content create-post-modal">
+        <div className="modal-header">
+          <h3>Crear Publicación</h3>
+          <button onClick={onClose} className="close-modal-button"><X size={24} /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="modal-body">
+          <div className="author-selector">
+            <label htmlFor="author">Publicar como:</label>
+            <select 
+              id="author"
+              onChange={(e) => {
+                const [type, id, name] = e.target.value.split(',');
+                setAuthorProfile({ type, id, name });
+              }}
             >
-              <div className="author-bubble-image">
-                <img src={profilePic || 'https://placehold.co/100x100/E2E8F0/4A5568?text=:)'} alt={profile.name} />
-              </div>
-              <span className="author-bubble-name">{isUser ? 'Tú' : profile.name.split(' ')[0]}</span>
+              <option value={`user,${user.uid},${user.name}`}>{user.name} (Tú)</option>
+              {pets.map(pet => (
+                <option key={pet.id} value={`pet,${pet.id},${pet.name}`}>{pet.name} (Mascota)</option>
+              ))}
+            </select>
+          </div>
+          <textarea
+            placeholder={`¿Qué estás pensando, ${authorProfile?.name}?`}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            rows="5"
+          />
+          {imagePreview && (
+            <div className="image-preview-container">
+              <img src={imagePreview} alt="Vista previa" className="image-preview" />
+              <button type="button" onClick={() => { setImage(null); setImagePreview(null); }}>
+                Quitar Imagen
+              </button>
             </div>
-          );
-        })}
+          )}
+          <div className="modal-footer">
+            <label htmlFor="image-upload" className="image-upload-label">
+              Añadir Foto
+            </label>
+            <input 
+              id="image-upload"
+              type="file" 
+              accept="image/*" 
+              onChange={handleImageChange} 
+              style={{ display: 'none' }}
+            />
+            <button type="submit" className="submit-post-button" disabled={isLoading}>
+              {isLoading ? 'Publicando...' : 'Publicar'}
+            </button>
+          </div>
+          {error && <p className="error-message">{error}</p>}
+        </form>
       </div>
     </div>
   );
 };
-
-function CreatePostModal({ userProfile, pets, initialAuthor, onClose, onPostCreated }) {
-    const userProfileWithId = { ...userProfile, id: auth.currentUser.uid };
-    const [selectedAuthor, setSelectedAuthor] = useState(initialAuthor || userProfileWithId);
-    const [caption, setCaption] = useState('');
-    const [postImage, setPostImage] = useState(null);
-    const [previewImage, setPreviewImage] = useState(null);
-    const [isLoading, setIsLoading] = useState(false);
-    const [message, setMessage] = useState('');
-    const fileInputRef = useRef(null);
-
-    const handleImageChange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            setPostImage(file);
-            setPreviewImage(URL.createObjectURL(file));
-        }
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (!postImage || !caption) {
-            setMessage('Por favor, añade una imagen y un texto.');
-            return;
-        }
-        setIsLoading(true);
-        setMessage('Publicando momento...');
-
-        const authorType = selectedAuthor.ownerId ? 'pet' : 'user';
-        const formData = new FormData();
-        formData.append('postImage', postImage);
-        formData.append('caption', caption);
-        formData.append('authorId', selectedAuthor.id);
-        formData.append('authorType', authorType);
-
-        try {
-            const user = auth.currentUser;
-            if (!user) throw new Error("No autenticado");
-            const idToken = await user.getIdToken();
-            const response = await fetch(`${API_URL}/api/posts`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${idToken}` },
-                body: formData,
-            });
-
-            const data = await response.json();
-            if (!response.ok) {
-                throw new Error(data.message || 'Error al crear la publicación.');
-            }
-
-            setMessage('¡Momento publicado con éxito!');
-            // [REFINADO] Pasamos el objeto del post del backend a la función callback.
-            onPostCreated(data.post); 
-            setTimeout(() => {
-                onClose();
-            }, 1500);
-
-        } catch (error) {
-            setMessage(error.message);
-            onPostCreated(null); // Indicamos que no se pudo crear para que el feed se recargue
-        } finally {
-            setIsLoading(false);
-        }
-    };
-    
-    const placeholderText = selectedAuthor.ownerId
-      ? `¿Qué está haciendo ${selectedAuthor.name}?`
-      : `¿Qué estás pensando, ${selectedAuthor.name.split(' ')[0]}?`;
-
-    return (
-        <div className="modal-backdrop" onClick={onClose}>
-            <div className="create-post-modal-content" onClick={e => e.stopPropagation()}>
-                <div className="modal-header">
-                    <h2>Crear un nuevo Momento</h2>
-                    <button onClick={onClose} className="close-button" disabled={isLoading}>
-                        <X size={24} />
-                    </button>
-                </div>
-                
-                <AuthorSelector 
-                  userProfile={userProfile} 
-                  pets={pets} 
-                  selectedAuthor={selectedAuthor} 
-                  onSelectAuthor={setSelectedAuthor}
-                />
-
-                <form onSubmit={handleSubmit} className="create-post-form">
-                    <div className="modal-body" style={{paddingTop: '16px'}}>
-                        <div 
-                            className="image-upload-area" 
-                            onClick={() => fileInputRef.current.click()}
-                        >
-                            {previewImage ? (
-                                <img src={previewImage} alt="Previsualización" className="image-preview" />
-                            ) : (
-                                <div className="upload-prompt-content">
-                                    <UploadCloud size={48} />
-                                    <p>Haz clic aquí para seleccionar una foto</p>
-                                </div>
-                            )}
-                        </div>
-                        <input 
-                            type="file" 
-                            accept="image/*" 
-                            ref={fileInputRef} 
-                            onChange={handleImageChange} 
-                            style={{ display: 'none' }} 
-                        />
-                        <div className="form-group">
-                            <textarea
-                                id="caption"
-                                value={caption}
-                                onChange={(e) => setCaption(e.target.value)}
-                                placeholder={placeholderText}
-                                rows="4"
-                                maxLength="280"
-                                required
-                                disabled={isLoading}
-                            ></textarea>
-                        </div>
-                    </div>
-                    <div className="modal-footer">
-                        {message && <p className="response-message">{message}</p>}
-                        <button type="submit" className="publish-button" disabled={isLoading}>
-                            {isLoading ? 'Publicando...' : 'Publicar Momento'}
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    );
-}
 
 export default CreatePostModal;
