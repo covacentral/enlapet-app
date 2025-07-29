@@ -65,6 +65,7 @@ const likePost = async (req, res) => {
     await db.runTransaction(async (transaction) => {
       const likeDoc = await transaction.get(likeRef);
       if (likeDoc.exists) {
+        // El usuario ya ha dado like, no hacemos nada.
         return;
       }
       transaction.set(likeRef, { createdAt: new Date().toISOString() });
@@ -90,6 +91,7 @@ const unlikePost = async (req, res) => {
     await db.runTransaction(async (transaction) => {
       const likeDoc = await transaction.get(likeRef);
       if (!likeDoc.exists) {
+        // El usuario no ha dado like, no hacemos nada.
         return;
       }
       transaction.delete(likeRef);
@@ -105,30 +107,35 @@ const unlikePost = async (req, res) => {
 
 // --- Controlador para añadir un comentario ---
 const addComment = async (req, res) => {
+    // Lógica para añadir un comentario...
     res.status(201).json({ message: 'Comentario añadido (lógica pendiente).' });
 };
 
 // --- Controlador para obtener comentarios ---
 const getComments = async (req, res) => {
+    // Lógica para obtener comentarios...
     res.status(200).json({ message: 'Comentarios obtenidos (lógica pendiente).' });
 };
 
 // --- Controlador para seguir a un perfil ---
 const followProfile = async (req, res) => {
-  const { uid: followerId } = req.user;
-  const { profileId: followingId } = req.params;
+  const { uid: followerId } = req.user; // Quien sigue
+  const { profileId: followingId } = req.params; // A quien se sigue
 
   if (followerId === followingId) {
     return res.status(400).json({ message: 'No puedes seguirte a ti mismo.' });
   }
 
   const followerRef = db.collection('users').doc(followerId);
-  const followingRef = db.collection('users').doc(followingId);
+  const followingRef = db.collection('users').doc(followingId); // Asumimos que es un usuario por ahora
 
   try {
     await db.runTransaction(async (t) => {
+      // 1. Añadir el ID del seguido a la subcolección 'following' del seguidor.
       t.set(followerRef.collection('following').doc(followingId), { createdAt: new Date() });
+      // 2. Añadir el ID del seguidor a la subcolección 'followers' del seguido.
       t.set(followingRef.collection('followers').doc(followerId), { createdAt: new Date() });
+      // 3. Incrementar contadores (opcional, pero útil)
       t.update(followerRef, { followingCount: admin.firestore.FieldValue.increment(1) });
       t.update(followingRef, { followersCount: admin.firestore.FieldValue.increment(1) });
     });
@@ -161,23 +168,6 @@ const unfollowProfile = async (req, res) => {
     }
 };
 
-// --- Controlador para obtener todos los posts de un usuario ---
-const getPostsByUser = async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const postsSnapshot = await db.collection('posts')
-      .where('authorId', '==', userId)
-      .orderBy('createdAt', 'desc')
-      .get();
-    
-    const posts = postsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    res.status(200).json(posts);
-  } catch (error) {
-    console.error('Error al obtener los posts del usuario:', error);
-    res.status(500).json({ message: 'Error del servidor.' });
-  }
-};
-
 module.exports = {
   createPost,
   likePost,
@@ -186,5 +176,4 @@ module.exports = {
   getComments,
   followProfile,
   unfollowProfile,
-  getPostsByUser, // <-- Exportamos la nueva función
 };
