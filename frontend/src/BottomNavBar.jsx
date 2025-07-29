@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Home, Map, Calendar, Bell, Plus } from 'lucide-react';
-import CreatePostModal from './CreatePostModal'; // Asumo que tienes este componente para crear posts
+import CreatePostModal from './CreatePostModal'; // Asumo que tienes este componente
 
 const NavItem = ({ to, icon: Icon, label }) => {
   const location = useLocation();
@@ -21,7 +21,7 @@ const BottomNavBar = () => {
   const navItems = [
     { to: '/feed', icon: Home, label: 'Inicio' },
     { to: '/map', icon: Map, label: 'Mapa' },
-    // El botón de "Crear" es especial, no es un enlace de navegación
+    // El botón de "Crear" se maneja por separado
     { to: '/events', icon: Calendar, label: 'Eventos' },
     { to: '/notifications', icon: Bell, label: 'Alertas' },
   ];
@@ -29,10 +29,12 @@ const BottomNavBar = () => {
   return (
     <>
       <nav className="bottom-nav-bar">
+        {/* Renderiza los dos primeros items */}
         {navItems.slice(0, 2).map((item) => (
           <NavItem key={item.to} {...item} />
         ))}
 
+        {/* Botón especial para crear post que abre un modal */}
         <button 
           className="nav-item create-post-button" 
           onClick={() => setIsCreatePostModalOpen(true)}
@@ -40,12 +42,13 @@ const BottomNavBar = () => {
           <Plus size={30} />
         </button>
 
+        {/* Renderiza los dos últimos items */}
         {navItems.slice(2).map((item) => (
           <NavItem key={item.to} {...item} />
         ))}
       </nav>
       
-      {/* Renderiza el modal para crear un post si el estado es true */}
+      {/* El modal para crear un post se muestra condicionalmente */}
       {isCreatePostModalOpen && (
         <CreatePostModal onClose={() => setIsCreatePostModalOpen(false)} />
       )}
