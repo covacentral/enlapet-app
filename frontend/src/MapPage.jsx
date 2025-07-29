@@ -1,9 +1,12 @@
 // frontend/src/MapPage.jsx
-// Versión: 1.5 - Conectar Modal de Eventos (Completo)
-// Permite abrir el modal de creación de eventos desde el mapa.
+// Versión: 1.6 - Navegación Libre
+// CORRIGE: El bug crítico que causaba un bucle de recentrado en el mapa.
+// ELIMINADO: Se elimina el componente <ChangeView /> que forzaba el reseteo
+// de la vista en cada renderizado. Ahora el mapa se centra una vez en la
+// geolocalización del usuario y luego permite la navegación libre.
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import { auth } from './firebase';
 import LoadingComponent from './LoadingComponent';
@@ -26,12 +29,6 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
-function ChangeView({ center, zoom }) {
-  const map = useMap();
-  map.setView(center, zoom);
-  return null;
-}
-
 function MapPage() {
   const [viewMode, setViewMode] = useState('locations');
   const [items, setItems] = useState([]);
@@ -41,13 +38,20 @@ function MapPage() {
   const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [mapCenter, setMapCenter] = useState(initialPosition);
+  const [mapInstance, setMapInstance] = useState(null);
 
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
-      (position) => setMapCenter([position.coords.latitude, position.coords.longitude]),
+      (position) => {
+        const coords = [position.coords.latitude, position.coords.longitude];
+        setMapCenter(coords);
+        if (mapInstance) {
+          mapInstance.setView(coords, 13);
+        }
+      },
       () => setMapCenter(initialPosition)
     );
-  }, []);
+  }, [mapInstance]);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -145,8 +149,7 @@ function MapPage() {
         {error && <p className="response-message error">{error}</p>}
 
         <div className="map-wrapper">
-          <MapContainer center={mapCenter} zoom={13} scrollWheelZoom={true} className="leaflet-container">
-            <ChangeView center={mapCenter} zoom={13} />
+          <MapContainer center={mapCenter} zoom={13} scrollWheelZoom={true} className="leaflet-container" whenCreated={setMapInstance}>
             <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
             {items.map(item => {
               const position = item.coordinates ? [item.coordinates._latitude, item.coordinates._longitude] : (item.customLocation ? [item.customLocation.coordinates._latitude, item.customLocation.coordinates._longitude] : null);
