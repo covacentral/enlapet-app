@@ -1,210 +1,125 @@
-// frontend/src/PetSocialProfile.jsx
-// Versión: 3.2 - Limpieza de UI
-// ELIMINADO: Se quita el botón flotante de creación de posts, ya que ahora
-// esta función está centralizada en la barra de navegación inferior.
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { auth } from './firebase';
+import useAuth from './hooks/useAuth';
+import api from './services/api';
 import LoadingComponent from './LoadingComponent';
-import CreatePostModal from './CreatePostModal';
-import PetEditModal from './PetEditModal';
-import PostCard from './PostCard';
+import PostCard from './PostCard'; // Reutilizamos el PostCard funcional
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const PetSocialProfile = () => {
+  const { petId } = useParams(); // Obtiene el ID de la mascota desde la URL
+  const { user: currentUser } = useAuth();
 
-function PetSocialProfile({ user, userProfile, pets, onUpdate }) {
-    const { petId } = useParams();
-    const [petProfile, setPetProfile] = useState(null);
-    const [posts, setPosts] = useState([]);
-    const [likedStatuses, setLikedStatuses] = useState({});
-    const [savedStatuses, setSavedStatuses] = useState({});
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState('');
-    const [isOwner, setIsOwner] = useState(false);
-    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [isFollowing, setIsFollowing] = useState(false);
-    const [followLoading, setFollowLoading] = useState(false);
+  const [profileData, setProfileData] = useState(null);
+  const [posts, setPosts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isFollowing, setIsFollowing] = useState(false);
 
-    const fetchData = useCallback(async () => {
-        if (!petProfile) setIsLoading(true);
-        try {
-            if (!user) throw new Error("Usuario no autenticado.");
-            const idToken = await user.getIdToken();
-            
-            const [profileRes, postsRes, followStatusRes] = await Promise.all([
-                fetch(`${API_URL}/api/public/pets/${petId}`, { headers: { 'Authorization': `Bearer ${idToken}` } }),
-                fetch(`${API_URL}/api/posts/by-author/${petId}`, { headers: { 'Authorization': `Bearer ${idToken}` } }),
-                fetch(`${API_URL}/api/profiles/${petId}/follow-status`, { headers: { 'Authorization': `Bearer ${idToken}` } })
-            ]);
+  // Verificamos si la mascota pertenece al usuario logueado
+  const isMyPet = profileData?.ownerId === currentUser.uid;
 
-            if (!profileRes.ok) throw new Error('No se pudo cargar el perfil.');
-            const profileData = await profileRes.json();
-            setPetProfile(profileData.pet);
-            setIsOwner(user.uid === profileData.pet.ownerId);
+  const checkFollowingStatus = useCallback(async () => {
+    if (isMyPet) return;
+    try {
+      // TODO: Optimizar esto en el futuro. Por ahora, funciona.
+      const followingList = currentUser.following || [];
+      setIsFollowing(followingList.includes(petId));
+    } catch (error) {
+      console.error("Error al verificar el estado de seguimiento de la mascota:", error);
+      setIsFollowing(false);
+    }
+  }, [currentUser, petId, isMyPet]);
 
-            if (!postsRes.ok) throw new Error('No se pudieron cargar las publicaciones.');
-            let postsData = await postsRes.json();
-            
-            const enrichedPosts = postsData.map(post => ({
-                ...post,
-                author: {
-                    id: profileData.pet.id,
-                    name: profileData.pet.name,
-                    profilePictureUrl: profileData.pet.petPictureUrl
-                }
-            }));
-            setPosts(enrichedPosts);
-
-            if (!followStatusRes.ok) throw new Error('Error al verificar seguimiento.');
-            const followStatusData = await followStatusRes.json();
-            setIsFollowing(followStatusData.isFollowing);
-
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [petId, user]);
-
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
-
-    const handlePostCreated = () => {
-      setIsCreateModalOpen(false);
-      fetchData();
-    };
-    
-    const handlePetUpdate = () => {
-      setIsEditModalOpen(false);
-      onUpdate();
-      fetchData();
-    };
-
-    const handleLikeToggle = async (postId) => {
-        const isCurrentlyLiked = !!likedStatuses[postId];
-        setLikedStatuses(prev => ({ ...prev, [postId]: !isCurrentlyLiked }));
-        setPosts(prevPosts => prevPosts.map(p => p.id === postId ? { ...p, likesCount: p.likesCount + (isCurrentlyLiked ? -1 : 1) } : p));
-    };
-    
-    const handleSaveToggle = async (postId) => {
-        const isCurrentlySaved = !!savedStatuses[postId];
-        setSavedStatuses(prev => ({ ...prev, [postId]: !isCurrentlySaved }));
-    };
-
-    const handleCommentAdded = (postId) => {
-        setPosts(prevPosts => prevPosts.map(p => p.id === postId ? { ...p, commentsCount: p.commentsCount + 1 } : p));
-    };
-
-    const handleFollowToggle = async () => {
-        setFollowLoading(true);
-        const user = auth.currentUser;
-        if (!user) return;
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      setIsLoading(true);
+      try {
+        const [profileResponse, postsResponse] = await Promise.all([
+          api.get(`/public/pets/${petId}`),
+          api.get(`/posts/user/${petId}`) // La ruta funciona con el ID de la mascota como autor
+        ]);
         
-        const endpoint = isFollowing 
-            ? `${API_URL}/api/profiles/${petId}/unfollow` 
-            : `${API_URL}/api/profiles/${petId}/follow`;
+        setProfileData(profileResponse.data);
+        setPosts(postsResponse.data);
         
-        const method = isFollowing ? 'DELETE' : 'POST';
-        try {
-            const idToken = await user.getIdToken();
-            const response = await fetch(endpoint, { 
-                method, 
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${idToken}` 
-                },
-                body: JSON.stringify({ profileType: 'pet' }) 
-            });
-            if (!response.ok) throw new Error('La acción no se pudo completar.');
-            setIsFollowing(!isFollowing);
-        } catch (err) {
-            console.error("Error toggling follow:", err);
-        } finally {
-            setFollowLoading(false);
-        }
+        checkFollowingStatus();
+
+      } catch (error) {
+        console.error("Error al obtener los datos del perfil de la mascota:", error);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    if (isLoading) return <LoadingComponent text="Cargando perfil de la mascota..." />;
-    if (error) return <div className="error-message">{error}</div>;
-    if (!petProfile) return <div>No se encontró el perfil.</div>;
+    fetchProfileData();
+  }, [petId, checkFollowingStatus]);
 
-    return (
-        <>
-            <header className="pet-social-profile-container">
-                <div className="profile-cover-photo"></div>
-                <div className="social-profile-header">
-                    <div className="social-profile-details">
-                        <div className="social-profile-picture-wrapper">
-                            <img 
-                                src={petProfile.petPictureUrl || 'https://placehold.co/300x300/E2E8F0/4A5568?text=🐾'} 
-                                alt={petProfile.name} 
-                                className="social-profile-picture"
-                            />
-                        </div>
-                        <div className="social-profile-info">
-                            <h1>{petProfile.name}</h1>
-                            <p>{petProfile.breed}</p>
-                        </div>
-                    </div>
-                     <div className="social-profile-actions">
-                        {isOwner ? (
-                            <button onClick={() => setIsEditModalOpen(true)} className="profile-action-button follow">Editar Perfil</button> 
-                        ) : (
-                            <button 
-                                className={`profile-action-button ${isFollowing ? 'following' : 'follow'}`} 
-                                onClick={handleFollowToggle} 
-                                disabled={followLoading}
-                            >
-                                {followLoading ? '...' : (isFollowing ? 'Siguiendo' : 'Seguir')}
-                            </button>
-                        )}
-                    </div>
-                </div>
-            </header>
+  const handleFollow = async () => {
+    if (isMyPet) return;
+    
+    setIsFollowing(currentState => !currentState);
 
-            <main className="profile-timeline">
-                {posts.length > 0 ? (
-                    posts.map(post => (
-                        <PostCard 
-                            key={post.id} 
-                            post={post} 
-                            isLiked={!!likedStatuses[post.id]}
-                            isSaved={!!savedStatuses[post.id]}
-                            onLikeToggle={handleLikeToggle}
-                            onSaveToggle={handleSaveToggle}
-                            onCommentAdded={handleCommentAdded}
-                        />
-                    ))
-                ) : (
-                    <p className="no-posts-message" style={{padding: '4rem 1rem'}}>
-                        ¡{petProfile.name} todavía no ha compartido ningún momento!
-                    </p>
-                )}
-            </main>
+    try {
+      const endpoint = `/profiles/${petId}/follow`;
+      if (isFollowing) {
+        await api.delete(endpoint);
+      } else {
+        await api.post(endpoint);
+      }
+    } catch (error) {
+      console.error("Error al actualizar el estado de seguimiento:", error);
+      setIsFollowing(currentState => !currentState);
+    }
+  };
 
-            {isCreateModalOpen && (
-                <CreatePostModal 
-                    userProfile={userProfile}
-                    pets={pets}
-                    initialAuthor={petProfile}
-                    onClose={() => setIsCreateModalOpen(false)}
-                    onPostCreated={handlePostCreated}
-                />
+  if (isLoading) {
+    return <LoadingComponent />;
+  }
+
+  if (!profileData) {
+    return <div>No se pudo cargar el perfil de la mascota.</div>;
+  }
+
+  return (
+    <div className="profile-page">
+      <div className="profile-header-section">
+        <img 
+          src={profileData.coverPhotoUrl || 'https://placehold.co/600x200/A9A9A9/FFFFFF?text=Pet+Cover'} 
+          alt="Foto de portada de la mascota" 
+          className="profile-cover-photo"
+        />
+        <div className="profile-details">
+          <img 
+            src={profileData.profilePictureUrl || 'https://placehold.co/150x150/EFEFEF/333333?text=Pet'} 
+            alt="Perfil de la mascota" 
+            className="profile-main-pic"
+          />
+          <div className="profile-info">
+            <h2>{profileData.name}</h2>
+            <p className="profile-bio">{profileData.breed || 'Una mascota increíble.'}</p>
+          </div>
+          <div className="profile-actions">
+            {isMyPet ? (
+              <button className="profile-button">Editar Perfil de Mascota</button>
+            ) : (
+              <button onClick={handleFollow} className={`profile-button ${isFollowing ? 'following' : ''}`}>
+                {isFollowing ? 'Siguiendo' : 'Seguir'}
+              </button>
             )}
-            
-            {isEditModalOpen && (
-                <PetEditModal 
-                    pet={petProfile}
-                    user={user}
-                    onClose={() => setIsEditModalOpen(false)}
-                    onUpdate={handlePetUpdate}
-                />
+          </div>
+        </div>
+      </div>
+      <div className="profile-content">
+        <h3>Publicaciones de {profileData.name}</h3>
+        <div className="posts-grid">
+            {posts.length > 0 ? (
+                posts.map(post => <PostCard key={post.id} post={post} />)
+            ) : (
+                <p>Esta mascota aún no tiene publicaciones.</p>
             )}
-        </>
-    );
-}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default PetSocialProfile;
