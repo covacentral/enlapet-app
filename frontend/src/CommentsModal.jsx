@@ -1,44 +1,36 @@
+// frontend/src/CommentsModal.jsx
+// Versión: 2.0 - Enlaces a Perfiles de Usuario
+// TAREA 5: El nombre del autor de cada comentario ahora enlaza a su perfil público.
+
 import React, { useState, useEffect, useCallback } from 'react';
-import useAuth from './hooks/useAuth';
-import api from './services/api';
-import { X, Send } from 'lucide-react';
+import { Link } from 'react-router-dom'; // Importamos Link
+import { auth } from './firebase';
 import LoadingComponent from './LoadingComponent';
+import { X } from 'lucide-react';
 
-const CommentItem = ({ comment }) => {
-  // Pequeño componente para mostrar un comentario individual
-  // TODO: Se necesitará una lógica para obtener los datos del autor del comentario.
-  return (
-    <div className="comment-item">
-      <div className="comment-author-avatar">
-        <img src={comment.author?.profilePictureUrl || 'https://placehold.co/40x40/EFEFEF/333333?text=U'} alt="avatar" />
-      </div>
-      <div className="comment-content">
-        <strong>{comment.author?.name || 'Usuario'}</strong>
-        <p>{comment.text}</p>
-        <small>{new Date(comment.createdAt).toLocaleString('es-CO')}</small>
-      </div>
-    </div>
-  );
-};
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-const CommentsModal = ({ postId, onClose }) => {
-  const { user } = useAuth();
+function CommentsModal({ postId, onClose, onCommentAdded }) {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [isPosting, setIsPosting] = useState(false);
-  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState(null);
 
   const fetchComments = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await api.get(`/posts/${postId}/comments`);
-      // TODO: El backend necesita devolver los comentarios con la info del autor.
-      // Por ahora, el frontend funcionará con lo que reciba.
-      setComments(response.data);
+      const user = auth.currentUser;
+      if (!user) throw new Error("No autenticado.");
+      const idToken = await user.getIdToken();
+      const response = await fetch(`${API_URL}/api/posts/${postId}/comments`, {
+        headers: { 'Authorization': `Bearer ${idToken}` }
+      });
+      if (!response.ok) throw new Error('No se pudieron cargar los comentarios.');
+      const data = await response.json();
+      setComments(data);
     } catch (err) {
-      console.error("Error al cargar los comentarios:", err);
-      setError('No se pudieron cargar los comentarios.');
+      setError(err.message);
     } finally {
       setIsLoading(false);
     }
@@ -48,64 +40,80 @@ const CommentsModal = ({ postId, onClose }) => {
     fetchComments();
   }, [fetchComments]);
 
-  const handlePostComment = async (e) => {
+  const handleSubmitComment = async (e) => {
     e.preventDefault();
     if (!newComment.trim()) return;
-
-    setIsPosting(true);
+    setIsSubmitting(true);
     try {
-      // Enviamos el nuevo comentario al backend
-      await api.post(`/posts/${postId}/comment`, { text: newComment });
-      setNewComment(''); // Limpiamos el input
-      // Volvemos a cargar los comentarios para mostrar el nuevo
-      await fetchComments(); 
+      const user = auth.currentUser;
+      if (!user) throw new Error("No autenticado.");
+      const idToken = await user.getIdToken();
+      const response = await fetch(`${API_URL}/api/posts/${postId}/comment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+        body: JSON.stringify({ text: newComment })
+      });
+      if (!response.ok) throw new Error('No se pudo publicar el comentario.');
+      const addedComment = await response.json();
+      setComments(prev => [...prev, addedComment]);
+      setNewComment('');
+      onCommentAdded(postId);
     } catch (err) {
-      console.error("Error al publicar el comentario:", err);
-      setError('No se pudo enviar tu comentario.');
+      setError(err.message);
     } finally {
-      setIsPosting(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content comments-modal">
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="comments-modal-content" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>Comentarios</h3>
-          <button onClick={onClose} className="close-modal-button"><X size={24} /></button>
+          <h2>Comentarios</h2>
+          <button onClick={onClose} className="close-button" disabled={isSubmitting}>
+            <X size={24} />
+          </button>
         </div>
-        <div className="modal-body">
-          {isLoading ? (
-            <LoadingComponent />
-          ) : error ? (
-            <p className="error-message">{error}</p>
-          ) : (
-            <div className="comments-list">
-              {comments.length > 0 ? (
-                comments.map(comment => <CommentItem key={comment.id} comment={comment} />)
-              ) : (
-                <p>No hay comentarios todavía. ¡Sé el primero!</p>
-              )}
-            </div>
+        <div className="comments-list">
+          {isLoading && <p>Cargando...</p>}
+          {error && <p className="text-red-500 text-center">{error}</p>}
+          {!isLoading && comments.length === 0 && (
+            <p className="text-gray-500 text-center py-4">No hay comentarios. ¡Sé el primero!</p>
           )}
+          {comments.map((comment) => (
+            <div key={comment.id} className="comment-item">
+              <img 
+                src={comment.authorProfilePic || 'https://placehold.co/100x100/E2E8F0/4A5568?text=:)'} 
+                alt={comment.authorName} 
+                className="comment-author-pic"
+              />
+              <div className="comment-text-content">
+                {/* --- ENLACE AÑADIDO --- */}
+                <Link to={`/dashboard/user/${comment.authorId}`} className="inline-profile-link">
+                  {comment.authorName}
+                </Link>
+                <p>{comment.text}</p>
+              </div>
+            </div>
+          ))}
         </div>
-        <div className="modal-footer comment-input-section">
-          <form onSubmit={handlePostComment} className="comment-form">
+        <div className="comments-modal-footer">
+          <form onSubmit={handleSubmitComment} className="comment-form">
             <input
               type="text"
-              placeholder="Añade un comentario..."
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
-              disabled={isPosting}
+              placeholder="Añade un comentario..."
+              disabled={isSubmitting}
             />
-            <button type="submit" disabled={isPosting}>
-              <Send size={20} />
+            <button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? '...' : 'Publicar'}
             </button>
           </form>
         </div>
       </div>
     </div>
   );
-};
+}
 
 export default CommentsModal;
