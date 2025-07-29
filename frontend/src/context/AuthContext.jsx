@@ -1,12 +1,9 @@
 import React, { createContext, useState, useEffect, useCallback } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '../firebase'; // Asegúrate que la ruta a tu firebase.js es correcta
-import api from '../services/api'; // Importamos el nuevo servicio de API
-import LoadingComponent from '../LoadingComponent'; // Importamos el componente de carga
+import { auth } from '../firebase';
+import api from '../services/api';
+import LoadingComponent from '../LoadingComponent';
 
-// Este es nuestro "Tablón de Anuncios Central". Gestiona el estado
-// del usuario (si está logueado, sus datos, etc.) y lo hace
-// disponible para toda la aplicación.
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
@@ -14,44 +11,63 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   const fetchUserProfile = useCallback(async (firebaseUser) => {
+    console.log('[AuthContext] Iniciando fetchUserProfile...');
     if (firebaseUser) {
       try {
+        console.log('[AuthContext] Usuario de Firebase encontrado. Obteniendo token...');
         const token = await firebaseUser.getIdToken();
-        localStorage.setItem('token', token); // Guardamos el token para el servicio API
-        const { data: profile } = await api.get('/profile'); // Usamos el servicio API para obtener el perfil
+        localStorage.setItem('token', token);
+        
+        console.log('[AuthContext] Token obtenido. Solicitando perfil a /api/profile...');
+        const response = await api.get('/profile');
+        
+        // --- LOG DE DEPURACIÓN CRÍTICO ---
+        console.log('[AuthContext] Respuesta de /api/profile recibida:', response);
+
+        if (!response || !response.data) {
+            throw new Error("La respuesta de la API no tiene el formato esperado o está vacía.");
+        }
+
+        const profile = response.data;
+        console.log('[AuthContext] Perfil obtenido:', profile);
+        
         setUser({ ...firebaseUser, ...profile });
+        console.log('[AuthContext] Estado del usuario actualizado en el contexto.');
+
       } catch (error) {
-        console.error("Error al obtener el perfil del usuario:", error);
+        // --- LOG DE ERROR CRÍTICO ---
+        // Esto nos mostrará el error exacto en la consola del navegador.
+        console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+        console.error('[AuthContext] ERROR FATAL al obtener el perfil del usuario:', error);
+        if (error.response) {
+            console.error('[AuthContext] Datos del error de la API:', error.response.data);
+            console.error('[AuthContext] Estado del error de la API:', error.response.status);
+        }
+        console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
         localStorage.removeItem('token');
         setUser(null);
       }
     } else {
+      console.log('[AuthContext] No se encontró usuario de Firebase. Limpiando sesión.');
       localStorage.removeItem('token');
       setUser(null);
     }
     setLoading(false);
+    console.log('[AuthContext] Carga finalizada.');
   }, []);
 
   useEffect(() => {
-    // onAuthStateChanged es el listener de Firebase que se dispara
-    // cada vez que el estado de autenticación cambia.
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setLoading(true);
       fetchUserProfile(firebaseUser);
     });
-
-    // Limpiamos el listener cuando el componente se desmonta
     return () => unsubscribe();
   }, [fetchUserProfile]);
 
-  // Mientras carga el estado inicial del usuario, mostramos un loader.
-  // Esto evita que se muestren vistas protegidas o incorrectas brevemente.
   if (loading) {
     return <LoadingComponent />;
   }
 
-  // El "Provider" envuelve a sus hijos (toda la app) y les da acceso
-  // al "value", que contiene el estado del usuario y la función para recargarlo.
   return (
     <AuthContext.Provider value={{ user, setUser, fetchUserProfile, loading }}>
       {children}
