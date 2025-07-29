@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import api from './services/api';
 import LoadingComponent from './LoadingComponent';
 
-// Un componente simple para mostrar cada evento
+// Componente individual para mostrar la tarjeta de un evento
 const EventCard = ({ event }) => (
   <div className="event-card-item">
     <h3>{event.title}</h3>
-    <p>{new Date(event.date).toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-    <p>{event.location}</p>
+    <p><strong>Fecha:</strong> {new Date(event.date).toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+    <p><strong>Lugar:</strong> {event.location}</p>
     <p>{event.description}</p>
     <div className="event-card-footer">
       <span>{event.attendeesCount || 0} asistentes</span>
@@ -29,15 +29,15 @@ const EventsPage = () => {
         const response = await api.get('/events');
         setEvents(response.data);
       } catch (err) {
-        console.error("Error al obtener los eventos:", err);
         setError("No se pudieron cargar los eventos.");
+        console.error("Error al obtener los eventos:", err);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchEvents();
-  }, []);
+  }, []); // El array vacío asegura que la llamada se haga solo una vez
 
   if (isLoading) {
     return <LoadingComponent />;
@@ -54,13 +54,11 @@ const EventsPage = () => {
         <button className="create-event-button">+ Crear Evento</button>
       </div>
       
-      {/* Aquí podrías añadir las pestañas de "Próximos", "Finalizados", etc. */}
-      
       <div className="events-list">
         {events.length > 0 ? (
           events.map(event => <EventCard key={event.id} event={event} />)
         ) : (
-          <p>No hay eventos programados por el momento.</p>
+          <p style={{ textAlign: 'center', marginTop: '20px' }}>No hay eventos programados por el momento.</p>
         )}
       </div>
     </div>
