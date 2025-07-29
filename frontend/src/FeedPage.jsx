@@ -2,94 +2,67 @@ import React, { useState, useEffect, useCallback } from 'react';
 import PostCard from './PostCard';
 import LoadingComponent from './LoadingComponent';
 import CreatePostPrompt from './CreatePostPrompt';
-import api from './services/api';
-import useAuth from './hooks/useAuth';
+import api from './services/api'; // Usamos el servicio de API centralizado
+import useAuth from './hooks/useAuth'; // Usamos el hook de autenticación
 
 const FeedPage = () => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const { user } = useAuth();
+  const { user } = useAuth(); // Obtenemos el usuario directamente desde el contexto
 
+  // useCallback memoriza la función para que no se recree en cada render,
+  // optimizando el rendimiento y evitando bucles infinitos en useEffect.
   const fetchFeed = useCallback(async () => {
-    console.log('[FeedPage] Iniciando fetchFeed...');
     setLoading(true);
     setError(null);
     try {
-      console.log('[FeedPage] Solicitando feed a /api/feed...');
+      // La lógica es ahora mucho más simple: solo llamamos al endpoint del feed.
+      // El token de autenticación y la URL base se añaden automáticamente
+      // por nuestro servicio `api.js`.
       const response = await api.get('/feed');
-
-      // --- LOG DE DEPURACIÓN CRÍTICO ---
-      console.log('[FeedPage] Respuesta de /api/feed recibida:', response);
-
-      if (!response || !response.data) {
-        throw new Error("La respuesta de la API del feed no tiene el formato esperado.");
-      }
-      
-      // Verificamos si la respuesta es un array
-      if (!Array.isArray(response.data)) {
-        console.error('[FeedPage] ¡ALERTA! La respuesta de la API no es un array. Es:', typeof response.data);
-        throw new Error("Los datos recibidos para el feed no son un array.");
-      }
-
       setPosts(response.data);
-      console.log('[FeedPage] Posts actualizados en el estado:', response.data);
-
     } catch (err) {
-      // --- LOG DE ERROR CRÍTICO ---
-      console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
-      console.error('[FeedPage] ERROR FATAL al obtener el feed:', err);
-      if (err.response) {
-        console.error('[FeedPage] Datos del error de la API:', err.response.data);
-      }
-      console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+      console.error("Error al obtener el feed:", err);
       setError('No se pudo cargar el feed. Inténtalo de nuevo más tarde.');
     } finally {
       setLoading(false);
-      console.log('[FeedPage] Carga del feed finalizada.');
     }
-  }, []);
+  }, []); // No tiene dependencias, por lo que solo se crea una vez.
 
   useEffect(() => {
+    // Este efecto se ejecuta solo una vez cuando el componente se monta por primera vez.
+    // Gracias al AuthContext, el estado del feed se conservará aunque navegues
+    // a otras pestañas y vuelvas, evitando recargas innecesarias.
     fetchFeed();
-  }, [fetchFeed]);
-
-  console.log(`[FeedPage] Renderizando. Loading: ${loading}, Error: ${error}, Posts: ${posts.length}`);
+  }, [fetchFeed]); // La dependencia es la función memorizada `fetchFeed`.
 
   if (loading) {
     return <LoadingComponent />;
   }
 
   if (error) {
-    return <div className="error-message" style={{ padding: '20px', color: 'red' }}>{error}</div>;
+    return <div className="error-message">{error}</div>;
   }
-  
-  // --- RENDERIZADO ---
-  // Este bloque es el sospechoso final. Si los datos no tienen la estructura
-  // que PostCard espera, puede romperse aquí.
-  try {
-    return (
-      <div className="feed-page">
-        <CreatePostPrompt userProfilePic={user?.profilePictureUrl} />
-        {posts.length > 0 ? (
-          posts.map(post => (
-            <PostCard key={post.id} post={post} />
-          ))
-        ) : (
-          <div className="empty-feed-message" style={{ textAlign: 'center', marginTop: '50px', padding: '20px' }}>
-            <h3>¡Bienvenido a EnlaPet!</h3>
-            <p>Tu feed está listo para llenarse de aventuras.</p>
-            <p>Sigue a otras mascotas para no perderte nada.</p>
-          </div>
-        )}
-      </div>
-    );
-  } catch (renderError) {
-      console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
-      console.error('[FeedPage] ERROR FATAL DURANTE EL RENDERIZADO:', renderError);
-      console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
-      return <div style={{color: 'red', padding: '20px'}}>Ocurrió un error al intentar mostrar las publicaciones.</div>
-  }
+
+  return (
+    <div className="feed-page">
+      {/* Pasamos la foto de perfil del usuario (obtenida del contexto) al componente para crear posts */}
+      <CreatePostPrompt userProfilePic={user?.profilePictureUrl} />
+      
+      {posts.length > 0 ? (
+        posts.map(post => (
+          <PostCard key={post.id} post={post} />
+        ))
+      ) : (
+        <div className="empty-feed-message" style={{ textAlign: 'center', marginTop: '50px', padding: '20px' }}>
+          <h3>¡Bienvenido a EnlaPet!</h3>
+          <p>Parece que tu feed está un poco vacío.</p>
+          <p>¡Empieza a seguir a otras mascotas para ver sus aventuras aquí o explora perfiles populares!</p>
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default FeedPage;
