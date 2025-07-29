@@ -1,10 +1,9 @@
 // backend/routes/profile.routes.js
-// Define los endpoints para la gestión de perfiles de usuario y seguimiento.
+// Define los endpoints PROTEGIDOS para la gestión de perfiles de usuario y seguimiento.
 
 const { Router } = require('express');
 const multer = require('multer');
 const { 
-    getUserPublicProfile,
     getCurrentUserProfile,
     updateUserProfile,
     uploadProfilePicture,
@@ -18,16 +17,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 *
 
 const router = Router();
 
-// --- Rutas Públicas (No requieren token de autenticación) ---
-
-// URL: /api/public/users/:userId
-// Método: GET
-// Función: Obtiene el perfil público de cualquier usuario.
-router.get('/public/users/:userId', getUserPublicProfile);
-
-
-// --- Rutas Protegidas (Requieren token de autenticación) ---
-// El middleware de autenticación se aplicará a este grupo de rutas en el index.js principal.
+// --- Rutas Protegidas (Requieren autenticación) ---
 
 // URL: /api/profile
 // Método: GET
@@ -58,6 +48,5 @@ router.delete('/profiles/:profileId/unfollow', unfollowProfile);
 // Método: GET
 // Función: Verifica si el usuario autenticado sigue a un perfil.
 router.get('/profiles/:profileId/follow-status', getFollowStatus);
-
 
 module.exports = router;

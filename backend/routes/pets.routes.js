@@ -1,10 +1,9 @@
 // backend/routes/pets.routes.js
-// Define los endpoints para la gestión de perfiles de mascotas.
+// Define los endpoints PROTEGIDOS para la gestión de perfiles de mascotas.
 
 const { Router } = require('express');
 const multer = require('multer');
 const {
-    getPetPublicProfile,
     getMyPets,
     createPet,
     updatePet,
@@ -15,14 +14,6 @@ const {
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
 const router = Router();
-
-// --- Rutas Públicas (No requieren autenticación) ---
-
-// URL: /api/public/pets/:petId
-// Método: GET
-// Función: Obtiene el perfil público de una mascota para la visualización NFC.
-router.get('/public/pets/:petId', getPetPublicProfile);
-
 
 // --- Rutas Protegidas (Requieren autenticación) ---
 
