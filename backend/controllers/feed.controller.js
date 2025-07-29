@@ -6,49 +6,48 @@ const { db } = require('../config/firebase');
 const getFeed = async (req, res) => {
   try {
     const userId = req.user.uid;
+    const allPosts = new Map(); // Usamos un Map para evitar duplicados fácilmente.
 
-    // --- Lógica del Feed Personalizado ---
-
-    // 1. Obtener la lista de perfiles que el usuario sigue.
+    // --- 1. Lógica del Feed Personalizado ---
     const followingSnapshot = await db.collection('users').doc(userId).collection('following').get();
     const followingIds = followingSnapshot.docs.map(doc => doc.id);
 
-    let posts = [];
-
-    // 2. Si el usuario sigue al menos a una persona, buscar sus posts.
     if (followingIds.length > 0) {
-      // NOTA DE ARQUITECTURA: Esta consulta requiere un índice compuesto en Firestore.
-      // Colección: 'posts', Campos: 'authorId' (Ascendente), 'createdAt' (Descendente).
-      const postsQuery = await db.collection('posts')
+      const personalizedFeedQuery = await db.collection('posts')
         .where('authorId', 'in', followingIds)
         .orderBy('createdAt', 'desc')
-        .limit(30) // Limitamos a 30 para empezar, podemos añadir paginación después.
+        .limit(20) // Traemos los 20 más recientes de la gente que sigue
         .get();
       
-      posts = postsQuery.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      personalizedFeedQuery.docs.forEach(doc => {
+        allPosts.set(doc.id, { id: doc.id, ...doc.data() });
+      });
     }
 
-    // --- Lógica del Feed de Descubrimiento ---
+    // --- 2. Lógica del Feed de Descubrimiento ---
+    // Siempre buscamos posts de descubrimiento para complementar.
+    const discoveryFeedQuery = await db.collection('posts')
+      .orderBy('createdAt', 'desc')
+      .limit(20) // Traemos los 20 más recientes de toda la plataforma
+      .get();
 
-    // 3. Si el feed personalizado está vacío (porque no sigue a nadie o sus seguidos no han posteado),
-    //    le mostramos un feed de descubrimiento.
-    if (posts.length === 0) {
-      // Para el descubrimiento, buscamos los 20 posts más recientes de toda la plataforma.
-      // Se puede hacer más complejo en el futuro (por popularidad, ubicación, etc.).
-      const discoveryQuery = await db.collection('posts')
-        .orderBy('createdAt', 'desc')
-        .limit(20)
-        .get();
+    discoveryFeedQuery.docs.forEach(doc => {
+      // Si el post no está ya en nuestro Map, lo añadimos.
+      if (!allPosts.has(doc.id)) {
+        allPosts.set(doc.id, { id: doc.id, ...doc.data() });
+      }
+    });
 
-      posts = discoveryQuery.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    }
+    // --- 3. Combinar y Ordenar ---
+    // Convertimos el Map de nuevo a un array y lo ordenamos por fecha.
+    const finalFeed = Array.from(allPosts.values())
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-    // 4. Devolvemos la lista de posts (sea personalizada o de descubrimiento).
-    res.status(200).json(posts);
+    // 4. Devolvemos el feed combinado.
+    res.status(200).json(finalFeed);
 
   } catch (error) {
-    console.error('Error al construir el feed:', error);
-    // Este log es crucial. Si hay un error de índice en Firestore, se mostrará aquí.
+    console.error('Error al construir el feed combinado:', error);
     res.status(500).json({ message: 'Error del servidor al construir el feed.' });
   }
 };

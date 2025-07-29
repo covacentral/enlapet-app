@@ -1,52 +1,88 @@
-// frontend/src/MainHeader.jsx
-// Componente que restaura la cabecera de presentación del usuario y sus mascotas.
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import useAuth from './hooks/useAuth';
+import api from './services/api';
+import { auth } from './firebase'; // <-- RUTA CORREGIDA: Apunta al archivo dentro de la carpeta src.
 
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { auth } from './firebase'; // Importamos auth para obtener el UID del usuario actual
+const MainHeader = () => {
+  const { user, setUser } = useAuth();
+  const [pets, setPets] = useState([]);
+  const navigate = useNavigate();
 
-const PetBubble = ({ pet }) => (
-  <Link to={`/dashboard/pet/${pet.id}`} className="pet-bubble" title={pet.name}>
-    {pet.petPictureUrl ? <img src={pet.petPictureUrl} alt={pet.name} /> : <span>🐾</span>}
-  </Link>
-);
+  useEffect(() => {
+    const fetchPets = async () => {
+      console.log('[MainHeader] Iniciando fetchPets...');
+      if (user) {
+        try {
+          console.log('[MainHeader] Usuario encontrado. Solicitando mascotas a /api/pets...');
+          const response = await api.get('/pets');
+          console.log('[MainHeader] Respuesta de /api/pets recibida:', response);
 
-function MainHeader({ userProfile, pets }) {
-  // Evitar renderizar si los datos aún no están listos
-  if (!userProfile) {
+          if (response && response.data) {
+            setPets(response.data);
+            console.log('[MainHeader] Mascotas actualizadas en el estado:', response.data);
+          } else {
+            throw new Error("La respuesta de la API de mascotas no tiene el formato esperado.");
+          }
+        } catch (error) {
+          console.error('[MainHeader] ERROR FATAL al obtener las mascotas:', error);
+          if (error.response) {
+            console.error('[MainHeader] Datos del error de la API:', error.response.data);
+          }
+        }
+      } else {
+        console.log('[MainHeader] No hay usuario, no se piden mascotas.');
+      }
+    };
+
+    fetchPets();
+  }, [user]);
+
+  const handleLogout = () => {
+    auth.signOut().then(() => {
+      setUser(null);
+      navigate('/login');
+    }).catch((error) => {
+      console.error('Error al cerrar sesión:', error);
+    });
+  };
+
+  if (!user) {
     return null;
   }
-  
-  const currentUserId = auth.currentUser?.uid;
 
   return (
     <header className="main-header">
       <div className="user-profile-section">
-        {/* Enlace al perfil del usuario actual */}
-        <Link to={`/dashboard/user/${currentUserId}`} style={{textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px'}}>
-            <h2>{userProfile.name}</h2>
-            <div className="profile-picture-container">
-              {userProfile.profilePictureUrl ? (
-                <img src={userProfile.profilePictureUrl} alt="Perfil" className="profile-picture" />
-              ) : (
-                <div className="profile-picture-placeholder">👤</div>
-              )}
-            </div>
-            <p className="profile-bio">{userProfile.bio || 'Sin biografía.'}</p>
+        <Link to={`/profile/${user.uid}`}>
+          <img 
+            src={user.profilePictureUrl || 'https://placehold.co/100x100/EFEFEF/333333?text=User'} 
+            alt="Perfil" 
+            className="user-profile-pic"
+            onError={(e) => { e.target.onerror = null; e.target.src='https://placehold.co/100x100/EFEFEF/333333?text=Error'; }}
+          />
         </Link>
-      </div>
-      <div className="user-pets-section">
-        <h1 className="header-brand-title">enlapet</h1>
-        <div className="pet-bubbles-container">
-          {pets && pets.length > 0 ? (
-            pets.map(pet => <PetBubble key={pet.id} pet={pet} />)
-          ) : (
-            <p className="no-pets-header">Añade tu primera mascota</p>
-          )}
+        <div className="user-info">
+          <h2>{user.name || 'Usuario'}</h2>
+          <div className="pet-bubbles">
+            {pets && pets.length > 0 && pets.map(pet => (
+              <Link key={pet.id} to={`/pet/${pet.id}/social`}>
+                <img 
+                  src={pet.profilePictureUrl || 'https://placehold.co/50x50/CCCCCC/FFFFFF?text=Pet'} 
+                  alt={pet.name} 
+                  className="pet-bubble"
+                  onError={(e) => { e.target.onerror = null; e.target.src='https://placehold.co/50x50/CCCCCC/FFFFFF?text=Error'; }}
+                />
+              </Link>
+            ))}
+          </div>
         </div>
+      </div>
+      <div className="header-actions">
+        <button onClick={handleLogout} className="logout-button">Cerrar Sesión</button>
       </div>
     </header>
   );
-}
+};
 
 export default MainHeader;
