@@ -23,18 +23,19 @@ app.use(express.json());
 
 // --- Importación de Rutas ---
 // Importamos los archivos de rutas que hemos creado.
-const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/user.routes');
-const petRoutes = require('./routes/pet.routes'); // <-- NUEVA LÍNEA
 const feedRoutes = require('./routes/feed.routes');
+// A medida que añadamos más funcionalidades (posts, pets, etc.), importaremos sus rutas aquí.
 
 
 // --- Conexión de Rutas ---
 // Le decimos a Express que use nuestros archivos de rutas.
-// Todas las rutas definidas en estos archivos estarán prefijadas con '/api'.
-app.use('/api', authRoutes);
+// Todas las rutas definidas en `userRoutes` estarán prefijadas con '/api'.
+// Por ejemplo: GET /api/profile
 app.use('/api', userRoutes);
-app.use('/api', petRoutes); // <-- NUEVA LÍNEA
+
+// Todas las rutas definidas en `feedRoutes` también estarán prefijadas con '/api'.
+// Por ejemplo: GET /api/feed
 app.use('/api', feedRoutes);
 
 
