@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import useAuth from './hooks/useAuth';
 import api from './services/api';
+import { auth } from '../firebase'; // <-- SOLUCIÓN 1: Importar 'auth' de Firebase
+import './MainHeader.css'; // <-- SOLUCIÓN 2: Importar el archivo de estilos (asegúrate que el nombre es correcto)
 
 const MainHeader = () => {
   const { user, setUser } = useAuth();
@@ -13,38 +15,32 @@ const MainHeader = () => {
       console.log('[MainHeader] Iniciando fetchPets...');
       if (user) {
         try {
-          console.log('[MainHeader] Usuario encontrado en el contexto. Solicitando mascotas a /api/pets...');
+          console.log('[MainHeader] Usuario encontrado. Solicitando mascotas a /api/pets...');
           const response = await api.get('/pets');
-
-          // --- LOG DE DEPURACIÓN CRÍTICO ---
           console.log('[MainHeader] Respuesta de /api/pets recibida:', response);
 
-          if (!response || !response.data) {
+          if (response && response.data) {
+            setPets(response.data);
+            console.log('[MainHeader] Mascotas actualizadas en el estado:', response.data);
+          } else {
             throw new Error("La respuesta de la API de mascotas no tiene el formato esperado.");
           }
-
-          setPets(response.data);
-          console.log('[MainHeader] Mascotas actualizadas en el estado del header:', response.data);
-
         } catch (error) {
-          // --- LOG DE ERROR CRÍTICO ---
-          console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
           console.error('[MainHeader] ERROR FATAL al obtener las mascotas:', error);
           if (error.response) {
             console.error('[MainHeader] Datos del error de la API:', error.response.data);
-            console.error('[MainHeader] Estado del error de la API:', error.response.status);
           }
-          console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
         }
       } else {
-        console.log('[MainHeader] No hay usuario en el contexto, no se piden mascotas.');
+        console.log('[MainHeader] No hay usuario, no se piden mascotas.');
       }
     };
 
     fetchPets();
-  }, [user]); // Se ejecuta cada vez que el objeto 'user' cambia.
+  }, [user]);
 
   const handleLogout = () => {
+    // Ahora 'auth' está definido y esta función debería funcionar.
     auth.signOut().then(() => {
       setUser(null);
       navigate('/login');
@@ -53,11 +49,8 @@ const MainHeader = () => {
     });
   };
 
-  console.log('[MainHeader] Renderizando componente. Usuario:', user);
-
   if (!user) {
-    console.log('[MainHeader] No hay usuario, renderizando null.');
-    return null; // No renderizar nada si no hay usuario
+    return null;
   }
 
   return (
@@ -74,7 +67,7 @@ const MainHeader = () => {
         <div className="user-info">
           <h2>{user.name || 'Usuario'}</h2>
           <div className="pet-bubbles">
-            {pets.map(pet => (
+            {pets && pets.length > 0 && pets.map(pet => (
               <Link key={pet.id} to={`/pet/${pet.id}/social`}>
                 <img 
                   src={pet.profilePictureUrl || 'https://placehold.co/50x50/CCCCCC/FFFFFF?text=Pet'} 
@@ -88,7 +81,6 @@ const MainHeader = () => {
         </div>
       </div>
       <div className="header-actions">
-        {/* Aquí podrías añadir iconos para notificaciones, etc. */}
         <button onClick={handleLogout} className="logout-button">Cerrar Sesión</button>
       </div>
     </header>
@@ -96,4 +88,3 @@ const MainHeader = () => {
 };
 
 export default MainHeader;
-
