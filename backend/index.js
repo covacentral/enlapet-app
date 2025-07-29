@@ -1,11 +1,15 @@
 // backend/index.js
-// Versión: 13.2 - Corrección Definitiva del Feed
-// NOTA DE ARQUITECTURA: El endpoint /api/feed requiere un índice compuesto en Firestore
-// para funcionar. Colección: 'posts', Campos: 'authorId' (Ascendente), 'createdAt' (Descendente).
+// Versión: 14.0 - Motor de Feed Híbrido
+// CORRIGE: El bug crítico del feed excluyente.
+// NUEVO: Se implementa una nueva lógica de feed híbrido que combina publicaciones de
+// perfiles seguidos con publicaciones de descubrimiento para todos los usuarios,
+// asegurando que el feed nunca esté vacío y fomentando el engagement.
+// NOTA DE ARQUITECTURA: Esta versión maneja la paginación de forma básica y puede
+// ser refinada en el futuro. La prioridad es la funcionalidad y estabilidad del feed.
 
 require('dotenv').config();
 const express = require('express');
-const cors =require('cors');
+const cors = require('cors');
 const admin = require('firebase-admin');
 const multer = require('multer');
 
@@ -77,7 +81,7 @@ const authenticateUser = async (req, res, next) => {
   };
 
 // --- Endpoint Raíz ---
-app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v13.2 - Feed Definitivo' }));
+app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v14.0 - Motor de Feed Híbrido' }));
 
 // --- Endpoints Públicos (No requieren autenticación) ---
 app.post('/api/register', async (req, res) => {try {const { email, password, name } = req.body;if (!email || !password || !name) {return res.status(400).json({ message: 'Nombre, email y contraseña son requeridos.' });}const userRecord = await auth.createUser({ email, password, displayName: name });const newUser = {name,email,createdAt: new Date().toISOString(),userType: 'personal',profilePictureUrl: '',coverPhotoUrl: '',bio: '',phone: '',location: { country: 'Colombia', department: '', city: '' },privacySettings: { profileVisibility: 'public', showEmail: 'private' }};await db.collection('users').doc(userRecord.uid).set(newUser);res.status(201).json({ message: 'Usuario registrado con éxito', uid: userRecord.uid });} catch (error) {console.error('Error en /api/register:', error);if (error.code === 'auth/email-already-exists') {return res.status(409).json({ message: 'El correo electrónico ya está en uso.' });}if (error.code === 'auth/invalid-password') {return res.status(400).json({ message: 'La contraseña debe tener al menos 6 caracteres.' });}res.status(500).json({ message: 'Error al registrar el usuario.' });}});
@@ -88,39 +92,69 @@ app.get('/api/public/pets/:petId', async (req, res) => {try {const { petId } = r
 // --- A partir de aquí, todos los endpoints requieren autenticación ---
 app.use(authenticateUser);
 
-// --- [INICIO] Endpoint de Feed Corregido y Simplificado ---
+// --- [INICIO] Endpoint de Feed Híbrido ---
 app.get('/api/feed', async (req, res) => {
     const { uid } = req.user;
     const { cursor } = req.query;
     const POSTS_PER_PAGE = 10;
+    const FOLLOWED_POSTS_TARGET = 7; // Intentaremos obtener hasta 7 posts de seguidos
 
     try {
         const followingSnapshot = await db.collection('users').doc(uid).collection('following').get();
         const followedIds = followingSnapshot.docs.map(doc => doc.id);
         const authorsToInclude = [...new Set([...followedIds, uid])];
 
-        let postsQuery = db.collection('posts').orderBy('createdAt', 'desc');
+        let posts = [];
+        const fetchedPostIds = new Set();
 
-        // Si el usuario sigue a alguien, el feed principal será de ellos.
-        if (authorsToInclude.length > 1) { // > 1 para contar más que solo a sí mismo
-            postsQuery = postsQuery.where('authorId', 'in', authorsToInclude);
-        }
-        // Si no sigue a nadie, la consulta traerá los posts más recientes de todos (feed de descubrimiento).
-
-        if (cursor) {
-            const cursorDoc = await db.collection('posts').doc(cursor).get();
-            if (cursorDoc.exists) {
-                postsQuery = postsQuery.startAfter(cursorDoc);
+        // 1. Obtener posts de las cuentas seguidas
+        if (authorsToInclude.length > 1) { // Si sigue a alguien (además de a sí mismo)
+            let followedQuery = db.collection('posts')
+                .where('authorId', 'in', authorsToInclude)
+                .orderBy('createdAt', 'desc')
+                .limit(POSTS_PER_PAGE);
+            
+            if (cursor) {
+                const cursorDoc = await db.collection('posts').doc(cursor).get();
+                if(cursorDoc.exists) followedQuery = followedQuery.startAfter(cursorDoc);
             }
+            
+            const followedSnapshot = await followedQuery.get();
+            followedSnapshot.docs.forEach(doc => {
+                if (!fetchedPostIds.has(doc.id)) {
+                    posts.push({ id: doc.id, ...doc.data() });
+                    fetchedPostIds.add(doc.id);
+                }
+            });
         }
 
-        const postsSnapshot = await postsQuery.limit(POSTS_PER_PAGE).get();
-        const posts = postsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // 2. Rellenar con posts de descubrimiento si es necesario
+        const remainingLimit = POSTS_PER_PAGE - posts.length;
+        if (remainingLimit > 0) {
+            let discoveryQuery = db.collection('posts')
+                .orderBy('createdAt', 'desc')
+                .limit(remainingLimit * 2); // Pedimos más para filtrar los que ya tenemos
 
-        const lastVisible = postsSnapshot.docs[postsSnapshot.docs.length - 1];
+             // No usamos el cursor aquí para asegurar que el descubrimiento sea fresco
+             // y no se salte contenido si el cursor era de un post de seguido.
+
+            const discoverySnapshot = await discoveryQuery.get();
+            discoverySnapshot.docs.forEach(doc => {
+                if (posts.length < POSTS_PER_PAGE && !fetchedPostIds.has(doc.id)) {
+                    posts.push({ id: doc.id, ...doc.data() });
+                    fetchedPostIds.add(doc.id);
+                }
+            });
+        }
+        
+        // 3. Ordenar la mezcla final por fecha
+        posts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        
+        // 4. Establecer el nuevo cursor para la paginación
+        const lastVisible = posts.length > 0 ? posts[posts.length - 1] : null;
         const nextCursor = lastVisible ? lastVisible.id : null;
 
-        // Enriquecer posts con datos del autor
+        // 5. Enriquecer posts con datos del autor
         const authorIds = [...new Set(posts.map(p => p.authorId))];
         const authorsData = {};
         if (authorIds.length > 0) {
@@ -145,7 +179,7 @@ app.get('/api/feed', async (req, res) => {
 
         const finalPosts = posts.map(post => ({
             ...post,
-            author: authorsData[post.authorId] || { name: 'Autor Desconocido' }
+            author: authorsData[post.authorId] || { name: 'Autor Desconocido', id: post.authorId }
         }));
         
         res.status(200).json({ posts: finalPosts, nextCursor });
@@ -154,7 +188,7 @@ app.get('/api/feed', async (req, res) => {
         res.status(500).json({ message: 'Error al obtener el feed.' });
     }
 });
-// --- [FIN] Endpoint de Feed Corregido ---
+// --- [FIN] Endpoint de Feed Híbrido ---
 
 // --- Endpoints de Perfil, Mascotas, Posts, etc. ---
 app.get('/api/public/users/:userId', async (req, res) => {
