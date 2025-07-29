@@ -1,11 +1,8 @@
 // backend/index.js
-// Versión: 15.0 - Core API Completado
-// CORRIGE: Bug crítico que impedía seguir a usuarios, comentar en posts y cargar las categorías de eventos.
-// NUEVO: Se añaden los endpoints faltantes:
-// - POST /api/profiles/:profileId/follow (con notificaciones)
-// - POST /api/posts/:postId/comment (con notificaciones)
-// - GET /api/event-categories
-// Esto estabiliza las funcionalidades sociales y de eventos de la Fase 2.0.
+// Versión: 15.1 - Funcionalidad de 'Like' Restaurada
+// CORRIGE: El bug crítico que impedía dar "like" a las publicaciones.
+// NUEVO: Se añade el endpoint POST /api/posts/:postId/like, incluyendo la lógica
+// para incrementar el contador del post y enviar una notificación al autor.
 
 require('dotenv').config();
 const express = require('express');
@@ -108,7 +105,7 @@ const authenticateUser = async (req, res, next) => {
   };
 
 // --- Endpoint Raíz ---
-app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v15.0 - Core API Completado' }));
+app.get('/', (req, res) => res.json({ message: "¡Bienvenido a la API de EnlaPet! v15.1 - Funcionalidad de 'Like' Restaurada" }));
 
 // --- Endpoints Públicos (No requieren autenticación) ---
 app.post('/api/register', async (req, res) => {try {const { email, password, name } = req.body;if (!email || !password || !name) {return res.status(400).json({ message: 'Nombre, email y contraseña son requeridos.' });}const userRecord = await auth.createUser({ email, password, displayName: name });const newUser = {name,email,createdAt: new Date().toISOString(),userType: 'personal',profilePictureUrl: '',coverPhotoUrl: '',bio: '',phone: '',location: { country: 'Colombia', department: '', city: '' },privacySettings: { profileVisibility: 'public', showEmail: 'private' }};await db.collection('users').doc(userRecord.uid).set(newUser);res.status(201).json({ message: 'Usuario registrado con éxito', uid: userRecord.uid });} catch (error) {console.error('Error en /api/register:', error);if (error.code === 'auth/email-already-exists') {return res.status(409).json({ message: 'El correo electrónico ya está en uso.' });}if (error.code === 'auth/invalid-password') {return res.status(400).json({ message: 'La contraseña debe tener al menos 6 caracteres.' });}res.status(500).json({ message: 'Error al registrar el usuario.' });}});
@@ -339,6 +336,38 @@ app.post('/api/posts', upload.single('postImage'), async (req, res) => {
     blobStream.end(req.file.buffer);
 });
 app.get('/api/posts/by-author/:authorId', async (req, res) => {try {const { authorId } = req.params;const postsQuery = await db.collection('posts').where('authorId', '==', authorId).orderBy('createdAt', 'desc').get();const posts = postsQuery.docs.map(doc => ({ id: doc.id, ...doc.data() }));res.status(200).json(posts);} catch (error) {console.error(`Error fetching posts for author ${req.params.authorId}:`, error);res.status(500).json({ message: 'Error al obtener las publicaciones.' });}});
+
+// --- [NUEVO] Endpoint para dar "like" a un post ---
+app.post('/api/posts/:postId/like', async (req, res) => {
+    const { uid } = req.user;
+    const { postId } = req.params;
+    const postRef = db.collection('posts').doc(postId);
+    const likeRef = postRef.collection('likes').doc(uid);
+
+    try {
+        await db.runTransaction(async (t) => {
+            const postDoc = await t.get(postRef);
+            if (!postDoc.exists) {
+                throw new Error("La publicación ya no existe.");
+            }
+            const likeDoc = await t.get(likeRef);
+            if (likeDoc.exists) {
+                return; // El usuario ya le dio like, no hacer nada.
+            }
+            
+            t.set(likeRef, { createdAt: new Date().toISOString() });
+            t.update(postRef, { likesCount: admin.firestore.FieldValue.increment(1) });
+
+            const postAuthorId = postDoc.data().authorId;
+            await createNotification(postAuthorId, uid, 'new_like', postId, 'post');
+        });
+        res.status(200).json({ message: 'Like añadido.' });
+    } catch (error) {
+        console.error('Error al dar like:', error);
+        res.status(500).json({ message: 'No se pudo registrar el like.' });
+    }
+});
+
 app.delete('/api/posts/:postId/unlike', async (req, res) => {const { uid } = req.user;const { postId } = req.params;const postRef = db.collection('posts').doc(postId);const likeRef = postRef.collection('likes').doc(uid);try {await db.runTransaction(async (t) => {const likeDoc = await t.get(likeRef);if (!likeDoc.exists) {return;}t.delete(likeRef);t.update(postRef, { likesCount: admin.firestore.FieldValue.increment(-1) });});res.status(200).json({ message: 'Like eliminado.' });} catch (error) {console.error('Error al quitar like:', error);res.status(500).json({ message: 'No se pudo quitar el like.' });}});
 app.post('/api/posts/like-statuses', async (req, res) => {const { uid } = req.user;const { postIds } = req.body;if (!Array.isArray(postIds) || postIds.length === 0) return res.status(200).json({});try {const likePromises = postIds.map(postId => db.collection('posts').doc(postId).collection('likes').doc(uid).get());const likeSnapshots = await Promise.all(likePromises);const statuses = {};likeSnapshots.forEach((doc, index) => {const postId = postIds[index];statuses[postId] = doc.exists;});res.status(200).json(statuses);} catch (error) {console.error('Error al verificar estados de likes:', error);res.status(500).json({ message: 'No se pudieron verificar los likes.' });}});
 
