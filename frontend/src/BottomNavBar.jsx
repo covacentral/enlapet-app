@@ -1,38 +1,56 @@
-// frontend/src/BottomNavBar.jsx
-// Componente de la nueva barra de navegación inferior fija.
+import React, { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { Home, Map, Calendar, Bell, Plus } from 'lucide-react';
+import CreatePostModal from './CreatePostModal'; // Asumo que tienes este componente para crear posts
 
-import React from 'react';
-import { NavLink } from 'react-router-dom';
-import { Home, Map, PlusSquare, Calendar, Bell, User } from 'lucide-react';
+const NavItem = ({ to, icon: Icon, label }) => {
+  const location = useLocation();
+  const isActive = location.pathname === to;
 
-function BottomNavBar({ unreadCount, onOpenCreatePost }) {
   return (
-    <nav className="bottom-nav-bar">
-      <NavLink to="/dashboard" end className="nav-item">
-        <Home className="nav-icon" />
-        <span className="nav-label">Inicio</span>
-      </NavLink>
-      <NavLink to="/dashboard/map" className="nav-item">
-        <Map className="nav-icon" />
-        <span className="nav-label">Mapa</span>
-      </NavLink>
-      
-      {/* Botón central para crear post */}
-      <button onClick={onOpenCreatePost} className="nav-item">
-        <PlusSquare className="nav-icon" size={28} />
-      </button>
-
-      <NavLink to="/dashboard/events" className="nav-item">
-        <Calendar className="nav-icon" />
-        <span className="nav-label">Eventos</span>
-      </NavLink>
-      <NavLink to="/dashboard/notifications" className="nav-item">
-        {unreadCount > 0 && <span className="notification-badge">{unreadCount}</span>}
-        <Bell className="nav-icon" />
-        <span className="nav-label">Alertas</span>
-      </NavLink>
-    </nav>
+    <Link to={to} className={`nav-item ${isActive ? 'active' : ''}`}>
+      <Icon size={24} />
+      <span>{label}</span>
+    </Link>
   );
-}
+};
+
+const BottomNavBar = () => {
+  const [isCreatePostModalOpen, setIsCreatePostModalOpen] = useState(false);
+
+  const navItems = [
+    { to: '/feed', icon: Home, label: 'Inicio' },
+    { to: '/map', icon: Map, label: 'Mapa' },
+    // El botón de "Crear" es especial, no es un enlace de navegación
+    { to: '/events', icon: Calendar, label: 'Eventos' },
+    { to: '/notifications', icon: Bell, label: 'Alertas' },
+  ];
+
+  return (
+    <>
+      <nav className="bottom-nav-bar">
+        {navItems.slice(0, 2).map((item) => (
+          <NavItem key={item.to} {...item} />
+        ))}
+
+        <button 
+          className="nav-item create-post-button" 
+          onClick={() => setIsCreatePostModalOpen(true)}
+        >
+          <Plus size={30} />
+        </button>
+
+        {navItems.slice(2).map((item) => (
+          <NavItem key={item.to} {...item} />
+        ))}
+      </nav>
+      
+      {/* Renderiza el modal para crear un post si el estado es true */}
+      {isCreatePostModalOpen && (
+        <CreatePostModal onClose={() => setIsCreatePostModalOpen(false)} />
+      )}
+    </>
+  );
+};
 
 export default BottomNavBar;
