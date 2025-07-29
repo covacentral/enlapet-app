@@ -1,7 +1,8 @@
 // frontend/src/AddLocationModal.jsx
-// Versión: 1.5 - Mapa de Lugares con Navegación Libre
-// CORRIGE: El bug de recentrado en el mini-mapa del modal.
-// ELIMINADO: Se quita el componente <ChangeView /> para permitir la exploración libre del mapa.
+// Versión: 1.6 - Geolocalización Inteligente
+// CORRIGE: Restaura la funcionalidad de centrado inicial por geolocalización en el mini-mapa.
+// REFACTOR: Se aísla la lógica de geolocalización en su propio useEffect para mayor
+// estabilidad y predictibilidad, replicando el comportamiento del mapa principal.
 
 import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
@@ -31,20 +32,18 @@ function AddLocationModal({ categories, onClose, onLocationAdded }) {
   const [coordinates, setCoordinates] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
-  const [mapCenter, setMapCenter] = useState(initialPosition);
   const [mapInstance, setMapInstance] = useState(null);
 
+  // --- Lógica de Geolocalización (Refactorizada) ---
   useEffect(() => {
+    if (!mapInstance) return;
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const coords = [position.coords.latitude, position.coords.longitude];
-        setMapCenter(coords);
-        if (mapInstance) {
-          mapInstance.setView(coords, 13);
-        }
+        mapInstance.setView(coords, 13);
       },
       () => {
-        console.log("No se pudo obtener la ubicación en el modal.");
+        console.log("No se pudo obtener la ubicación, se usará la inicial.");
       }
     );
   }, [mapInstance]);
@@ -134,7 +133,7 @@ function AddLocationModal({ categories, onClose, onLocationAdded }) {
           <div className="form-group">
             <label>Selecciona la ubicación en el mapa</label>
             <div className="mini-map-wrapper">
-              <MapContainer center={mapCenter} zoom={13} className="leaflet-container mini-map" whenCreated={setMapInstance}>
+              <MapContainer center={initialPosition} zoom={13} className="leaflet-container mini-map" whenCreated={setMapInstance}>
                 <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
                 <LocationPicker onLocationSelect={handleLocationSelect} />
               </MapContainer>

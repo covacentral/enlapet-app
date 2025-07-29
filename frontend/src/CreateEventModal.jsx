@@ -1,10 +1,11 @@
 // frontend/src/CreateEventModal.jsx
-// Versión: 1.4 - Mapa de Eventos con Navegación Libre
-// CORRIGE: El bug de recentrado en el mini-mapa del modal.
-// ELIMINADO: Se quita el componente <ChangeView /> para permitir la exploración libre del mapa.
+// Versión: 1.5 - Geolocalización Inteligente
+// CORRIGE: Restaura la funcionalidad de centrado inicial por geolocalización en el mini-mapa.
+// REFACTOR: Se aísla la lógica de geolocalización en su propio useEffect para mayor
+// estabilidad y predictibilidad, replicando el comportamiento del mapa principal.
 
 import React, { useState, useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import { auth } from './firebase';
 import { X, UploadCloud } from 'lucide-react';
 
@@ -31,7 +32,6 @@ const toLocalISOString = (date) => {
     return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
-
 function CreateEventModal({ onClose, onEventCreated }) {
   const [formData, setFormData] = useState({
     name: '', description: '', category: '', 
@@ -45,22 +45,25 @@ function CreateEventModal({ onClose, onEventCreated }) {
   const [eventCategories, setEventCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
-  const [mapCenter, setMapCenter] = useState(initialPosition);
   const [mapInstance, setMapInstance] = useState(null);
   const fileInputRef = useRef(null);
 
+  // --- Lógica de Geolocalización (Refactorizada) ---
   useEffect(() => {
+    if (!mapInstance) return;
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const coords = [position.coords.latitude, position.coords.longitude];
-        setMapCenter(coords);
-        if (mapInstance) {
-            mapInstance.setView(coords, 13);
-        }
+        mapInstance.setView(coords, 13);
       },
-      () => console.log("No se pudo obtener la ubicación.")
+      () => {
+        console.log("No se pudo obtener la ubicación, se usará la inicial.");
+      }
     );
+  }, [mapInstance]);
 
+  // --- Lógica de Carga de Datos (Aislada) ---
+  useEffect(() => {
     const fetchCategories = async () => {
         try {
             const user = auth.currentUser;
@@ -77,7 +80,7 @@ function CreateEventModal({ onClose, onEventCreated }) {
         }
     };
     fetchCategories();
-  }, [mapInstance]);
+  }, []);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -191,7 +194,7 @@ function CreateEventModal({ onClose, onEventCreated }) {
           <div className="form-group">
             <label>Ubicación del Evento</label>
             <div className="mini-map-wrapper">
-              <MapContainer center={mapCenter} zoom={13} className="leaflet-container mini-map" whenCreated={setMapInstance}>
+              <MapContainer center={initialPosition} zoom={13} className="leaflet-container mini-map" whenCreated={setMapInstance}>
                 <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
                 <LocationPicker onLocationSelect={(latlng) => setCoordinates({ latitude: latlng.lat, longitude: latlng.lng })} />
               </MapContainer>
