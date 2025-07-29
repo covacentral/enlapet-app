@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import useAuth from './hooks/useAuth';
 import api from './services/api';
-import { auth } from '../firebase'; // <-- SOLUCIÓN 1: Importar 'auth' de Firebase
+import { auth } from './firebase'; // <-- RUTA CORREGIDA: Apunta al archivo dentro de la carpeta src.
 
 const MainHeader = () => {
   const { user, setUser } = useAuth();
@@ -39,7 +39,6 @@ const MainHeader = () => {
   }, [user]);
 
   const handleLogout = () => {
-    // Ahora 'auth' está definido y esta función debería funcionar.
     auth.signOut().then(() => {
       setUser(null);
       navigate('/login');
