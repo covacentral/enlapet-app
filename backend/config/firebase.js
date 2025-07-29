@@ -1,23 +1,41 @@
+// backend/config/firebase.js
+// Módulo para la inicialización centralizada del Firebase Admin SDK.
+
 const admin = require('firebase-admin');
 
-// 1. Importamos el archivo de la clave de la cuenta de servicio.
-const serviceAccount = require('./serviceAccountKey.json');
-
-// 2. Comprobamos si la app ya está inicializada para evitar errores.
-if (!admin.apps.length) {
-  // 3. Inicializamos la app con las credenciales, la URL y el ID del proyecto.
-  // Esta es la configuración más explícita posible.
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    databaseURL: `https://${serviceAccount.project_id}.firebaseio.com`,
-    // AÑADIMOS ESTA LÍNEA PARA SER MÁS EXPLÍCITOS
-    projectId: serviceAccount.project_id,
-  });
+// 1. Verificación robusta de la variable de entorno
+const serviceAccountBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
+if (!serviceAccountBase64) {
+  console.error('ERROR FATAL: La variable de entorno FIREBASE_SERVICE_ACCOUNT_BASE64 no está definida.');
+  process.exit(1);
 }
 
-// 4. Obtenemos las instancias de los servicios que necesitamos.
+try {
+  // 2. Decodificación y parseo seguro de las credenciales
+  const serviceAccountString = Buffer.from(serviceAccountBase64, 'base64').toString('utf8');
+  const serviceAccount = JSON.parse(serviceAccountString);
+
+  // 3. Inicialización de la App de Firebase
+  // Se comprueba si ya existe una app inicializada para evitar errores en entornos de recarga en caliente (hot-reloading)
+  if (!admin.apps.length) {
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+      storageBucket: 'enlapet.firebasestorage.app' // Asegúrate de que este sea tu bucket correcto
+    });
+    console.log('Firebase Admin SDK inicializado correctamente.');
+  }
+} catch (error) {
+  console.error('ERROR FATAL: No se pudo inicializar Firebase Admin SDK.', error);
+  process.exit(1);
+}
+
+// 4. Exportación de los servicios de Firebase para ser utilizados en toda la aplicación
 const db = admin.firestore();
 const auth = admin.auth();
+const bucket = admin.storage().bucket();
 
-// 5. Exportamos los servicios para que el resto de la app los use.
-module.exports = { db, auth };
+module.exports = {
+  db,
+  auth,
+  bucket
+};
