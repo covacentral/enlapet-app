@@ -1,98 +1,59 @@
-// frontend/src/NotificationsPage.jsx
-// Página para mostrar la lista de notificaciones del usuario.
-
-import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
-import { auth } from './firebase';
+import React, { useState, useEffect } from 'react';
+import api from './services/api';
 import LoadingComponent from './LoadingComponent';
-import { formatDistanceToNow } from 'date-fns';
-import { es } from 'date-fns/locale';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-
-function NotificationsPage({ onMarkAsRead }) {
+const NotificationsPage = () => {
   const [notifications, setNotifications] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchNotifications = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const user = auth.currentUser;
-      if (!user) throw new Error("No autenticado.");
-      const idToken = await user.getIdToken();
-      const response = await fetch(`${API_URL}/api/notifications`, {
-        headers: { 'Authorization': `Bearer ${idToken}` }
-      });
-      if (!response.ok) throw new Error('No se pudieron cargar las notificaciones.');
-      const data = await response.json();
-      setNotifications(data);
-      
-      // Notificar al layout que las notificaciones se han visto
-      onMarkAsRead();
-
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [onMarkAsRead]);
-
   useEffect(() => {
+    const fetchNotifications = async () => {
+      setIsLoading(true);
+      try {
+        // Llamamos al endpoint correcto que sí existe en nuestro backend
+        const response = await api.get('/notifications');
+        setNotifications(response.data);
+      } catch (err) {
+        setError("No se pudieron cargar las notificaciones.");
+        console.error("Error al obtener las notificaciones:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     fetchNotifications();
-  }, [fetchNotifications]);
+  }, []); // El array vacío asegura que la llamada se haga solo una vez
 
-  const getNotificationLinkAndText = (notification) => {
-    const { type, actorName, entityId, entityType } = notification;
-    let text = '';
-    let link = '/dashboard';
+  if (isLoading) {
+    return <LoadingComponent />;
+  }
 
-    switch (type) {
-      case 'new_follower':
-        text = `${actorName} ha comenzado a seguirte.`;
-        link = `/dashboard/user/${notification.actorId}`;
-        break;
-      case 'new_like':
-        text = `A ${actorName} le gustó tu momento.`;
-        link = `/dashboard`; // Idealmente, debería llevar al post específico
-        break;
-      case 'new_comment':
-        text = `${actorName} comentó en tu momento.`;
-        link = `/dashboard`; // Idealmente, debería llevar al post específico
-        break;
-      default:
-        text = 'Tienes una nueva notificación.';
-    }
-    return { text, link };
-  };
-
-  if (isLoading) return <LoadingComponent text="Cargando tus notificaciones..." />;
-  if (error) return <p className="response-message error">{error}</p>;
+  if (error) {
+    return <div className="error-message">{error}</div>;
+  }
 
   return (
     <div className="notifications-page">
-      <h2 className="tab-title">Notificaciones</h2>
-      {notifications.length > 0 ? (
-        <div className="notifications-list">
-          {notifications.map(notif => {
-            const { text, link } = getNotificationLinkAndText(notif);
-            const timeAgo = formatDistanceToNow(new Date(notif.createdAt), { addSuffix: true, locale: es });
-            return (
-              <Link to={link} key={notif.id} className={`notification-item ${!notif.read ? 'unread' : ''}`}>
-                <img src={notif.actorProfilePic || 'https://placehold.co/100x100/E2E8F0/4A5568?text=:)'} alt={notif.actorName} className="notification-actor-pic" />
-                <div className="notification-content">
-                  <p className="notification-text">{text}</p>
-                  <p className="notification-time">{timeAgo}</p>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      ) : (
-        <p className="empty-state-message">No tienes notificaciones nuevas.</p>
-      )}
+      <div className="page-header">
+        <h2>Notificaciones</h2>
+      </div>
+      
+      <div className="notifications-list">
+        {notifications.length > 0 ? (
+          notifications.map(notif => (
+            <div key={notif.id} className={`notification-item ${notif.read ? 'read' : 'unread'}`}>
+              {/* El contenido real de la notificación dependerá de su estructura en la BD */}
+              <p>{notif.message || `Tienes una nueva notificación del ${new Date(notif.createdAt).toLocaleDateString('es-CO')}.`}</p>
+              <small>{new Date(notif.createdAt).toLocaleString('es-CO')}</small>
+            </div>
+          ))
+        ) : (
+          <p style={{ textAlign: 'center', marginTop: '20px' }}>No tienes notificaciones nuevas.</p>
+        )}
+      </div>
     </div>
   );
-}
+};
 
 export default NotificationsPage;
