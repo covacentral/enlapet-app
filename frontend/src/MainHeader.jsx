@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import useAuth from './hooks/useAuth';
 import api from './services/api';
 import { auth } from '../firebase'; // <-- SOLUCIÓN 1: Importar 'auth' de Firebase
-import './MainHeader.css'; // <-- SOLUCIÓN 2: Importar el archivo de estilos (asegúrate que el nombre es correcto)
 
 const MainHeader = () => {
   const { user, setUser } = useAuth();
