@@ -1,11 +1,11 @@
 // backend/index.js
-// Versión: 14.0 - Motor de Feed Híbrido
-// CORRIGE: El bug crítico del feed excluyente.
-// NUEVO: Se implementa una nueva lógica de feed híbrido que combina publicaciones de
-// perfiles seguidos con publicaciones de descubrimiento para todos los usuarios,
-// asegurando que el feed nunca esté vacío y fomentando el engagement.
-// NOTA DE ARQUITECTURA: Esta versión maneja la paginación de forma básica y puede
-// ser refinada en el futuro. La prioridad es la funcionalidad y estabilidad del feed.
+// Versión: 15.0 - Core API Completado
+// CORRIGE: Bug crítico que impedía seguir a usuarios, comentar en posts y cargar las categorías de eventos.
+// NUEVO: Se añaden los endpoints faltantes:
+// - POST /api/profiles/:profileId/follow (con notificaciones)
+// - POST /api/posts/:postId/comment (con notificaciones)
+// - GET /api/event-categories
+// Esto estabiliza las funcionalidades sociales y de eventos de la Fase 2.0.
 
 require('dotenv').config();
 const express = require('express');
@@ -39,6 +39,33 @@ const auth = admin.auth();
 const bucket = admin.storage().bucket();
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// --- Helper para crear notificaciones ---
+const createNotification = async (recipientId, actorId, type, entityId = null, entityType = null) => {
+    if (recipientId === actorId) return; // No notificar a un usuario por sus propias acciones
+
+    try {
+        const actorDoc = await db.collection('users').doc(actorId).get();
+        if (!actorDoc.exists) return;
+        const actorData = actorDoc.data();
+
+        const notification = {
+            recipientId,
+            actorId,
+            actorName: actorData.name,
+            actorProfilePic: actorData.profilePictureUrl || '',
+            type, // 'new_follower', 'new_like', 'new_comment'
+            entityId, // ID del post, etc.
+            entityType, // 'post', 'event', etc.
+            read: false,
+            createdAt: new Date().toISOString(),
+        };
+        await db.collection('notifications').add(notification);
+    } catch (error) {
+        console.error('Error al crear la notificación:', error);
+    }
+};
+
 
 // --- Configuración de CORS ---
 const allowedOrigins = [
@@ -81,7 +108,7 @@ const authenticateUser = async (req, res, next) => {
   };
 
 // --- Endpoint Raíz ---
-app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v14.0 - Motor de Feed Híbrido' }));
+app.get('/', (req, res) => res.json({ message: '¡Bienvenido a la API de EnlaPet! v15.0 - Core API Completado' }));
 
 // --- Endpoints Públicos (No requieren autenticación) ---
 app.post('/api/register', async (req, res) => {try {const { email, password, name } = req.body;if (!email || !password || !name) {return res.status(400).json({ message: 'Nombre, email y contraseña son requeridos.' });}const userRecord = await auth.createUser({ email, password, displayName: name });const newUser = {name,email,createdAt: new Date().toISOString(),userType: 'personal',profilePictureUrl: '',coverPhotoUrl: '',bio: '',phone: '',location: { country: 'Colombia', department: '', city: '' },privacySettings: { profileVisibility: 'public', showEmail: 'private' }};await db.collection('users').doc(userRecord.uid).set(newUser);res.status(201).json({ message: 'Usuario registrado con éxito', uid: userRecord.uid });} catch (error) {console.error('Error en /api/register:', error);if (error.code === 'auth/email-already-exists') {return res.status(409).json({ message: 'El correo electrónico ya está en uso.' });}if (error.code === 'auth/invalid-password') {return res.status(400).json({ message: 'La contraseña debe tener al menos 6 caracteres.' });}res.status(500).json({ message: 'Error al registrar el usuario.' });}});
@@ -314,6 +341,57 @@ app.post('/api/posts', upload.single('postImage'), async (req, res) => {
 app.get('/api/posts/by-author/:authorId', async (req, res) => {try {const { authorId } = req.params;const postsQuery = await db.collection('posts').where('authorId', '==', authorId).orderBy('createdAt', 'desc').get();const posts = postsQuery.docs.map(doc => ({ id: doc.id, ...doc.data() }));res.status(200).json(posts);} catch (error) {console.error(`Error fetching posts for author ${req.params.authorId}:`, error);res.status(500).json({ message: 'Error al obtener las publicaciones.' });}});
 app.delete('/api/posts/:postId/unlike', async (req, res) => {const { uid } = req.user;const { postId } = req.params;const postRef = db.collection('posts').doc(postId);const likeRef = postRef.collection('likes').doc(uid);try {await db.runTransaction(async (t) => {const likeDoc = await t.get(likeRef);if (!likeDoc.exists) {return;}t.delete(likeRef);t.update(postRef, { likesCount: admin.firestore.FieldValue.increment(-1) });});res.status(200).json({ message: 'Like eliminado.' });} catch (error) {console.error('Error al quitar like:', error);res.status(500).json({ message: 'No se pudo quitar el like.' });}});
 app.post('/api/posts/like-statuses', async (req, res) => {const { uid } = req.user;const { postIds } = req.body;if (!Array.isArray(postIds) || postIds.length === 0) return res.status(200).json({});try {const likePromises = postIds.map(postId => db.collection('posts').doc(postId).collection('likes').doc(uid).get());const likeSnapshots = await Promise.all(likePromises);const statuses = {};likeSnapshots.forEach((doc, index) => {const postId = postIds[index];statuses[postId] = doc.exists;});res.status(200).json(statuses);} catch (error) {console.error('Error al verificar estados de likes:', error);res.status(500).json({ message: 'No se pudieron verificar los likes.' });}});
+
+// --- [NUEVO] Endpoint para crear comentarios ---
+app.post('/api/posts/:postId/comment', async (req, res) => {
+    const { uid } = req.user;
+    const { postId } = req.params;
+    const { text } = req.body;
+
+    if (!text || !text.trim()) {
+        return res.status(400).json({ message: 'El comentario no puede estar vacío.' });
+    }
+
+    const postRef = db.collection('posts').doc(postId);
+    const commentRef = postRef.collection('comments').doc();
+
+    try {
+        const userProfileDoc = await db.collection('users').doc(uid).get();
+        if (!userProfileDoc.exists) {
+            return res.status(404).json({ message: 'Perfil de usuario no encontrado.' });
+        }
+        const userProfile = userProfileDoc.data();
+
+        const newComment = {
+            id: commentRef.id,
+            text,
+            postId,
+            authorId: uid,
+            authorName: userProfile.name,
+            authorProfilePic: userProfile.profilePictureUrl || '',
+            createdAt: new Date().toISOString()
+        };
+
+        await db.runTransaction(async (transaction) => {
+            const postDoc = await transaction.get(postRef);
+            if (!postDoc.exists) {
+                throw new Error("La publicación ya no existe.");
+            }
+            transaction.set(commentRef, newComment);
+            transaction.update(postRef, { commentsCount: admin.firestore.FieldValue.increment(1) });
+            
+            // Notificar al autor del post
+            const postAuthorId = postDoc.data().authorId;
+            await createNotification(postAuthorId, uid, 'new_comment', postId, 'post');
+        });
+
+        res.status(201).json(newComment);
+    } catch (error) {
+        console.error('Error al publicar comentario:', error);
+        res.status(500).json({ message: 'No se pudo publicar el comentario.' });
+    }
+});
+
 app.get('/api/posts/:postId/comments', async (req, res) => {const { postId } = req.params;try {const commentsQuery = await db.collection('posts').doc(postId).collection('comments').orderBy('createdAt', 'asc').get();const comments = commentsQuery.docs.map(doc => doc.data());res.status(200).json(comments);} catch (error) {console.error('Error al obtener comentarios:', error);res.status(500).json({ message: 'No se pudieron obtener los comentarios.' });}});
 app.post('/api/posts/:postId/save', async (req, res) => {
     const { uid } = req.user;
@@ -470,6 +548,20 @@ app.post('/api/reports', async (req, res) => {
         res.status(500).json({ message: 'Error interno al procesar el reporte.' });
     }
 });
+
+// --- [NUEVO] Endpoint para categorías de eventos ---
+app.get('/api/event-categories', async (req, res) => {
+    try {
+        // Asumimos una colección llamada 'event_categories' similar a 'location_categories'
+        const categoriesSnapshot = await db.collection('event_categories').where('isOfficial', '==', true).get();
+        const categories = categoriesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        res.status(200).json(categories);
+    } catch (error) {
+        console.error('Error al obtener categorías de eventos:', error);
+        res.status(500).json({ message: 'Error interno al obtener las categorías de eventos.' });
+    }
+});
+
 app.get('/api/location-categories', async (req, res) => {
     try {
         const categoriesSnapshot = await db.collection('location_categories').where('isOfficial', '==', true).get();
@@ -817,6 +909,49 @@ app.put('/api/events/:eventId/details', upload.single('coverImage'), async (req,
         res.status(500).json({ message: 'Error interno al actualizar los detalles.' });
     }
 });
+
+// --- [NUEVO] Endpoint para seguir un perfil ---
+app.post('/api/profiles/:profileId/follow', async (req, res) => {
+    const { uid } = req.user; // El que sigue
+    const { profileId } = req.params; // El que es seguido
+    const { profileType } = req.body;
+
+    if (uid === profileId) {
+        return res.status(400).json({ message: 'No te puedes seguir a ti mismo.' });
+    }
+    if (!profileType || !['pet', 'user'].includes(profileType)) {
+        return res.status(400).json({ message: 'Se requiere un tipo de perfil válido (pet/user).' });
+    }
+
+    const currentUserRef = db.collection('users').doc(uid);
+    const followedProfileRef = db.collection(profileType === 'pet' ? 'pets' : 'users').doc(profileId);
+
+    try {
+        await db.runTransaction(async (t) => {
+            const followedDoc = await t.get(followedProfileRef);
+            if (!followedDoc.exists) {
+                throw new Error('El perfil que intentas seguir no existe.');
+            }
+            const recipientId = profileType === 'pet' ? followedDoc.data().ownerId : profileId;
+
+            t.set(currentUserRef.collection('following').doc(profileId), {
+                followedAt: new Date().toISOString(),
+                type: profileType
+            });
+            t.set(followedProfileRef.collection('followers').doc(uid), {
+                followedAt: new Date().toISOString()
+            });
+            
+            // Notificar al dueño del perfil seguido
+            await createNotification(recipientId, uid, 'new_follower', profileId, profileType);
+        });
+        res.status(200).json({ message: 'Ahora estás siguiendo a este perfil.' });
+    } catch (error) {
+        console.error('Error al seguir al perfil:', error);
+        res.status(500).json({ message: 'No se pudo completar la acción de seguir.' });
+    }
+});
+
 app.delete('/api/profiles/:profileId/unfollow', async (req, res) => {
     const { uid } = req.user;
     const { profileId } = req.params;
