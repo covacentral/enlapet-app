@@ -1,22 +1,16 @@
 // frontend/src/AddLocationModal.jsx
-// Versión: 1.4 - Importación Corregida
-// Añade la importación de 'useMapEvents' que faltaba para evitar el crash.
+// Versión: 1.6 - Geolocalización Inteligente
+// CORRIGE: Restaura la funcionalidad de centrado inicial por geolocalización en el mini-mapa.
+// REFACTOR: Se aísla la lógica de geolocalización en su propio useEffect para mayor
+// estabilidad y predictibilidad, replicando el comportamiento del mapa principal.
 
 import React, { useState, useEffect } from 'react';
-// *** CORRECCIÓN CLAVE: Añadido 'useMapEvents' a la importación ***
-import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import { auth } from './firebase';
 import { X } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 const initialPosition = [4.5709, -74.2973];
-
-// Componente para cambiar la vista del mapa dinámicamente
-function ChangeView({ center, zoom }) {
-  const map = useMap();
-  map.setView(center, zoom);
-  return null;
-}
 
 function LocationPicker({ onLocationSelect }) {
   const [position, setPosition] = useState(null);
@@ -38,19 +32,21 @@ function AddLocationModal({ categories, onClose, onLocationAdded }) {
   const [coordinates, setCoordinates] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
-  const [mapCenter, setMapCenter] = useState(initialPosition);
+  const [mapInstance, setMapInstance] = useState(null);
 
-  // Geolocalización al montar el modal
+  // --- Lógica de Geolocalización (Refactorizada) ---
   useEffect(() => {
+    if (!mapInstance) return;
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setMapCenter([position.coords.latitude, position.coords.longitude]);
+        const coords = [position.coords.latitude, position.coords.longitude];
+        mapInstance.setView(coords, 13);
       },
       () => {
-        console.log("No se pudo obtener la ubicación en el modal.");
+        console.log("No se pudo obtener la ubicación, se usará la inicial.");
       }
     );
-  }, []);
+  }, [mapInstance]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -137,8 +133,7 @@ function AddLocationModal({ categories, onClose, onLocationAdded }) {
           <div className="form-group">
             <label>Selecciona la ubicación en el mapa</label>
             <div className="mini-map-wrapper">
-              <MapContainer center={mapCenter} zoom={13} className="leaflet-container mini-map">
-                <ChangeView center={mapCenter} zoom={13} />
+              <MapContainer center={initialPosition} zoom={13} className="leaflet-container mini-map" whenCreated={setMapInstance}>
                 <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
                 <LocationPicker onLocationSelect={handleLocationSelect} />
               </MapContainer>
