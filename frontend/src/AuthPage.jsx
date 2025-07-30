@@ -1,6 +1,5 @@
 // frontend/src/AuthPage.jsx
-// Versión: 2.2 - Corrección de Ruta de Registro
-// CORRIGE: Se actualiza la URL del endpoint de registro para que coincida con la nueva arquitectura del backend.
+// Versión: 2.3 - Refactorización a CSS Modules
 
 import { useState, useEffect } from 'react';
 import { auth } from './firebase';
@@ -10,10 +9,11 @@ import {
   GoogleAuthProvider,
   signInWithPopup
 } from "firebase/auth";
-import './App.css';
+import styles from './AuthPage.module.css'; // <-- Módulo de estilos local
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
+// ... (Componentes de íconos sin cambios)
 const GoogleIcon = () => (
   <svg className="google-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24">
     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -25,7 +25,9 @@ const GoogleIcon = () => (
 const EyeIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>);
 const EyeOffIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>);
 
+
 function AuthPage() {
+  // ... (toda la lógica de estado y funciones de handle... se mantiene igual)
   const [view, setView] = useState('login'); 
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({ name: '', email: '', password: '' });
@@ -76,7 +78,6 @@ function AuthPage() {
     setIsLoading(true);
     setMessage('Registrando...');
     try {
-      // --- LÍNEA CORREGIDA ---
       const response = await fetch(`${API_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -127,17 +128,21 @@ function AuthPage() {
     }
   };
 
+
   const renderForm = () => {
+    // ... (lógica de renderizado de formularios)
     switch (view) {
       case 'login':
         return (
           <>
             <h2>Iniciar Sesión con Email</h2>
+            {/* Usamos clases globales para el form genérico */}
             <form onSubmit={handleLogin} className="register-form">
               <div className="form-group"><label htmlFor="email">Email:</label><input type="email" name="email" value={formData.email} onChange={handleChange} required disabled={isLoading} /></div>
               <div className="form-group password-group"><label htmlFor="password">Contraseña:</label><input type={showPassword ? 'text' : 'password'} name="password" value={formData.password} onChange={handleChange} required disabled={isLoading} /><button type="button" className="password-toggle-button" onClick={() => setShowPassword(!showPassword)}>{showPassword ? <EyeOffIcon /> : <EyeIcon />}</button></div>
               <button type="submit" disabled={isLoading}>{isLoading ? 'Verificando...' : 'Iniciar Sesión'}</button>
             </form>
+            {/* Usamos la clase global .link-button */}
             <button className="link-button" onClick={() => setView('forgot-password')} disabled={isLoading}>Olvidé mi contraseña</button>
           </>
         );
@@ -169,30 +174,18 @@ function AuthPage() {
   };
 
   return (
-    <>
-    <style>{`
-        .auth-container { max-width: 400px; margin: 2rem auto; padding: 2rem; background-color: var(--background-light); border-radius: 12px; text-align: center; }
-        .google-btn { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; padding: 12px; font-size: 1rem; font-weight: bold; background-color: #fff; color: #444; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; transition: background-color 0.3s, box-shadow 0.3s; }
-        .google-btn:hover:not(:disabled) { background-color: #f5f5f5; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .google-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-        .divider { display: flex; align-items: center; text-align: center; color: var(--text-secondary); margin: 1.5rem 0; }
-        .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid #444; }
-        .divider:not(:empty)::before { margin-right: .5em; }
-        .divider:not(:empty)::after { margin-left: .5em; }
-    `}</style>
-    <header className="App-header">
-        <div className="auth-container">
+    <div className="App-header">
+        <div className={styles.authContainer}>
             <h1>Bienvenido a EnlaPet</h1>
             <p>La red social para tu mejor amigo.</p>
-            <button className="google-btn" onClick={handleGoogleSignIn} disabled={isLoading}><GoogleIcon />Continuar con Google</button>
-            <div className="divider">o</div>
+            <button className={styles.googleBtn} onClick={handleGoogleSignIn} disabled={isLoading}><GoogleIcon />Continuar con Google</button>
+            <div className={styles.divider}>o</div>
             {renderForm()}
             {view === 'login' && (<p>¿No tienes cuenta? <button className="link-button" onClick={() => setView('register')} disabled={isLoading}>Regístrate</button></p>)}
             {(view === 'register' || view === 'forgot-password') && (<p>¿Ya tienes cuenta? <button className="link-button" onClick={() => setView('login')} disabled={isLoading}>Inicia Sesión</button></p>)}
             {message && <p className="response-message">{message}</p>}
         </div>
-    </header>
-    </>
+    </div>
   );
 }
 

@@ -1,0 +1,57 @@
+/* frontend/src/AuthPage.module.css */
+.authContainer {
+    max-width: 400px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background-color: var(--background-light);
+    border-radius: 12px;
+    text-align: center;
+  }
+  
+  .authContainer h1 {
+      font-size: 1.8rem;
+  }
+  
+  .googleBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+    padding: 12px;
+    font-size: 1rem;
+    font-weight: bold;
+    background-color: #fff;
+    color: #444;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s, box-shadow 0.3s;
+  }
+  
+  .googleBtn:hover:not(:disabled) {
+    background-color: #f5f5f5;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  
+  .googleBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  
+  .divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    color: var(--text-secondary);
+    margin: 1.5rem 0;
+  }
+  
+  .divider::before,
+  .divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .divider:not(:empty)::before { margin-right: .5em; }
+  .divider:not(:empty)::after { margin-left: .5em; }

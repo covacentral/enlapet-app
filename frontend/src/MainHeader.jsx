@@ -1,12 +1,12 @@
 // frontend/src/MainHeader.jsx
-// Versión 1.3 - Refactorización a CSS Modules
-// CAMBIO: Se importa y utiliza un módulo de CSS local (MainHeader.module.css).
+// Versión 1.4 - Corrección de UI
+// ELIMINADO: Se quita el botón "Editar Perfil" que no corresponde a este componente.
 
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { auth } from './firebase';
 import { Plus } from 'lucide-react';
-import styles from './MainHeader.module.css'; // <-- 1. Importamos el módulo de estilos
+import styles from './MainHeader.module.css';
 
 const PetBubble = ({ pet }) => (
   <Link to={`/dashboard/pet/${pet.id}`} className={styles.petBubble} title={pet.name}>
@@ -28,7 +28,6 @@ function MainHeader({ userProfile, pets }) {
   const currentUserId = auth.currentUser?.uid;
 
   return (
-    // --- 2. Se actualizan las clases para usar el objeto 'styles' ---
     <header className={styles.mainHeader}>
       <div className={styles.userProfileSection}>
         <Link to={`/dashboard/user/${currentUserId}`} className={styles.userProfileMainLink}>
@@ -41,9 +40,6 @@ function MainHeader({ userProfile, pets }) {
               )}
             </div>
             <p className={styles.profileBio}>{userProfile.bio || 'Sin biografía.'}</p>
-        </Link>
-        <Link to="/dashboard/settings" className={styles.editProfileButton}>
-          Editar Perfil
         </Link>
       </div>
       <div className={styles.userPetsSection}>
