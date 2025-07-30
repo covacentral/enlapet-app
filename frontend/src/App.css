@@ -2028,3 +2028,35 @@ input::-ms-clear {
 .profile-container {
   padding-bottom: 70px; /* Espacio para la barra de navegación */
 }
+
+/* frontend/src/App.css */
+/* --- ESTILOS ADICIONALES PARA NOTIFICACIONES Y MODAL DE POST --- */
+
+.notification-preview {
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--text-secondary);
+  opacity: 0.9;
+  margin: 6px 0 0 0;
+  padding: 8px 12px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-left: 3px solid var(--primary-accent);
+  border-radius: 0 4px 4px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.post-detail-modal-wrapper {
+  width: 95vw; /* Ocupa el 95% del ancho de la pantalla en móviles */
+  max-width: 550px; /* Límite de ancho para tabletas y escritorio */
+  margin: auto;
+}
+
+.post-detail-modal-wrapper .error-message {
+  background-color: var(--background-light);
+  padding: 2rem;
+  border-radius: 15px;
+  border: 1px solid var(--border-color);
+  color: white;
+}

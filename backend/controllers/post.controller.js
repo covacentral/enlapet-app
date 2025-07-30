@@ -1,12 +1,11 @@
 // backend/controllers/post.controller.js
-// Lógica de negocio para publicaciones.
-// VERSIÓN CORREGIDA: Arregla el sistema de notificaciones para posts de mascotas.
+// VERSIÓN CORREGIDA: Añade endpoint para obtener un post por ID.
 
 const { db, bucket } = require('../config/firebase');
 const { createNotification } = require('../services/notification.service');
 const admin = require('firebase-admin');
 
-// ... (Las funciones getFeed, createPost, getPostsByAuthor no cambian) ...
+// ... (Todas las funciones existentes como likePost, addComment, etc., permanecen sin cambios)
 const getFeed = async (req, res) => {
     const { uid } = req.user;
     const { cursor } = req.query;
@@ -111,59 +110,43 @@ const getPostsByAuthor = async (req, res) => {
         res.status(500).json({ message: 'Error al obtener las publicaciones.' });
     }
 };
-
-/**
- * Da "like" a una publicación.
- */
 const likePost = async (req, res) => {
     const { uid } = req.user;
     const { postId } = req.params;
     const postRef = db.collection('posts').doc(postId);
     const likeRef = postRef.collection('likes').doc(uid);
-
     try {
-        let recipientId = null; // Variable para guardar el ID del dueño de la mascota
-
+        let recipientId = null;
         await db.runTransaction(async (t) => {
             const postDoc = await t.get(postRef);
             if (!postDoc.exists) throw new Error("Publicación no encontrada.");
-
             const likeDoc = await t.get(likeRef);
             if (likeDoc.exists) {
-                recipientId = 'ALREADY_LIKED'; // Usamos un flag para no enviar notificación
+                recipientId = 'ALREADY_LIKED';
                 return;
             }
-            
             const postData = postDoc.data();
-            recipientId = postData.authorId; // Por defecto, el autor es el destinatario
-
-            // Si el autor es una mascota, buscamos a su dueño
+            recipientId = postData.authorId;
             if (postData.authorType === 'pet') {
                 const petDoc = await t.get(db.collection('pets').doc(postData.authorId));
                 if (petDoc.exists) {
-                    recipientId = petDoc.data().ownerId; // El destinatario es el dueño
+                    recipientId = petDoc.data().ownerId;
                 } else {
-                    recipientId = null; // La mascota fue eliminada, no se puede notificar
+                    recipientId = null;
                 }
             }
-            
             t.set(likeRef, { createdAt: new Date().toISOString() });
             t.update(postRef, { likesCount: admin.firestore.FieldValue.increment(1) });
         });
-
-        // Enviamos la notificación DESPUÉS de que la transacción sea exitosa
         if (recipientId && recipientId !== 'ALREADY_LIKED') {
             await createNotification(recipientId, uid, 'new_like', postId, 'post');
         }
-        
         res.status(200).json({ message: 'Like añadido.' });
     } catch (error) {
         console.error('Error en likePost:', error);
         res.status(500).json({ message: 'No se pudo registrar el like.' });
     }
 };
-
-// ... (La función unlikePost no cambia) ...
 const unlikePost = async (req, res) => {
     const { uid } = req.user;
     const { postId } = req.params;
@@ -182,7 +165,6 @@ const unlikePost = async (req, res) => {
         res.status(500).json({ message: 'No se pudo quitar el like.' });
     }
 };
-// ... (La función getLikeStatuses no cambia) ...
 const getLikeStatuses = async (req, res) => {
     const { uid } = req.user;
     const { postIds } = req.body;
@@ -198,42 +180,25 @@ const getLikeStatuses = async (req, res) => {
         res.status(500).json({ message: 'Error al verificar likes.' });
     }
 };
-
-/**
- * Crea un comentario en una publicación.
- */
 const addComment = async (req, res) => {
     const { uid } = req.user;
     const { postId } = req.params;
     const { text } = req.body;
-
     if (!text || !text.trim()) return res.status(400).json({ message: 'El comentario no puede estar vacío.' });
-
     const postRef = db.collection('posts').doc(postId);
     const commentRef = postRef.collection('comments').doc();
-
     try {
         let recipientId = null;
         let newComment = null;
-
         await db.runTransaction(async (t) => {
             const postDoc = await t.get(postRef);
             if (!postDoc.exists) throw new Error("Publicación no encontrada.");
-
             const userProfileDoc = await t.get(db.collection('users').doc(uid));
             if (!userProfileDoc.exists) throw new Error("Perfil de usuario no encontrado.");
             const userProfile = userProfileDoc.data();
-
-            newComment = {
-                id: commentRef.id, text, postId, authorId: uid,
-                authorName: userProfile.name,
-                authorProfilePic: userProfile.profilePictureUrl || '',
-                createdAt: new Date().toISOString()
-            };
-            
+            newComment = { id: commentRef.id, text, postId, authorId: uid, authorName: userProfile.name, authorProfilePic: userProfile.profilePictureUrl || '', createdAt: new Date().toISOString() };
             const postData = postDoc.data();
             recipientId = postData.authorId;
-
             if (postData.authorType === 'pet') {
                 const petDoc = await t.get(db.collection('pets').doc(postData.authorId));
                 if (petDoc.exists) {
@@ -242,23 +207,18 @@ const addComment = async (req, res) => {
                     recipientId = null;
                 }
             }
-            
             t.set(commentRef, newComment);
             t.update(postRef, { commentsCount: admin.firestore.FieldValue.increment(1) });
         });
-
         if (recipientId) {
             await createNotification(recipientId, uid, 'new_comment', postId, 'post');
         }
-
         res.status(201).json(newComment);
     } catch (error) {
         console.error('Error en addComment:', error);
         res.status(500).json({ message: 'No se pudo publicar el comentario.' });
     }
 };
-
-// ... (El resto de funciones: getComments, savePost, unsavePost, getSaveStatuses, getSavedPosts no cambian) ...
 const getComments = async (req, res) => {
     try {
         const { postId } = req.params;
@@ -349,8 +309,47 @@ const getSavedPosts = async (req, res) => {
     }
 };
 
+/**
+ * [NUEVO] Obtiene un único post por su ID y enriquece los datos del autor.
+ */
+const getPostById = async (req, res) => {
+    try {
+        const { postId } = req.params;
+        const postDoc = await db.collection('posts').doc(postId).get();
+        if (!postDoc.exists) {
+            return res.status(404).json({ message: 'La publicación no fue encontrada.' });
+        }
+
+        const postData = postDoc.data();
+        let authorData = { id: postData.authorId, name: 'Autor Desconocido' };
+
+        const authorCollection = postData.authorType === 'pet' ? 'pets' : 'users';
+        const authorDoc = await db.collection(authorCollection).doc(postData.authorId).get();
+        
+        if (authorDoc.exists) {
+            const data = authorDoc.data();
+            authorData = {
+                id: authorDoc.id,
+                name: data.name,
+                profilePictureUrl: data.profilePictureUrl || data.petPictureUrl || ''
+            };
+        }
+
+        const finalPost = {
+            ...postData,
+            id: postDoc.id,
+            author: authorData
+        };
+        
+        res.status(200).json(finalPost);
+    } catch (error) {
+        console.error(`Error en getPostById para el post ${req.params.postId}:`, error);
+        res.status(500).json({ message: 'Error al obtener la publicación.' });
+    }
+};
 
 module.exports = {
     getFeed, createPost, getPostsByAuthor, likePost, unlikePost, getLikeStatuses,
-    addComment, getComments, savePost, unsavePost, getSaveStatuses, getSavedPosts
+    addComment, getComments, savePost, unsavePost, getSaveStatuses, getSavedPosts,
+    getPostById // <-- Exportamos la nueva función
 };

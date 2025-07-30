@@ -1,5 +1,5 @@
 // backend/routes/posts.routes.js
-// Define los endpoints para el feed, posts, likes, comentarios, guardados y reportes.
+// VERSIÓN CORREGIDA: Añade la ruta para obtener un post por ID.
 
 const { Router } = require('express');
 const multer = require('multer');
@@ -15,30 +15,29 @@ const {
     savePost,
     unsavePost,
     getSaveStatuses,
-    getSavedPosts
+    getSavedPosts,
+    getPostById // <-- 1. Importamos la nueva función
 } = require('../controllers/post.controller');
-// Nota: El controlador de reportes se añadirá en una refactorización posterior para mantener el foco.
 
-// Configuración de Multer para la subida de archivos en memoria
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
 const router = Router();
 
-// Todas las rutas en este archivo están protegidas y requieren autenticación.
-
-// --- Rutas del Feed ---
+// --- Rutas del Feed y Posts Guardados ---
 router.get('/feed', getFeed);
-
-// --- Rutas de Publicaciones Guardadas ---
 router.get('/user/saved-posts', getSavedPosts);
 
-// --- Rutas de Posts ---
+// --- Rutas de Posts Generales ---
 router.post('/posts', upload.single('postImage'), createPost);
 router.get('/posts/by-author/:authorId', getPostsByAuthor);
 
 // --- Rutas de Estados (Like y Guardado) ---
 router.post('/posts/like-statuses', getLikeStatuses);
 router.post('/posts/save-statuses', getSaveStatuses);
+
+// --- [NUEVO] Ruta para un Post Específico ---
+// Debe ir antes de las rutas con /:postId/ para evitar conflictos de enrutamiento.
+router.get('/posts/:postId', getPostById); // <-- 2. Añadimos la nueva ruta
 
 // --- Rutas de Interacción con Posts Específicos ---
 router.post('/posts/:postId/like', likePost);
