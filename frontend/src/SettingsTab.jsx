@@ -1,6 +1,7 @@
 // frontend/src/SettingsTab.jsx
-// Versión: 2.2 - Subida de Foto Corregida
-// Corrige el bug que impedía la subida de la foto de perfil del usuario.
+// Versión: 2.3 - Corrección del Bug de Edición de Perfil
+// CORRIGE: El bug que impedía modificar los campos del formulario al restablecer
+// el estado durante la edición.
 
 import { useState, useEffect, useRef } from 'react';
 import './App.css';
@@ -31,9 +32,15 @@ function SettingsTab({ user, userProfile, onProfileUpdate }) {
     }
   };
 
+  // --- CORRECCIÓN DEL BUG ---
+  // Este useEffect ahora solo actualiza el formulario desde las props
+  // si el usuario NO está en modo de edición. Esto previene que la entrada
+  // del usuario sea sobrescrita durante una nueva renderización.
   useEffect(() => {
-    populateFields();
-  }, [userProfile]);
+    if (!isEditMode) {
+      populateFields();
+    }
+  }, [userProfile, isEditMode]);
 
   const handleChange = (e) => {
     const { id, value } = e.target;
@@ -58,7 +65,7 @@ function SettingsTab({ user, userProfile, onProfileUpdate }) {
       if (!response.ok) throw new Error(data.message);
       setMessage({ text: 'Perfil guardado con éxito.', isError: false });
       onProfileUpdate();
-      setIsEditMode(false);
+      setIsEditMode(false); // Esto desactivará el modo edición y permitirá que el useEffect se ejecute de nuevo
     } catch (error) {
       setMessage({ text: error.message, isError: true });
     } finally {
@@ -95,8 +102,7 @@ function SettingsTab({ user, userProfile, onProfileUpdate }) {
   };
   
   const handleCancelEdit = () => {
-    populateFields();
-    setIsEditMode(false);
+    setIsEditMode(false); // Desactiva modo edición. El useEffect se encargará de resetear los campos.
     setMessage({ text: '', isError: false });
   };
 
