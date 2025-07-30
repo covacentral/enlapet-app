@@ -1,5 +1,7 @@
 // frontend/src/AuthPage.jsx
-// Versión: 2.1 - Rediseñado con Google
+// Versión: 2.2 - Corrección de Ruta de Registro
+// CORRIGE: Se actualiza la URL del endpoint de registro para que coincida con la nueva arquitectura del backend.
+
 import { useState, useEffect } from 'react';
 import { auth } from './firebase';
 import { 
@@ -74,7 +76,8 @@ function AuthPage() {
     setIsLoading(true);
     setMessage('Registrando...');
     try {
-      const response = await fetch(`${API_URL}/api/register`, {
+      // --- LÍNEA CORREGIDA ---
+      const response = await fetch(`${API_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
@@ -168,11 +171,11 @@ function AuthPage() {
   return (
     <>
     <style>{`
-        .auth-container { max-width: 400px; margin: 2rem auto; padding: 2rem; background-color: #282c34; border-radius: 12px; text-align: center; }
+        .auth-container { max-width: 400px; margin: 2rem auto; padding: 2rem; background-color: var(--background-light); border-radius: 12px; text-align: center; }
         .google-btn { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; padding: 12px; font-size: 1rem; font-weight: bold; background-color: #fff; color: #444; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; transition: background-color 0.3s, box-shadow 0.3s; }
         .google-btn:hover:not(:disabled) { background-color: #f5f5f5; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .google-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-        .divider { display: flex; align-items: center; text-align: center; color: #888; margin: 1.5rem 0; }
+        .divider { display: flex; align-items: center; text-align: center; color: var(--text-secondary); margin: 1.5rem 0; }
         .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid #444; }
         .divider:not(:empty)::before { margin-right: .5em; }
         .divider:not(:empty)::after { margin-left: .5em; }
