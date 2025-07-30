@@ -1,9 +1,11 @@
 // frontend/src/MainHeader.jsx
-// Componente que restaura la cabecera de presentación del usuario y sus mascotas.
+// Versión 1.1 - Botón para Añadir Mascotas
+// AÑADIDO: Se incluye una burbuja "+" en el carrusel para enlazar a la página de gestión de mascotas.
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { auth } from './firebase'; // Importamos auth para obtener el UID del usuario actual
+import { auth } from './firebase';
+import { Plus } from 'lucide-react'; // Importamos el ícono necesario
 
 const PetBubble = ({ pet }) => (
   <Link to={`/dashboard/pet/${pet.id}`} className="pet-bubble" title={pet.name}>
@@ -11,8 +13,14 @@ const PetBubble = ({ pet }) => (
   </Link>
 );
 
+// Componente para la nueva burbuja de "Añadir Mascota"
+const AddPetBubble = () => (
+    <Link to="/dashboard/pets" className="pet-bubble" title="Añadir o gestionar mascotas" style={{backgroundColor: 'var(--border-color)', borderStyle: 'dashed'}}>
+        <Plus size={32} color="var(--text-secondary)" />
+    </Link>
+);
+
 function MainHeader({ userProfile, pets }) {
-  // Evitar renderizar si los datos aún no están listos
   if (!userProfile) {
     return null;
   }
@@ -22,7 +30,6 @@ function MainHeader({ userProfile, pets }) {
   return (
     <header className="main-header">
       <div className="user-profile-section">
-        {/* Enlace al perfil del usuario actual */}
         <Link to={`/dashboard/user/${currentUserId}`} style={{textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px'}}>
             <h2>{userProfile.name}</h2>
             <div className="profile-picture-container">
@@ -43,6 +50,8 @@ function MainHeader({ userProfile, pets }) {
           ) : (
             <p className="no-pets-header">Añade tu primera mascota</p>
           )}
+          {/* La burbuja "+" siempre aparece al final del carrusel */}
+          <AddPetBubble />
         </div>
       </div>
     </header>
