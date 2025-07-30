@@ -1,8 +1,9 @@
 // backend/controllers/profile.controller.js
-// Lógica de negocio para perfiles de usuario y sistema de seguimiento.
+// Lógica de negocio para perfiles de usuario y sistema de seguimiento (Versión Corregida).
 
 const { db, bucket } = require('../config/firebase');
 const { createNotification } = require('../services/notification.service');
+const admin = require('firebase-admin'); // <-- LÍNEA CORREGIDA
 
 /**
  * Obtiene el perfil público de un usuario, incluyendo sus mascotas.
@@ -19,7 +20,6 @@ const getUserPublicProfile = async (req, res) => {
 
         const userData = userDoc.data();
         
-        // Obtenemos los contadores directamente del documento.
         const publicProfile = {
             id: userDoc.id,
             name: userData.name,
@@ -69,7 +69,6 @@ const updateUserProfile = async (req, res) => {
         const { uid } = req.user;
         const dataToUpdate = req.body;
         
-        // Limpiamos datos que no deberían poderse actualizar masivamente desde aquí
         delete dataToUpdate.uid;
         delete dataToUpdate.email;
         delete dataToUpdate.followersCount;
@@ -129,9 +128,9 @@ const uploadProfilePicture = async (req, res) => {
  * Permite a un usuario seguir a otro perfil (usuario o mascota).
  */
 const followProfile = async (req, res) => {
-    const { uid } = req.user; // El que sigue
-    const { profileId } = req.params; // El que es seguido
-    const { profileType } = req.body; // 'user' o 'pet'
+    const { uid } = req.user;
+    const { profileId } = req.params;
+    const { profileType } = req.body;
 
     if (uid === profileId) {
         return res.status(400).json({ message: 'No te puedes seguir a ti mismo.' });
@@ -150,19 +149,15 @@ const followProfile = async (req, res) => {
 
             const recipientId = profileType === 'pet' ? followedDoc.data().ownerId : profileId;
 
-            // Añadir a la lista de 'following' del usuario actual
             t.set(currentUserRef.collection('following').doc(profileId), {
                 followedAt: new Date().toISOString(),
                 type: profileType
             });
-            // Incrementar el contador de 'following' del usuario actual
             t.update(currentUserRef, { followingCount: admin.firestore.FieldValue.increment(1) });
 
-            // Añadir a la lista de 'followers' del perfil seguido
             t.set(followedProfileRef.collection('followers').doc(uid), {
                 followedAt: new Date().toISOString()
             });
-            // Incrementar el contador de 'followers' del perfil seguido
             t.update(followedProfileRef, { followersCount: admin.firestore.FieldValue.increment(1) });
             
             await createNotification(recipientId, uid, 'new_follower', profileId, profileType);
