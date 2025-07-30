@@ -1,25 +1,25 @@
 /* frontend/src/App.css */
-/* Versión: 3.3 - Navegación Inferior Corregida y Estilos Unificados */
-/* CORRIGE: La simetría y el centrado de la barra de navegación inferior. */
-/* MANTIENE: Todos los estilos previos de la aplicación. */
+/* Versión: 3.5 - Nuevo Sistema de Color "OLED Slate & Teal" */
+/* IMPLEMENTA: Una paleta de colores balanceada con una base Slate y acentos Teal. */
+/* MANTIENE: Todos los estilos estructurales y el fondo negro absoluto. */
 
 /* --- Importación de Tipografía --- */
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&display=swap');
 
-/* --- Paleta de Colores "OLED LAVENDER" --- */
+/* --- [NUEVO] Paleta de Colores "OLED Slate & Teal" --- */
 :root {
   --background-dark: #000000;
-  --background-light: #1C1C1E;
-  --primary-accent: #9B89B3;
-  --primary-accent-hover: #8A79A2;
+  --background-light: #0f172b;      /* Slate 900 */
+  --primary-accent: #00bba7;        /* Teal 500 */
+  --primary-accent-hover: #009689;   /* Teal 600 */
   --text-primary: #FFFFFF;
-  --text-secondary: #AEAEB2;
+  --text-secondary: #90a1b9;       /* Slate 400 */
   --brand-cream: #FDFBF5;
   --error-red: #E74C3C;
   --like-red: #f43f5e;
   --whatsapp-green: #25D366;
-  --border-color: #2C2C2E;
-  --cover-photo-bg: linear-gradient(135deg, #2a2a2e 0%, #1c1c1e 100%);
+  --border-color: #1d293d;         /* Slate 800 */
+  --cover-photo-bg: linear-gradient(135deg, #1d293d 0%, #0f172b 100%);
 }
 
 /* --- ESTILOS GLOBALES --- */
@@ -623,7 +623,7 @@ input::-ms-clear {
 .modal-backdrop {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background-color: rgba(0, 0, 0, 0.8);
-  display: flex; justify-content: center; align-items: center; z-index: 1001; /* CORREGIDO */
+  display: flex; justify-content: center; align-items: center; z-index: 1001;
   backdrop-filter: blur(5px);
   animation: modal-fade-in 0.3s ease;
 }
@@ -1925,7 +1925,7 @@ input::-ms-clear {
 }
 
 .notification-item.unread {
-  background-color: rgba(155, 137, 179, 0.1);
+  background-color: rgba(0, 187, 167, 0.1); /* Teal 500 con 10% de opacidad */
 }
 
 .notification-actor-pic {
