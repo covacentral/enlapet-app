@@ -1,11 +1,9 @@
 /* frontend/src/App.css */
-/* Versión: 4.1 - FINAL CORREGIDO - Arquitectura CSS Modular Completa */
-/* Este archivo contiene estilos globales, clases de utilidad y correcciones de bugs de layout. */
+/* Versión: 4.2 - FINAL - Arquitectura CSS Modular Completa */
+/* Contiene únicamente estilos globales y clases de utilidad. */
 
-/* --- Importación de Tipografía --- */
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&display=swap');
 
-/* --- Paleta de Colores Global --- */
 :root {
   --background-dark: #000000;
   --background-light: #0f172b;      /* Slate 900 */
@@ -21,55 +19,29 @@
   --cover-photo-bg: linear-gradient(135deg, #1d293d 0%, #0f172b 100%);
 }
 
-/* --- ESTILOS GLOBALES DE BASE --- */
 html, body {
-  margin: 0;
-  padding: 0;
-  background-color: var(--background-dark);
-  color: var(--text-primary);
-  font-family: 'Nunito', sans-serif;
-  overflow-x: hidden;
+  margin: 0; padding: 0; background-color: var(--background-dark);
+  color: var(--text-primary); font-family: 'Nunito', sans-serif; overflow-x: hidden;
 }
 
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-  box-sizing: border-box;
-  width: 100%;
+  max-width: 1280px; margin: 0 auto; padding: 2rem;
+  text-align: center; box-sizing: border-box; width: 100%;
 }
+@media (max-width: 600px) { #root { padding: 1rem; } }
 
-@media (max-width: 600px) {
-  #root { padding: 1rem; }
-}
-
-.profile-container {
-  padding-bottom: 70px;
-}
+.profile-container { padding-bottom: 70px; }
 
 /* --- CLASES DE UTILIDAD GLOBALES --- */
 
 /* Formularios Genéricos */
-.App-header { /* Para AuthPage */
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: calc(100vh - 4rem);
-    width: 100%;
-}
 .register-form {
-  padding: 30px;
-  border-radius: 15px;
-  text-align: left;
-  border: 1px solid var(--border-color);
-  margin-bottom: 20px;
-  box-sizing: border-box;
-  background-color: var(--background-light); /* Restaurado para AuthPage */
+  padding: 30px; border-radius: 15px; text-align: left;
+  border: 1px solid var(--border-color); margin-bottom: 20px;
+  box-sizing: border-box; background-color: var(--background-light);
 }
 .form-group { margin-bottom: 20px; }
-.register-form label, .form-group label {
+.form-group label {
   display: block; margin-bottom: 8px; font-weight: bold; color: var(--text-secondary);
 }
 .form-group input, .form-group textarea, .form-group select {
@@ -80,16 +52,16 @@ html, body {
 .password-group { position: relative; }
 .password-group input { padding-right: 50px; }
 .password-toggle-button {
-    position: absolute; top: 50%; right: 10px; transform: translateY(0%); /* Corregido */
-    background: none; border: none; cursor: pointer; padding: 5px; color: var(--text-secondary);
+  position: absolute; top: 50%; right: 10px; transform: translateY(0%);
+  background: none; border: none; cursor: pointer; padding: 5px; color: var(--text-secondary);
 }
 .link-button {
-    background: none; border: none; color: var(--primary-accent); cursor: pointer;
-    text-decoration: underline; font-size: 0.9rem; padding: 5px;
+  background: none; border: none; color: var(--primary-accent); cursor: pointer;
+  text-decoration: underline; font-size: 0.9rem; padding: 5px;
 }
 .link-button:hover { color: var(--primary-accent-hover); }
 
-/* Botones de Acción de Perfil (Seguir, Editar) */
+/* Botones Genéricos */
 .profile-action-button {
   padding: 10px 20px; border-radius: 8px; border: none; font-weight: bold; font-size: 1rem;
   cursor: pointer; transition: background-color 0.2s, transform 0.1s;
@@ -100,26 +72,37 @@ html, body {
 .profile-action-button.following { background-color: var(--border-color); color: var(--text-secondary); }
 .profile-action-button.following:hover { background-color: #3a3a3c; }
 
+.publish-button {
+  background-color: var(--primary-accent); color: var(--brand-cream); border: none; border-radius: 8px;
+  padding: 12px 20px; font-weight: bold; cursor: pointer; width: 100%; transition: background-color 0.2s;
+}
+.publish-button:hover { background-color: var(--primary-accent-hover); }
+.publish-button:disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* Mini Mapa para Modales */
-.leaflet-container { width: 100%; height: 100%; }
-
-/* Otros */
-.response-message { margin-top: 15px; color: var(--text-secondary); min-height: 20px; }
-.response-message.error { color: var(--error-red); }
-.empty-state-message { text-align: center; color: var(--text-secondary); padding: 4rem 1rem; font-size: 1.1rem; }
-.empty-state-message.small { padding: 2rem 1rem; font-size: 1rem; }
+/* Elementos de UI Compartidos */
 .modal-backdrop {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8);
   display: flex; justify-content: center; align-items: center; z-index: 1001; backdrop-filter: blur(5px);
   animation: modal-fade-in 0.3s ease;
 }
 @keyframes modal-fade-in { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+
+.modal-tabs {
+  display: flex; position: relative; border-bottom: 1px solid var(--border-color);
+}
+.modal-tab-button {
+  background: none; border: none; color: var(--text-secondary); font-weight: bold;
+  font-size: 1rem; padding: 16px 20px; cursor: pointer; transition: color 0.2s ease-in-out;
+  border-bottom: 3px solid transparent; margin-bottom: -1px;
+}
+.modal-tab-button:hover { color: var(--text-primary); }
+.modal-tab-button.active { color: var(--primary-accent); border-bottom-color: var(--primary-accent); }
+
+/* Clases de Utilidad */
+.response-message { margin-top: 15px; color: var(--text-secondary); min-height: 20px; }
+.response-message.error { color: var(--error-red); }
+.empty-state-message { text-align: center; color: var(--text-secondary); padding: 4rem 1rem; font-size: 1.1rem; }
+.empty-state-message.small { padding: 2rem 1rem; font-size: 1rem; }
 .inline-profile-link { color: var(--text-primary); text-decoration: none; font-weight: 700; transition: color 0.2s; }
 .inline-profile-link:hover { color: var(--primary-accent); text-decoration: underline; }
-.action-button { background: none; border: none; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 0.9rem; padding: 4px; transition: color 0.2s; font-family: 'Nunito', sans-serif; }
-.action-button:hover { color: var(--text-primary); }
-.post-menu-container { position: relative; }
-.post-menu-dropdown { position: absolute; top: 100%; right: 0; background-color: var(--background-dark); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px; width: 180px; z-index: 10; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
-.post-menu-dropdown button { background: none; border: none; color: var(--text-primary); padding: 10px; width: 100%; text-align: left; border-radius: 6px; cursor: pointer; font-family: 'Nunito', sans-serif; font-size: 0.9rem; }
-.post-menu-dropdown button:hover { background-color: var(--border-color); }
+.leaflet-container { width: 100%; height: 100%; }

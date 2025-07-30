@@ -1,0 +1,61 @@
+/* frontend/src/EventsPage.module.css */
+
+.eventsPageContainer {
+    background-color: var(--background-light);
+    padding: 25px;
+    border-radius: 15px;
+  }
+  
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap; /* Para responsiveness en móviles */
+    gap: 1rem;
+  }
+  
+  .tabTitle {
+    font-size: 1.8rem;
+    font-weight: 800;
+    margin: 0;
+  }
+  
+  .createEventButton {
+    background-color: var(--primary-accent);
+    color: var(--brand-cream);
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.2s;
+    font-family: 'Nunito', sans-serif;
+  }
+  
+  .createEventButton:hover {
+    background-color: var(--primary-accent-hover);
+  }
+  
+  .eventsSection {
+      margin-top: 2rem;
+  }
+  
+  .eventsSection h3 {
+    text-align: left;
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+    margin-top: 0;
+  }
+  
+  .eventsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+  }

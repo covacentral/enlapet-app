@@ -1,4 +1,5 @@
 /* frontend/src/EventCard.module.css */
+
 .eventCard {
     background-color: var(--background-dark);
     border-radius: 15px;
@@ -8,19 +9,24 @@
     flex-direction: column;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
+  
   .eventCard:hover {
     transform: translateY(-5px);
     box-shadow: 0 8px 20px rgba(0,0,0,0.4);
   }
+  
   .imageWrapper {
     position: relative;
     height: 180px;
+    flex-shrink: 0;
   }
+  
   .image {
     width: 100%;
     height: 100%;
     object-fit: cover;
   }
+  
   .statusBadge {
     position: absolute;
     top: 12px;
@@ -31,30 +37,44 @@
     font-weight: bold;
     color: white;
     text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    box-sizing: border-box; /* Corrección de layout */
   }
+  
   .statusPlanned { background-color: rgba(52, 152, 219, 0.8); }
   .statusActive { background-color: rgba(46, 204, 113, 0.8); }
   .statusFinished { background-color: rgba(149, 165, 166, 0.8); }
-  .statusCancelled { background-color: rgba(231, 76, 60, 0.8); } /* Color para cancelado */
+  .statusCancelled { background-color: rgba(231, 76, 60, 0.8); }
   
   .content {
     padding: 16px;
     display: flex;
     flex-direction: column;
-    flex-grow: 1;
+    flex-grow: 1; /* Permite que este contenedor ocupe el espacio sobrante */
   }
+  
+  .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+  }
+  
   .title {
     font-size: 1.2rem;
     font-weight: 800;
     margin: 0 0 8px 0;
     text-align: left;
+    /* Permite que el texto se rompa si es muy largo */
+    word-break: break-word;
   }
+  
   .organizer {
     font-size: 0.9rem;
     color: var(--text-secondary);
     margin: 0 0 16px 0;
     text-align: left;
   }
+  
   .details {
     display: flex;
     flex-direction: column;
@@ -64,13 +84,15 @@
     font-size: 0.9rem;
     color: var(--text-secondary);
   }
+  
   .detailItem {
     display: flex;
     align-items: center;
     gap: 8px;
   }
+  
   .button {
-    margin-top: auto;
+    margin-top: auto; /* Empuja el botón al final del contenedor flexible */
     background-color: var(--primary-accent);
     color: var(--brand-cream);
     border: none;
@@ -81,7 +103,9 @@
     cursor: pointer;
     transition: background-color 0.2s;
     font-family: 'Nunito', sans-serif;
+    flex-shrink: 0; /* Evita que el botón se encoja */
   }
+  
   .button:hover {
     background-color: var(--primary-accent-hover);
   }

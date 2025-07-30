@@ -1,12 +1,13 @@
 // frontend/src/EventCard.jsx
-// Versión: 1.4 - Refactorización a CSS Modules
+// Versión: 1.4 - Refactorización a CSS Modules y Corrección de Layout
+// CAMBIO: Se importa y utiliza un módulo de CSS local.
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Calendar, MapPin, MoreVertical } from 'lucide-react';
 import ReportModal from './ReportModal';
-import styles from './EventCard.module.css';
+import styles from './EventCard.module.css'; // <-- 1. Importamos el módulo
 
 function EventCard({ event, onDetailsClick }) {
-  // ... (lógica existente sin cambios)
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const menuRef = useRef(null);
@@ -24,16 +25,21 @@ function EventCard({ event, onDetailsClick }) {
   const formatEventDuration = (startIso, endIso) => {
     const startDate = new Date(startIso);
     const endDate = new Date(endIso);
+
     const optionsDate = { year: 'numeric', month: 'long', day: 'numeric' };
     const optionsTime = { hour: '2-digit', minute: '2-digit', hour12: true };
+
     const startDateString = startDate.toLocaleDateString('es-ES', optionsDate);
     const endDateString = endDate.toLocaleDateString('es-ES', optionsDate);
+
     const startTimeString = startDate.toLocaleTimeString('es-CO', optionsTime);
     const endTimeString = endDate.toLocaleTimeString('es-CO', optionsTime);
+
     if (startDateString === endDateString) {
       return `${startDateString}, ${startTimeString} - ${endTimeString}`;
+    } else {
+      return `Del ${startDateString} al ${endDateString}`;
     }
-    return `Del ${startDateString} al ${endDateString}`;
   };
 
   const getStatusInfo = (status) => {
@@ -58,15 +64,15 @@ function EventCard({ event, onDetailsClick }) {
           onClose={() => setIsReportModalOpen(false)}
         />
       )}
+      {/* --- 2. Se actualizan las clases para usar el objeto 'styles' --- */}
       <div className={styles.eventCard}>
         <div className={styles.imageWrapper}>
           <img src={event.coverImage} alt={event.name} className={styles.image} />
           <span className={`${styles.statusBadge} ${statusInfo.className}`}>{statusInfo.text}</span>
         </div>
         <div className={styles.content}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div className={styles.header}>
             <h3 className={styles.title}>{event.name}</h3>
-            {/* El menú de opciones reutiliza clases globales, lo cual es aceptable */}
             <div className="post-menu-container" ref={menuRef}>
               <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="action-button">
                 <MoreVertical size={20} />

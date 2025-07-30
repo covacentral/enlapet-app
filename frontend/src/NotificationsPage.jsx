@@ -1,6 +1,6 @@
 // frontend/src/NotificationsPage.jsx
-// Versión 2.0 - Notificaciones Enriquecidas y Enlazadas
-// IMPLEMENTA: Muestra de texto contextual y vista previa. Enlaza al modal del post.
+// Versión: 2.1 - Refactorización a CSS Modules
+// CAMBIO: Se importa y utiliza un módulo de CSS local.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
@@ -8,6 +8,7 @@ import { auth } from './firebase';
 import LoadingComponent from './LoadingComponent';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
+import styles from './NotificationsPage.module.css'; // <-- 1. Importamos el módulo
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -28,10 +29,7 @@ function NotificationsPage({ onMarkAsRead }) {
       if (!response.ok) throw new Error('No se pudieron cargar las notificaciones.');
       const data = await response.json();
       setNotifications(data);
-      
-      // Notificar al layout que las notificaciones se han visto
       onMarkAsRead();
-
     } catch (err) {
       setError(err.message);
     } finally {
@@ -43,13 +41,10 @@ function NotificationsPage({ onMarkAsRead }) {
     fetchNotifications();
   }, [fetchNotifications]);
 
-  // --- LÓGICA DE NOTIFICACIONES ACTUALIZADA ---
   const getNotificationLinkAndText = (notification) => {
     const { type, entityId, entityContext } = notification;
     let text = '';
     let link = '/dashboard';
-
-    // Usamos el nombre del autor del post (si existe) para un texto más rico.
     const targetName = entityContext?.authorName ? `el momento de ${entityContext.authorName}` : 'tu momento';
 
     switch (type) {
@@ -75,27 +70,27 @@ function NotificationsPage({ onMarkAsRead }) {
   if (error) return <p className="response-message error">{error}</p>;
 
   return (
-    <div className="notifications-page">
-      <h2 className="tab-title">Notificaciones</h2>
+    // --- 2. Se actualizan las clases para usar el objeto 'styles' ---
+    <div className={styles.notificationsPage}>
+      <h2 className={styles.tabTitle}>Notificaciones</h2>
       {notifications.length > 0 ? (
-        <div className="notifications-list">
+        <div className={styles.notificationsList}>
           {notifications.map(notif => {
             const { text, link } = getNotificationLinkAndText(notif);
             const timeAgo = formatDistanceToNow(new Date(notif.createdAt), { addSuffix: true, locale: es });
             return (
-              <Link to={link} key={notif.id} className={`notification-item ${!notif.read ? 'unread' : ''}`}>
-                <img src={notif.actorProfilePic || 'https://placehold.co/100x100/E2E8F0/4A5568?text=:)'} alt={notif.actorName} className="notification-actor-pic" />
-                <div className="notification-content">
-                  <p className="notification-text">
+              <Link to={link} key={notif.id} className={`${styles.notificationItem} ${!notif.read ? styles.unread : ''}`}>
+                <img src={notif.actorProfilePic || 'https://placehold.co/100x100/E2E8F0/4A5568?text=:)'} alt={notif.actorName} className={styles.actorPic} />
+                <div className={styles.content}>
+                  <p className={styles.text}>
                     <strong>{notif.actorName}</strong> {text}
                   </p>
-                  {/* --- VISTA PREVIA DEL CONTENIDO --- */}
                   {notif.entityContext?.preview && (
-                    <p className="notification-preview">
+                    <p className={styles.preview}>
                       "{notif.entityContext.preview}..."
                     </p>
                   )}
-                  <p className="notification-time">{timeAgo}</p>
+                  <p className={styles.time}>{timeAgo}</p>
                 </div>
               </Link>
             );

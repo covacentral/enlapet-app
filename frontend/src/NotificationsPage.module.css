@@ -1,0 +1,83 @@
+/* frontend/src/NotificationsPage.module.css */
+
+.notificationsPage {
+    background-color: var(--background-light);
+    padding: 25px;
+    border-radius: 15px;
+    text-align: left;
+  }
+  
+  .tabTitle {
+    text-align: left;
+    font-size: 1.8rem;
+    font-weight: 800;
+    margin-bottom: 2rem;
+    margin-top: 0;
+  }
+  
+  .notificationsList {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .notificationItem {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    text-decoration: none;
+    color: var(--text-primary);
+    transition: background-color 0.2s;
+    border-radius: 8px;
+    margin: 0 -10px;
+    padding: 12px 10px;
+    border-bottom: 1px solid var(--border-color);
+  }
+  
+  .notificationItem:last-child {
+    border-bottom: none;
+  }
+  
+  .notificationItem:hover {
+    background-color: var(--background-dark);
+  }
+  
+  .notificationItem.unread {
+    background-color: rgba(0, 187, 167, 0.1);
+  }
+  
+  .actorPic {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+  
+  .content {
+    flex-grow: 1;
+  }
+  
+  .text {
+    margin: 0;
+  }
+  
+  .time {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 4px;
+  }
+  
+  .preview {
+    font-size: 0.9rem;
+    font-style: italic;
+    color: var(--text-secondary);
+    opacity: 0.9;
+    margin: 6px 0 0 0;
+    padding: 8px 12px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-left: 3px solid var(--primary-accent);
+    border-radius: 0 4px 4px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
