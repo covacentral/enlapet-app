@@ -1,25 +1,25 @@
 /* frontend/src/App.css */
-/* Versión: 3.4 - Nueva Paleta de Colores "OLED TEAL" */
-/* IMPLEMENTA: La nueva paleta de colores teal, manteniendo el fondo negro absoluto. */
-/* MANTIENE: Todos los estilos estructurales y funcionales de la aplicación. */
+/* Versión: 3.5 - Nuevo Sistema de Color "OLED Slate & Teal" */
+/* IMPLEMENTA: Una paleta de colores balanceada con una base Slate y acentos Teal. */
+/* MANTIENE: Todos los estilos estructurales y el fondo negro absoluto. */
 
 /* --- Importación de Tipografía --- */
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&display=swap');
 
-/* --- [NUEVO] Paleta de Colores "OLED TEAL" --- */
+/* --- [NUEVO] Paleta de Colores "OLED Slate & Teal" --- */
 :root {
   --background-dark: #000000;
-  --background-light: #022f2e; /* Teal 950 */
-  --primary-accent: #00bba7; /* Teal 500 */
-  --primary-accent-hover: #009689; /* Teal 600 */
+  --background-light: #0f172b;      /* Slate 900 */
+  --primary-accent: #00bba7;        /* Teal 500 */
+  --primary-accent-hover: #009689;   /* Teal 600 */
   --text-primary: #FFFFFF;
-  --text-secondary: #96f7e4; /* Teal 200 */
+  --text-secondary: #90a1b9;       /* Slate 400 */
   --brand-cream: #FDFBF5;
   --error-red: #E74C3C;
   --like-red: #f43f5e;
   --whatsapp-green: #25D366;
-  --border-color: #0b4f4a; /* Teal 900 */
-  --cover-photo-bg: linear-gradient(135deg, #0b4f4a 0%, #022f2e 100%);
+  --border-color: #1d293d;         /* Slate 800 */
+  --cover-photo-bg: linear-gradient(135deg, #1d293d 0%, #0f172b 100%);
 }
 
 /* --- ESTILOS GLOBALES --- */
