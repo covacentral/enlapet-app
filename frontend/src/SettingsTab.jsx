@@ -1,9 +1,10 @@
 // frontend/src/SettingsTab.jsx
-// Versión: 2.3 - Corrección del Bug de Edición de Perfil
-// CORRIGE: El bug que impedía modificar los campos del formulario al restablecer
-// el estado durante la edición.
+// Versión: 2.4 - Funcionalidad de Cerrar Sesión
+// AÑADIDO: Se importa 'signOut' y se añade un botón para cerrar la sesión del usuario.
 
 import { useState, useEffect, useRef } from 'react';
+import { auth } from './firebase';
+import { signOut } from "firebase/auth"; // <-- 1. Importar signOut
 import './App.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -32,10 +33,6 @@ function SettingsTab({ user, userProfile, onProfileUpdate }) {
     }
   };
 
-  // --- CORRECCIÓN DEL BUG ---
-  // Este useEffect ahora solo actualiza el formulario desde las props
-  // si el usuario NO está en modo de edición. Esto previene que la entrada
-  // del usuario sea sobrescrita durante una nueva renderización.
   useEffect(() => {
     if (!isEditMode) {
       populateFields();
@@ -49,6 +46,20 @@ function SettingsTab({ user, userProfile, onProfileUpdate }) {
       [id]: value
     }));
   };
+  
+  // --- 2. NUEVA FUNCIÓN PARA CERRAR SESIÓN ---
+  const handleLogout = async () => {
+    if (window.confirm('¿Estás seguro de que quieres cerrar sesión?')) {
+      try {
+        await signOut(auth);
+        // No es necesario redirigir aquí. El listener onAuthStateChanged en App.jsx
+        // se encargará de llevar al usuario a la página de login.
+      } catch (error) {
+        setMessage({ text: 'Error al cerrar sesión.', isError: true });
+      }
+    }
+  };
+
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
@@ -65,7 +76,7 @@ function SettingsTab({ user, userProfile, onProfileUpdate }) {
       if (!response.ok) throw new Error(data.message);
       setMessage({ text: 'Perfil guardado con éxito.', isError: false });
       onProfileUpdate();
-      setIsEditMode(false); // Esto desactivará el modo edición y permitirá que el useEffect se ejecute de nuevo
+      setIsEditMode(false);
     } catch (error) {
       setMessage({ text: error.message, isError: true });
     } finally {
@@ -102,7 +113,7 @@ function SettingsTab({ user, userProfile, onProfileUpdate }) {
   };
   
   const handleCancelEdit = () => {
-    setIsEditMode(false); // Desactiva modo edición. El useEffect se encargará de resetear los campos.
+    setIsEditMode(false);
     setMessage({ text: '', isError: false });
   };
 
@@ -125,6 +136,7 @@ function SettingsTab({ user, userProfile, onProfileUpdate }) {
 
       {isEditMode ? (
         <form onSubmit={handleUpdateProfile} className="register-form">
+          {/* ... campos del formulario sin cambios ... */}
           <div className="form-group">
             <label htmlFor="name">Nombre:</label>
             <input type="text" id="name" value={formData.name} onChange={handleChange} required />
@@ -155,6 +167,7 @@ function SettingsTab({ user, userProfile, onProfileUpdate }) {
         </form>
       ) : (
         <div className="display-profile">
+          {/* ... vista de perfil sin cambios ... */}
           <div className="profile-info-item"><strong>Nombre:</strong><p>{userProfile?.name || 'No establecido'}</p></div>
           <div className="profile-info-item"><strong>Teléfono:</strong><p>{userProfile?.phone || 'No establecido'}</p></div>
           <div className="profile-info-item"><strong>Biografía:</strong><p>{userProfile?.bio || 'Sin biografía.'}</p></div>
@@ -167,6 +180,14 @@ function SettingsTab({ user, userProfile, onProfileUpdate }) {
           </div>
         </div>
       )}
+
+      {/* --- 3. NUEVA SECCIÓN Y BOTÓN DE LOGOUT --- */}
+      <div className="logout-section">
+        <button onClick={handleLogout} className="logout-button">
+            Cerrar Sesión
+        </button>
+      </div>
+
     </div>
   );
 }
