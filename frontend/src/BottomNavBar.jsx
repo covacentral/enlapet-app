@@ -1,35 +1,42 @@
 // frontend/src/BottomNavBar.jsx
-// Componente de la nueva barra de navegación inferior fija.
+// Versión 1.1 - Refactorización a CSS Modules
+// CAMBIO: Se importa y utiliza un módulo de CSS local.
 
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Map, PlusSquare, Calendar, Bell, User } from 'lucide-react';
+import { Home, Map, PlusSquare, Calendar, Bell } from 'lucide-react';
+import styles from './BottomNavBar.module.css'; // <-- 1. Importamos el módulo de estilos
 
 function BottomNavBar({ unreadCount, onOpenCreatePost }) {
+  
+  // Función para determinar las clases del NavLink
+  const getNavLinkClass = ({ isActive }) => {
+    return isActive ? `${styles.navItem} ${styles.active}` : styles.navItem;
+  };
+
   return (
-    <nav className="bottom-nav-bar">
-      <NavLink to="/dashboard" end className="nav-item">
-        <Home className="nav-icon" />
-        <span className="nav-label">Inicio</span>
+    <nav className={styles.bottomNavBar}>
+      <NavLink to="/dashboard" end className={getNavLinkClass}>
+        <Home className={styles.navIcon} />
+        <span className={styles.navLabel}>Inicio</span>
       </NavLink>
-      <NavLink to="/dashboard/map" className="nav-item">
-        <Map className="nav-icon" />
-        <span className="nav-label">Mapa</span>
+      <NavLink to="/dashboard/map" className={getNavLinkClass}>
+        <Map className={styles.navIcon} />
+        <span className={styles.navLabel}>Mapa</span>
       </NavLink>
       
-      {/* Botón central para crear post */}
-      <button onClick={onOpenCreatePost} className="nav-item">
-        <PlusSquare className="nav-icon" size={28} />
+      <button onClick={onOpenCreatePost} className={`${styles.navItem} ${styles.createPostButton}`}>
+        <PlusSquare className={styles.navIcon} size={28} />
       </button>
 
-      <NavLink to="/dashboard/events" className="nav-item">
-        <Calendar className="nav-icon" />
-        <span className="nav-label">Eventos</span>
+      <NavLink to="/dashboard/events" className={getNavLinkClass}>
+        <Calendar className={styles.navIcon} />
+        <span className={styles.navLabel}>Eventos</span>
       </NavLink>
-      <NavLink to="/dashboard/notifications" className="nav-item">
-        {unreadCount > 0 && <span className="notification-badge">{unreadCount}</span>}
-        <Bell className="nav-icon" />
-        <span className="nav-label">Alertas</span>
+      <NavLink to="/dashboard/notifications" className={getNavLinkClass}>
+        {unreadCount > 0 && <span className={styles.notificationBadge}>{unreadCount}</span>}
+        <Bell className={styles.navIcon} />
+        <span className={styles.navLabel}>Alertas</span>
       </NavLink>
     </nav>
   );

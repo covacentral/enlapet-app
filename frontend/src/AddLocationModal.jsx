@@ -1,13 +1,13 @@
 // frontend/src/AddLocationModal.jsx
-// Versión: 1.6 - Geolocalización Inteligente
-// CORRIGE: Restaura la funcionalidad de centrado inicial por geolocalización en el mini-mapa.
-// REFACTOR: Se aísla la lógica de geolocalización en su propio useEffect para mayor
-// estabilidad y predictibilidad, replicando el comportamiento del mapa principal.
+// Versión: 1.7 - Refactorización a CSS Modules y Corrección de Layout
+// CAMBIO: Se importa y utiliza el módulo de estilos compartido FormModal.module.css.
+// CORRIGE: El bug de desbordamiento de elementos del formulario.
 
 import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import { auth } from './firebase';
 import { X } from 'lucide-react';
+import styles from './FormModal.module.css'; // <-- 1. Importamos el módulo compartido
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 const initialPosition = [4.5709, -74.2973];
@@ -34,7 +34,6 @@ function AddLocationModal({ categories, onClose, onLocationAdded }) {
   const [message, setMessage] = useState('');
   const [mapInstance, setMapInstance] = useState(null);
 
-  // --- Lógica de Geolocalización (Refactorizada) ---
   useEffect(() => {
     if (!mapInstance) return;
     navigator.geolocation.getCurrentPosition(
@@ -109,14 +108,15 @@ function AddLocationModal({ categories, onClose, onLocationAdded }) {
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="add-location-modal-content" onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
+      {/* --- 2. Se actualizan las clases para usar el objeto 'styles' --- */}
+      <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
+        <div className={styles.modalHeader}>
           <h2>Añadir un Nuevo Lugar</h2>
-          <button onClick={onClose} className="close-button" disabled={isLoading}>
+          <button onClick={onClose} className={styles.closeButton} disabled={isLoading}>
             <X size={24} />
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="add-location-form">
+        <form onSubmit={handleSubmit} className={styles.form}>
           <div className="form-group">
             <label htmlFor="name">Nombre del Lugar</label>
             <input type="text" id="name" name="name" onChange={handleChange} required />
@@ -132,14 +132,14 @@ function AddLocationModal({ categories, onClose, onLocationAdded }) {
           </div>
           <div className="form-group">
             <label>Selecciona la ubicación en el mapa</label>
-            <div className="mini-map-wrapper">
-              <MapContainer center={initialPosition} zoom={13} className="leaflet-container mini-map" whenCreated={setMapInstance}>
+            <div className={styles.miniMapWrapper}>
+              <MapContainer center={initialPosition} zoom={13} className="leaflet-container" whenCreated={setMapInstance}>
                 <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
                 <LocationPicker onLocationSelect={handleLocationSelect} />
               </MapContainer>
             </div>
-            {!coordinates && <small className="map-prompt">Haz clic en el mapa para marcar el punto exacto.</small>}
-            {coordinates && <small className="map-prompt success">¡Ubicación seleccionada!</small>}
+            {!coordinates && <small className={styles.mapPrompt}>Haz clic en el mapa para marcar el punto exacto.</small>}
+            {coordinates && <small className={`${styles.mapPrompt} ${styles.success}`}>¡Ubicación seleccionada!</small>}
           </div>
            <div className="form-group">
             <label htmlFor="description">Descripción (Opcional)</label>
@@ -153,7 +153,7 @@ function AddLocationModal({ categories, onClose, onLocationAdded }) {
             <label htmlFor="phone">Teléfono de Contacto (Opcional)</label>
             <input type="tel" id="phone" name="phone" onChange={handleChange} />
           </div>
-          <div className="modal-footer">
+          <div className={styles.modalFooter}>
             {message && <p className="response-message">{message}</p>}
             <button type="submit" className="publish-button" disabled={isLoading || !coordinates || !formData.category}>
               {isLoading ? 'Guardando...' : 'Añadir Lugar al Mapa'}

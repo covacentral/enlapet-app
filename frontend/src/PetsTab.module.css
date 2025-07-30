@@ -1,0 +1,147 @@
+/* frontend/src/PetsTab.module.css */
+
+.petsTabContainer {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 30px;
+  }
+  
+  .addPetColumn {
+    background-color: var(--background-light);
+    padding: 25px;
+    border-radius: 15px;
+    align-self: start;
+  }
+  
+  .petsListColumn h2 {
+      text-align: left;
+      margin-top: 0;
+  }
+  
+  .petsList {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .petCard {
+    display: flex;
+    background-color: var(--background-light);
+    border-radius: 15px;
+    padding: 20px;
+    gap: 20px;
+    align-items: center;
+  }
+  
+  .petCardImageContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 120px;
+    flex-shrink: 0;
+  }
+  
+  .petCardImage {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 4px solid var(--border-color);
+    margin-bottom: 10px;
+  }
+  
+  .petCardImagePlaceholder {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background-color: var(--background-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    color: var(--primary-accent);
+    border: 4px solid var(--border-color);
+    margin-bottom: 10px;
+  }
+  
+  .petCardInfo {
+    width: 100%;
+  }
+  
+  .petNameButton {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background-color: var(--background-dark);
+    border: 1px solid var(--border-color);
+    padding: 10px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+    color: var(--text-primary);
+    transition: background-color 0.2s;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+  }
+  
+  .petNameButton:hover {
+      background-color: #2C2C2E;
+  }
+  
+  .petNameBreedWrapper {
+    flex-grow: 1;
+  }
+  
+  .petNameBreedWrapper h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    line-height: 1.2;
+  }
+  
+  .petBreedSubtitle {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    font-weight: normal;
+  }
+  
+  .updatePrompt { 
+    display: flex; 
+    align-items: center; 
+    gap: 6px; 
+    font-size: 0.8rem; 
+    color: #ffc107; 
+    white-space: nowrap;
+    padding: 4px 8px; 
+    background-color: rgba(255, 193, 7, 0.1); 
+    border-radius: 6px; 
+  }
+  
+  .viewPublicButton {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    background-color: var(--primary-accent);
+    color: var(--brand-cream);
+    text-decoration: none;
+    padding: 12px;
+    border-radius: 8px;
+    font-weight: bold;
+    text-align: center;
+    transition: background-color 0.2s;
+    box-sizing: border-box;
+  }
+  
+  .viewPublicButton:hover {
+      background-color: var(--primary-accent-hover);
+  }
+  
+  /* --- Media Queries --- */
+  @media (max-width: 900px) {
+    .petsTabContainer {
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+  }

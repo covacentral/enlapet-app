@@ -1,13 +1,13 @@
 // frontend/src/CreateEventModal.jsx
-// Versión: 1.5 - Geolocalización Inteligente
-// CORRIGE: Restaura la funcionalidad de centrado inicial por geolocalización en el mini-mapa.
-// REFACTOR: Se aísla la lógica de geolocalización en su propio useEffect para mayor
-// estabilidad y predictibilidad, replicando el comportamiento del mapa principal.
+// Versión: 1.6 - Refactorización a CSS Modules y Corrección de Layout
+// CAMBIO: Se importa y utiliza el módulo de estilos compartido FormModal.module.css.
+// CORRIGE: El bug de desbordamiento de elementos del formulario.
 
 import React, { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import { auth } from './firebase';
 import { X, UploadCloud } from 'lucide-react';
+import styles from './FormModal.module.css'; // <-- 1. Importamos el módulo compartido
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 const initialPosition = [4.5709, -74.2973];
@@ -48,7 +48,6 @@ function CreateEventModal({ onClose, onEventCreated }) {
   const [mapInstance, setMapInstance] = useState(null);
   const fileInputRef = useRef(null);
 
-  // --- Lógica de Geolocalización (Refactorizada) ---
   useEffect(() => {
     if (!mapInstance) return;
     navigator.geolocation.getCurrentPosition(
@@ -62,7 +61,6 @@ function CreateEventModal({ onClose, onEventCreated }) {
     );
   }, [mapInstance]);
 
-  // --- Lógica de Carga de Datos (Aislada) ---
   useEffect(() => {
     const fetchCategories = async () => {
         try {
@@ -149,14 +147,15 @@ function CreateEventModal({ onClose, onEventCreated }) {
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="add-location-modal-content" onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
+      {/* --- 2. Se actualizan las clases para usar el objeto 'styles' --- */}
+      <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
+        <div className={styles.modalHeader}>
           <h2>Crear un Nuevo Evento</h2>
-          <button onClick={onClose} className="close-button" disabled={isLoading}>
+          <button onClick={onClose} className={styles.closeButton} disabled={isLoading}>
             <X size={24} />
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="add-location-form">
+        <form onSubmit={handleSubmit} className={styles.form}>
           <div className="form-group">
             <label>Imagen de Portada</label>
             <div className="image-upload-area" onClick={() => fileInputRef.current.click()}>
@@ -181,7 +180,7 @@ function CreateEventModal({ onClose, onEventCreated }) {
             <label htmlFor="description">Descripción</label>
             <textarea id="description" name="description" rows="4" value={formData.description} onChange={handleChange} required></textarea>
           </div>
-          <div className="form-row">
+          <div className={styles.formRow}>
             <div className="form-group">
               <label htmlFor="startDate">Fecha y Hora de Inicio</label>
               <input type="datetime-local" id="startDate" name="startDate" value={formData.startDate} onChange={handleChange} required />
@@ -193,20 +192,20 @@ function CreateEventModal({ onClose, onEventCreated }) {
           </div>
           <div className="form-group">
             <label>Ubicación del Evento</label>
-            <div className="mini-map-wrapper">
-              <MapContainer center={initialPosition} zoom={13} className="leaflet-container mini-map" whenCreated={setMapInstance}>
+            <div className={styles.miniMapWrapper}>
+              <MapContainer center={initialPosition} zoom={13} className="leaflet-container" whenCreated={setMapInstance}>
                 <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
                 <LocationPicker onLocationSelect={(latlng) => setCoordinates({ latitude: latlng.lat, longitude: latlng.lng })} />
               </MapContainer>
             </div>
-            {!coordinates && <small className="map-prompt">Haz clic en el mapa para marcar el punto exacto.</small>}
-            {coordinates && <small className="map-prompt success">¡Ubicación seleccionada!</small>}
+            {!coordinates && <small className={styles.mapPrompt}>Haz clic en el mapa para marcar el punto exacto.</small>}
+            {coordinates && <small className={`${styles.mapPrompt} ${styles.success}`}>¡Ubicación seleccionada!</small>}
           </div>
           <div className="form-group">
             <label htmlFor="customAddress">Dirección (Opcional)</label>
             <input type="text" id="customAddress" name="customAddress" value={formData.customAddress} onChange={handleChange} />
           </div>
-          <div className="modal-footer">
+          <div className={styles.modalFooter}>
             {message && <p className="response-message">{message}</p>}
             <button type="submit" className="publish-button" disabled={isLoading}>
               {isLoading ? 'Creando...' : 'Crear Evento'}

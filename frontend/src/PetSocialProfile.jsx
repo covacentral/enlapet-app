@@ -1,7 +1,6 @@
 // frontend/src/PetSocialProfile.jsx
-// Versión: 3.2 - Limpieza de UI
-// ELIMINADO: Se quita el botón flotante de creación de posts, ya que ahora
-// esta función está centralizada en la barra de navegación inferior.
+// Versión: 3.3 - Refactorización a CSS Modules
+// CAMBIO: Se importa y utiliza el módulo de estilos compartido SocialProfile.module.css.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
@@ -10,6 +9,7 @@ import LoadingComponent from './LoadingComponent';
 import CreatePostModal from './CreatePostModal';
 import PetEditModal from './PetEditModal';
 import PostCard from './PostCard';
+import styles from './SocialProfile.module.css'; // <-- 1. Importamos el módulo compartido
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -66,7 +66,7 @@ function PetSocialProfile({ user, userProfile, pets, onUpdate }) {
         } finally {
             setIsLoading(false);
         }
-    }, [petId, user]);
+    }, [petId, user, petProfile]);
 
     useEffect(() => {
         fetchData();
@@ -100,8 +100,8 @@ function PetSocialProfile({ user, userProfile, pets, onUpdate }) {
 
     const handleFollowToggle = async () => {
         setFollowLoading(true);
-        const user = auth.currentUser;
-        if (!user) return;
+        const userAuth = auth.currentUser;
+        if (!userAuth) return;
         
         const endpoint = isFollowing 
             ? `${API_URL}/api/profiles/${petId}/unfollow` 
@@ -109,7 +109,7 @@ function PetSocialProfile({ user, userProfile, pets, onUpdate }) {
         
         const method = isFollowing ? 'DELETE' : 'POST';
         try {
-            const idToken = await user.getIdToken();
+            const idToken = await userAuth.getIdToken();
             const response = await fetch(endpoint, { 
                 method, 
                 headers: { 
@@ -133,23 +133,24 @@ function PetSocialProfile({ user, userProfile, pets, onUpdate }) {
 
     return (
         <>
-            <header className="pet-social-profile-container">
-                <div className="profile-cover-photo"></div>
-                <div className="social-profile-header">
-                    <div className="social-profile-details">
-                        <div className="social-profile-picture-wrapper">
+            {/* --- 2. Se actualizan las clases para usar el objeto 'styles' --- */}
+            <header className={styles.container}>
+                <div className={styles.coverPhoto}></div>
+                <div className={styles.header}>
+                    <div className={styles.details}>
+                        <div className={styles.pictureWrapper}>
                             <img 
                                 src={petProfile.petPictureUrl || 'https://placehold.co/300x300/E2E8F0/4A5568?text=🐾'} 
                                 alt={petProfile.name} 
-                                className="social-profile-picture"
+                                className={styles.picture}
                             />
                         </div>
-                        <div className="social-profile-info">
+                        <div className={styles.info}>
                             <h1>{petProfile.name}</h1>
                             <p>{petProfile.breed}</p>
                         </div>
                     </div>
-                     <div className="social-profile-actions">
+                     <div className={styles.actions}>
                         {isOwner ? (
                             <button onClick={() => setIsEditModalOpen(true)} className="profile-action-button follow">Editar Perfil</button> 
                         ) : (

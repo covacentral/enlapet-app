@@ -1,0 +1,68 @@
+/* frontend/src/SocialProfile.module.css */
+/* Estilos compartidos para los banners de PetSocialProfile y UserProfilePage */
+
+.container {
+    background-color: var(--background-light);
+    border-radius: 15px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+  }
+  
+  .coverPhoto {
+    height: 200px;
+    background: var(--cover-photo-bg);
+  }
+  
+  .header {
+    padding: 0 24px 24px;
+    margin-top: -80px;
+    position: relative;
+    text-align: left;
+  }
+  
+  .details {
+    display: flex;
+    align-items: flex-end;
+    gap: 20px;
+  }
+  
+  .pictureWrapper {
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    border: 5px solid var(--background-light);
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  
+  .picture {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  .info {
+    padding-bottom: 10px;
+  }
+  
+  .info h1 {
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin: 0 0 5px;
+    color: var(--text-primary);
+  }
+  
+  .info p {
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    margin: 0;
+  }
+  
+  .actions {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+  }
+  
+  /* Reutilizamos el estilo de botón de acción global de App.css */
+  /* Si se quisiera un estilo único, se definiría aquí. */

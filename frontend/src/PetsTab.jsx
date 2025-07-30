@@ -1,16 +1,16 @@
 // frontend/src/PetsTab.jsx
-// Versión: 2.0 - Hoja de Vida
-// Implementa la apertura del modal de edición y el aviso de perfil incompleto.
+// Versión: 2.1 - Refactorización a CSS Modules
+// CAMBIO: Se importa y utiliza un módulo de CSS local (PetsTab.module.css).
 
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import PetEditModal from './PetEditModal';
-import './App.css';
+import styles from './PetsTab.module.css'; // <-- 1. Importamos el módulo de estilos
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const UpdatePrompt = () => (
-    <div className="update-prompt">
+    <div className={styles.updatePrompt}>
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
         <span>¡Completa mi perfil!</span>
     </div>
@@ -20,24 +20,25 @@ function PetCard({ pet, onEdit }) {
   const isProfileIncomplete = !pet.location?.city || !pet.healthRecord?.birthDate;
 
   return (
-    <div className="pet-card">
-      <div className="pet-card-image-container">
+    // --- 2. Se actualizan las clases del PetCard ---
+    <div className={styles.petCard}>
+      <div className={styles.petCardImageContainer}>
         {pet.petPictureUrl ? (
-          <img src={pet.petPictureUrl} alt={pet.name} className="pet-card-image" />
+          <img src={pet.petPictureUrl} alt={pet.name} className={styles.petCardImage} />
         ) : (
-          <div className="pet-card-image-placeholder">🐾</div>
+          <div className={styles.petCardImagePlaceholder}>🐾</div>
         )}
       </div>
-      <div className="pet-card-info">
-        <button className="pet-name-button" onClick={() => onEdit(pet)}>
-            <div className="pet-name-breed-wrapper">
+      <div className={styles.petCardInfo}>
+        <button className={styles.petNameButton} onClick={() => onEdit(pet)}>
+            <div className={styles.petNameBreedWrapper}>
                 <h3>{pet.name}</h3>
-                {pet.breed && <p className="pet-breed-subtitle">{pet.breed}</p>}
+                {pet.breed && <p className={styles.petBreedSubtitle}>{pet.breed}</p>}
             </div>
             {isProfileIncomplete && <UpdatePrompt />}
         </button>
-        <div className="pet-card-actions">
-           <Link to={`/pet/${pet.id}`} className="link-button view-public-button">Ver Perfil Público</Link>
+        <div className={styles.petCardActions}>
+           <Link to={`/pet/${pet.id}`} className={styles.viewPublicButton}>Ver Perfil Público</Link>
         </div>
       </div>
     </div>
@@ -96,23 +97,20 @@ function PetsTab({ user, initialPets, onPetsUpdate }) {
 
   return (
     <>
-      <style>{`
-        .update-prompt { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: #ffc107; margin-top: 4px; padding: 4px 8px; background-color: rgba(255, 193, 7, 0.1); border-radius: 6px; }
-        .pet-name-button { background: none; border: none; padding: 0; margin: 0; cursor: pointer; text-align: left; width: 100%; color: white; }
-      `}</style>
-      <div className="pets-tab-container">
-        <div className="dashboard-column add-pet-column">
+      {/* --- 2. Se actualizan las clases del PetsTab --- */}
+      <div className={styles.petsTabContainer}>
+        <div className={`${styles.dashboardColumn} ${styles.addPetColumn}`}>
           <h2>Registrar Nueva Mascota</h2>
-          <form onSubmit={handleAddPet} className="register-form">
+          <form onSubmit={handleAddPet} className="register-form"> {/* Mantenemos clase global de form */}
             <div className="form-group"><label htmlFor="petName">Nombre:</label><input type="text" id="petName" value={petName} onChange={(e) => setPetName(e.target.value)} required disabled={isAdding} /></div>
             <div className="form-group"><label htmlFor="petBreed">Raza (Opcional):</label><input type="text" id="petBreed" value={petBreed} onChange={(e) => setPetBreed(e.target.value)} disabled={isAdding} /></div>
             <button type="submit" disabled={isAdding}>{isAdding ? 'Añadiendo...' : 'Añadir Mascota'}</button>
           </form>
           {message && <p className="response-message">{message}</p>}
         </div>
-        <div className="dashboard-column pets-list-column">
+        <div className={`${styles.dashboardColumn} ${styles.petsListColumn}`}>
           <h2>Mis Mascotas</h2>
-          <div className="pets-list">
+          <div className={styles.petsList}>
             {pets.length > 0 ? (
               pets.map(pet => (
                 <PetCard key={pet.id} pet={pet} onEdit={handleOpenModal} />

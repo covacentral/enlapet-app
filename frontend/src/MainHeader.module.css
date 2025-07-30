@@ -1,0 +1,183 @@
+/* frontend/src/MainHeader.module.css */
+
+.mainHeader {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 30px;
+    align-items: start;
+    background-color: var(--background-light);
+    padding: 25px;
+    border-radius: 15px;
+    margin-bottom: 20px;
+  }
+  
+  .userProfileSection {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    border-right: 1px solid var(--border-color);
+    padding-right: 30px;
+    text-align: center;
+  }
+  
+  .userProfileMainLink {
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .userName {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 1.5rem;
+    font-weight: 700;
+    order: -1;
+  }
+  
+  .profilePictureContainer {
+    margin: 0;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 3px solid var(--border-color);
+    flex-shrink: 0;
+  }
+  
+  .profilePicture {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  .profilePicturePlaceholder {
+    width: 100px;
+    height: 100px;
+    font-size: 2.5rem;
+    margin: 0;
+    border-radius: 50%;
+    background-color: var(--background-dark);
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .profileBio {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  
+  .editProfileButton {
+    background-color: var(--border-color);
+    color: var(--text-secondary);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+  }
+  
+  .editProfileButton:hover {
+    background-color: var(--primary-accent);
+    color: var(--brand-cream);
+    border-color: var(--primary-accent);
+  }
+  
+  .userPetsSection {
+    overflow: hidden;
+  }
+  
+  .headerBrandTitle {
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    font-size: 2rem;
+    text-align: right;
+    margin: 0 0 15px 0;
+    color: var(--brand-cream);
+  }
+  
+  .petBubblesContainer {
+    display: flex;
+    gap: 15px;
+    overflow-x: auto;
+    padding-bottom: 15px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  
+  .petBubblesContainer::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .petBubble {
+    width: 70px;
+    height: 70px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background-color: var(--background-dark);
+    border: 3px solid var(--primary-accent);
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    text-decoration: none;
+    color: var(--text-primary);
+  }
+  
+  .petBubble:hover {
+    transform: scale(1.1);
+  }
+  
+  .petBubble img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  .noPetsHeader {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    align-self: center;
+  }
+  
+  /* --- Media Queries --- */
+  @media (max-width: 900px) {
+    .mainHeader {
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+  
+    .userProfileSection {
+      border-right: none;
+      padding-right: 0;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 20px;
+      justify-content: center;
+    }
+  
+    .headerBrandTitle {
+      text-align: center;
+    }
+  
+    .userPetsSection {
+      width: 100%;
+    }
+  }

@@ -1,14 +1,13 @@
 // frontend/src/UserProfilePage.jsx
-// Versión: 4.1 - Botón de Editar Perfil
-// AÑADIDO: Se muestra un botón "Editar Perfil" en el perfil del propio usuario,
-// enlazando a la página de ajustes.
+// Versión: 4.2 - Refactorización a CSS Modules
+// CAMBIO: Se importa y utiliza el módulo de estilos compartido SocialProfile.module.css.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { auth } from './firebase';
 import LoadingComponent from './LoadingComponent';
 import PostCard from './PostCard';
-import { Users } from 'lucide-react';
+import styles from './SocialProfile.module.css'; // <-- 1. Importamos el módulo compartido
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -142,12 +141,10 @@ function UserProfilePage() {
     const isCurrentlyLiked = !!likedStatuses[postId];
     setLikedStatuses(prev => ({ ...prev, [postId]: !isCurrentlyLiked }));
     setPosts(prev => prev.map(p => p.id === postId ? { ...p, likesCount: p.likesCount + (isCurrentlyLiked ? -1 : 1) } : p));
-    // Lógica de API en segundo plano...
   };
   const handleSaveToggle = async (postId) => {
     const isCurrentlySaved = !!savedStatuses[postId];
     setSavedStatuses(prev => ({ ...prev, [postId]: !isCurrentlySaved }));
-    // Lógica de API en segundo plano...
   };
   const handleCommentAdded = (postId) => setPosts(prev => prev.map(p => p.id === postId ? { ...p, commentsCount: p.commentsCount + 1 } : p));
 
@@ -158,27 +155,25 @@ function UserProfilePage() {
 
   return (
     <>
-      <header className="pet-social-profile-container">
-        <div className="profile-cover-photo"></div>
-        <div className="social-profile-header">
-          <div className="social-profile-details">
-            <div className="social-profile-picture-wrapper">
+      {/* --- 2. Se actualizan las clases para usar el objeto 'styles' --- */}
+      <header className={styles.container}>
+        <div className={styles.coverPhoto}></div>
+        <div className={styles.header}>
+          <div className={styles.details}>
+            <div className={styles.pictureWrapper}>
               <img 
                 src={userProfile.profilePictureUrl || 'https://placehold.co/300x300/9B89B3/FFFFFF?text=U'} 
                 alt={userProfile.name} 
-                className="social-profile-picture"
+                className={styles.picture}
               />
             </div>
-            <div className="social-profile-info">
+            <div className={styles.info}>
               <h1>{userProfile.name}</h1>
               <p>{userProfile.bio}</p>
-              <div className="user-profile-stats" style={{marginTop: '10px'}}>
-                {/* Stats omitidos por brevedad, pero deberían ir aquí */}
-              </div>
+              {/* Aquí irían los contadores de seguidores/seguidos si se añaden al HTML */}
             </div>
           </div>
-          <div className="social-profile-actions">
-            {/* --- LÓGICA DE BOTÓN CORREGIDA --- */}
+          <div className={styles.actions}>
             {isOwnProfile ? (
               <Link to="/dashboard/settings" className="profile-action-button follow">
                 Editar Perfil

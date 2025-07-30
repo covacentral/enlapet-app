@@ -1,21 +1,21 @@
 // frontend/src/MainHeader.jsx
-// Versión 1.1 - Botón para Añadir Mascotas
-// AÑADIDO: Se incluye una burbuja "+" en el carrusel para enlazar a la página de gestión de mascotas.
+// Versión 1.3 - Refactorización a CSS Modules
+// CAMBIO: Se importa y utiliza un módulo de CSS local (MainHeader.module.css).
 
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { auth } from './firebase';
-import { Plus } from 'lucide-react'; // Importamos el ícono necesario
+import { Plus } from 'lucide-react';
+import styles from './MainHeader.module.css'; // <-- 1. Importamos el módulo de estilos
 
 const PetBubble = ({ pet }) => (
-  <Link to={`/dashboard/pet/${pet.id}`} className="pet-bubble" title={pet.name}>
+  <Link to={`/dashboard/pet/${pet.id}`} className={styles.petBubble} title={pet.name}>
     {pet.petPictureUrl ? <img src={pet.petPictureUrl} alt={pet.name} /> : <span>🐾</span>}
   </Link>
 );
 
-// Componente para la nueva burbuja de "Añadir Mascota"
 const AddPetBubble = () => (
-    <Link to="/dashboard/pets" className="pet-bubble" title="Añadir o gestionar mascotas" style={{backgroundColor: 'var(--border-color)', borderStyle: 'dashed'}}>
+    <Link to="/dashboard/pets" className={styles.petBubble} title="Añadir o gestionar mascotas" style={{backgroundColor: 'var(--border-color)', borderStyle: 'dashed'}}>
         <Plus size={32} color="var(--text-secondary)" />
     </Link>
 );
@@ -28,29 +28,32 @@ function MainHeader({ userProfile, pets }) {
   const currentUserId = auth.currentUser?.uid;
 
   return (
-    <header className="main-header">
-      <div className="user-profile-section">
-        <Link to={`/dashboard/user/${currentUserId}`} style={{textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px'}}>
-            <h2>{userProfile.name}</h2>
-            <div className="profile-picture-container">
+    // --- 2. Se actualizan las clases para usar el objeto 'styles' ---
+    <header className={styles.mainHeader}>
+      <div className={styles.userProfileSection}>
+        <Link to={`/dashboard/user/${currentUserId}`} className={styles.userProfileMainLink}>
+            <h2 className={styles.userName}>{userProfile.name}</h2>
+            <div className={styles.profilePictureContainer}>
               {userProfile.profilePictureUrl ? (
-                <img src={userProfile.profilePictureUrl} alt="Perfil" className="profile-picture" />
+                <img src={userProfile.profilePictureUrl} alt="Perfil" className={styles.profilePicture} />
               ) : (
-                <div className="profile-picture-placeholder">👤</div>
+                <div className={styles.profilePicturePlaceholder}>👤</div>
               )}
             </div>
-            <p className="profile-bio">{userProfile.bio || 'Sin biografía.'}</p>
+            <p className={styles.profileBio}>{userProfile.bio || 'Sin biografía.'}</p>
+        </Link>
+        <Link to="/dashboard/settings" className={styles.editProfileButton}>
+          Editar Perfil
         </Link>
       </div>
-      <div className="user-pets-section">
-        <h1 className="header-brand-title">enlapet</h1>
-        <div className="pet-bubbles-container">
+      <div className={styles.userPetsSection}>
+        <h1 className={styles.headerBrandTitle}>enlapet</h1>
+        <div className={styles.petBubblesContainer}>
           {pets && pets.length > 0 ? (
             pets.map(pet => <PetBubble key={pet.id} pet={pet} />)
           ) : (
-            <p className="no-pets-header">Añade tu primera mascota</p>
+            <p className={styles.noPetsHeader}>Añade tu primera mascota</p>
           )}
-          {/* La burbuja "+" siempre aparece al final del carrusel */}
           <AddPetBubble />
         </div>
       </div>

@@ -1,0 +1,91 @@
+/* frontend/src/FormModal.module.css */
+/* Estilos compartidos y corregidos para modales con formularios */
+
+.modalContent {
+    background-color: var(--background-light);
+    border: 1px solid var(--border-color);
+    border-radius: 15px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .modalHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+  }
+  
+  .modalHeader h2 {
+    margin: 0;
+    font-size: 1.2rem;
+  }
+  
+  .closeButton {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+  }
+  
+  .closeButton:hover {
+    color: var(--text-primary);
+  }
+  
+  .form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    padding: 24px;
+  }
+  
+  /* --- CORRECCIÓN DE BUG DE DESBORDAMIENTO --- */
+  /* Forzamos a que todos los elementos dentro del formulario
+     calculen su tamaño incluyendo el padding y el borde,
+     evitando que se salgan del contenedor. */
+  .form * {
+    box-sizing: border-box;
+  }
+  
+  .formRow {
+      display: flex;
+      gap: 15px;
+  }
+  
+  .formRow > .form-group {
+      flex: 1;
+  }
+  
+  .miniMapWrapper {
+    width: 100%;
+    height: 350px;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  
+  .mapPrompt {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-top: 8px;
+  }
+  
+  .mapPrompt.success {
+    color: #4caf50;
+    font-weight: bold;
+  }
+  
+  .modalFooter {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border-color);
+    margin-top: auto;
+    flex-shrink: 0;
+  }
