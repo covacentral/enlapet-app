@@ -1,5 +1,6 @@
 // frontend/src/NotificationsPage.jsx
-// Página para mostrar la lista de notificaciones del usuario.
+// Versión 2.0 - Notificaciones Enriquecidas y Enlazadas
+// IMPLEMENTA: Muestra de texto contextual y vista previa. Enlaza al modal del post.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
@@ -42,26 +43,30 @@ function NotificationsPage({ onMarkAsRead }) {
     fetchNotifications();
   }, [fetchNotifications]);
 
+  // --- LÓGICA DE NOTIFICACIONES ACTUALIZADA ---
   const getNotificationLinkAndText = (notification) => {
-    const { type, actorName, entityId, entityType } = notification;
+    const { type, entityId, entityContext } = notification;
     let text = '';
     let link = '/dashboard';
 
+    // Usamos el nombre del autor del post (si existe) para un texto más rico.
+    const targetName = entityContext?.authorName ? `el momento de ${entityContext.authorName}` : 'tu momento';
+
     switch (type) {
       case 'new_follower':
-        text = `${actorName} ha comenzado a seguirte.`;
+        text = `ha comenzado a seguirte.`;
         link = `/dashboard/user/${notification.actorId}`;
         break;
       case 'new_like':
-        text = `A ${actorName} le gustó tu momento.`;
-        link = `/dashboard`; // Idealmente, debería llevar al post específico
+        text = `le gustó ${targetName}.`;
+        link = `/dashboard/notifications/post/${entityId}`;
         break;
       case 'new_comment':
-        text = `${actorName} comentó en tu momento.`;
-        link = `/dashboard`; // Idealmente, debería llevar al post específico
+        text = `comentó en ${targetName}.`;
+        link = `/dashboard/notifications/post/${entityId}`;
         break;
       default:
-        text = 'Tienes una nueva notificación.';
+        text = 'ha interactuado contigo.';
     }
     return { text, link };
   };
@@ -81,7 +86,15 @@ function NotificationsPage({ onMarkAsRead }) {
               <Link to={link} key={notif.id} className={`notification-item ${!notif.read ? 'unread' : ''}`}>
                 <img src={notif.actorProfilePic || 'https://placehold.co/100x100/E2E8F0/4A5568?text=:)'} alt={notif.actorName} className="notification-actor-pic" />
                 <div className="notification-content">
-                  <p className="notification-text">{text}</p>
+                  <p className="notification-text">
+                    <strong>{notif.actorName}</strong> {text}
+                  </p>
+                  {/* --- VISTA PREVIA DEL CONTENIDO --- */}
+                  {notif.entityContext?.preview && (
+                    <p className="notification-preview">
+                      "{notif.entityContext.preview}..."
+                    </p>
+                  )}
                   <p className="notification-time">{timeAgo}</p>
                 </div>
               </Link>
