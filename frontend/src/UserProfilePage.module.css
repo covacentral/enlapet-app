@@ -1,0 +1,132 @@
+/* frontend/src/UserProfilePage.module.css */
+/* Estilos encapsulados para la página de perfil público de un usuario. */
+
+.pageContainer {
+    /* Contenedor principal para la página de perfil completa */
+    width: 100%;
+  }
+  
+  .profileHeader {
+    background-color: var(--background-light);
+    border-radius: 15px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+  }
+  
+  .coverPhoto {
+    height: 200px;
+    background: var(--cover-photo-bg);
+  }
+  
+  .headerContent {
+    padding: 0 24px 24px;
+    margin-top: -80px;
+    position: relative;
+    text-align: left;
+  }
+  
+  .details {
+    display: flex;
+    align-items: flex-end;
+    gap: 20px;
+    flex-wrap: wrap; /* Para mejor responsiveness */
+  }
+  
+  .pictureWrapper {
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    border: 5px solid var(--background-light);
+    flex-shrink: 0;
+    overflow: hidden;
+    background-color: var(--background-dark);
+  }
+  
+  .picture {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  .info {
+    padding-bottom: 10px;
+    flex-grow: 1;
+  }
+  
+  .info h1 {
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin: 0 0 5px;
+    color: var(--text-primary);
+  }
+  
+  .info p {
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    margin: 0;
+    white-space: pre-wrap; /* Respeta saltos de línea en la bio */
+  }
+  
+  .actions {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+  }
+  
+  .profileContent {
+    background-color: var(--background-light);
+    padding: 1.5rem;
+    border-radius: 0 0 15px 15px;
+    border: 1px solid var(--border-color);
+    border-top: none;
+  }
+  
+  .petsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+  
+  .petCard {
+    background-color: var(--background-dark);
+    border-radius: 12px;
+    overflow: hidden;
+    text-decoration: none;
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  
+  .petCard:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+    border-color: var(--primary-accent);
+  }
+  
+  .petCardImageWrapper {
+    height: 180px;
+  }
+  
+  .petCardImageWrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  .petCardInfo {
+    padding: 1rem;
+    text-align: left;
+  }
+  
+  .petCardInfo strong {
+    display: block;
+    font-size: 1.1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .petCardInfo span {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+  }
