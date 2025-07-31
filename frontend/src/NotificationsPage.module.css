@@ -1,0 +1,79 @@
+/* frontend/src/NotificationsPage.module.css */
+/* Estilos restaurados y encapsulados para la página de Notificaciones. */
+
+.page {
+    background-color: var(--background-light);
+    padding: 25px;
+    border-radius: 15px;
+    text-align: left;
+    border: 1px solid var(--border-color);
+  }
+  
+  .item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 12px 10px;
+    border-bottom: 1px solid var(--border-color);
+    text-decoration: none;
+    color: var(--text-primary);
+    transition: background-color 0.2s;
+    border-radius: 8px;
+    margin: 0 -10px; /* Compensa el padding para el hover */
+  }
+  
+  .item:last-child {
+    border-bottom: none;
+  }
+  
+  .item:hover {
+    background-color: var(--background-dark);
+  }
+  
+  .unread {
+    background-color: rgba(0, 187, 167, 0.1); /* Teal con opacidad */
+  }
+  
+  .actorPic {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+  
+  .content {
+      flex-grow: 1;
+  }
+  
+  .text {
+    flex-grow: 1;
+    font-size: 0.95rem;
+    line-height: 1.4;
+  }
+  
+  .text strong {
+      font-weight: 700;
+  }
+  
+  .time {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 4px;
+  }
+  
+  .preview {
+    font-size: 0.9rem;
+    font-style: italic;
+    color: var(--text-secondary);
+    opacity: 0.9;
+    margin: 6px 0 0 0;
+    padding: 8px 12px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-left: 3px solid var(--primary-accent);
+    border-radius: 0 4px 4px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
