@@ -1,0 +1,73 @@
+/* frontend/src/ReportModal.module.css */
+/* Estilos específicos para el modal de reportes. */
+
+.content {
+    background-color: var(--background-light);
+    border: 1px solid var(--border-color);
+    border-radius: 15px;
+    width: 90%;
+    max-width: 500px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .body {
+    padding: 24px;
+  }
+  
+  .description {
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+    text-align: left;
+    line-height: 1.6;
+  }
+  
+  .description strong {
+      color: var(--text-primary);
+  }
+  
+  .reasonsList {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .reasonButton {
+    background-color: var(--background-dark);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 12px;
+    border-radius: 8px;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: border-color 0.2s, background-color 0.2s;
+  }
+  
+  .reasonButton:hover:not(:disabled) {
+    border-color: var(--primary-accent-hover);
+  }
+  
+  .reasonButton.selected {
+    background-color: var(--primary-accent);
+    border-color: var(--primary-accent);
+    color: var(--brand-cream);
+    font-weight: bold;
+  }
+  
+  .confirmationView {
+    padding: 2rem;
+    text-align: center;
+  }
+  .confirmationView h3 {
+    font-size: 1.5rem;
+    color: var(--brand-cream);
+    margin-bottom: 1rem;
+  }
+  .confirmationView p {
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 2rem;
+  }

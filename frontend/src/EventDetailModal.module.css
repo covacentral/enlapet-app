@@ -1,0 +1,111 @@
+/* frontend/src/EventDetailModal.module.css */
+/* Estilos específicos para el modal de detalles de un evento. */
+
+.content {
+    background-color: var(--background-light);
+    border: 1px solid var(--border-color);
+    border-radius: 15px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .body {
+      padding: 0 24px 24px;
+  }
+  
+  .coverImage {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+  }
+  
+  .details {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 1rem;
+      text-align: left;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+  }
+    
+  .detailItem {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+  }
+  
+  .description {
+      text-align: left;
+      line-height: 1.6;
+  }
+  
+  .organizerControls {
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border-color);
+      text-align: left;
+  }
+  
+  .organizerControls h4 {
+      margin-top: 0;
+      margin-bottom: 1rem;
+      font-size: 1.2rem;
+  }
+  
+  .editNotice {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
+      color: var(--primary-accent);
+      margin-bottom: 1rem;
+      padding: 8px;
+      background-color: rgba(0, 187, 167, 0.1);
+      border-radius: 6px;
+  }
+  
+  .controlsContainer {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+  }
+  
+  .menuContainer {
+      position: relative;
+  }
+    
+  .menuDropdown {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      background-color: var(--background-dark);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 8px;
+      width: 180px;
+      z-index: 10;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  }
+    
+  .menuDropdown button {
+      background: none;
+      border: none;
+      color: var(--text-primary);
+      padding: 10px;
+      width: 100%;
+      text-align: left;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+  }
+    
+  .menuDropdown button:hover {
+      background-color: var(--border-color);
+  }

@@ -1,0 +1,90 @@
+/* frontend/src/EventCard.module.css */
+/* Estilos encapsulados para las tarjetas de eventos. */
+
+.card {
+    background-color: var(--background-dark);
+    border-radius: 15px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+  }
+  
+  .imageWrapper {
+    position: relative;
+    height: 180px;
+  }
+  .image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .statusBadge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: white;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+  }
+  
+  /* Clases de estado */
+  .planned { background-color: rgba(52, 152, 219, 0.9); }
+  .active { background-color: rgba(46, 204, 113, 0.9); }
+  .finished { background-color: rgba(149, 165, 166, 0.9); }
+  .cancelled { background-color: rgba(225, 29, 72, 0.9); } /* Usando --error-red */
+  
+  .content {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    text-align: left;
+  }
+  
+  .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+  }
+  
+  .title {
+    font-size: 1.2rem;
+    font-weight: 800;
+    margin: 0 0 8px 0;
+  }
+  
+  .organizer {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin: 0 0 16px 0;
+  }
+  .organizer strong {
+      color: var(--text-primary);
+  }
+  
+  .details {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+  }
+  .detailItem {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .button {
+    margin-top: auto; /* Empuja el botón al final del contenedor flex */
+  }
