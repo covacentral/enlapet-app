@@ -1,13 +1,12 @@
 // frontend/src/CreateEventModal.jsx
-// Versión: 1.6 - Refactorización a CSS Modules
-// TAREA: Se implementan los módulos de estilos local y compartido.
+// Versión: 1.7 - Corrección de Estilos de Botón
+// TAREA: Se aplican las clases correctas del sistema de botones compartidos.
 
 import React, { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import { auth } from './firebase';
 import { X, UploadCloud } from 'lucide-react';
 
-// 1. IMPORTAMOS los nuevos módulos de CSS
 import styles from './CreateEventModal.module.css';
 import sharedStyles from './shared.module.css';
 
@@ -208,7 +207,13 @@ function CreateEventModal({ onClose, onEventCreated }) {
           </div>
           <div className={sharedStyles.modalFooter}>
             {message && <p className={message.startsWith('Error') ? sharedStyles.responseMessageError : sharedStyles.responseMessage}>{message}</p>}
-            <button type="submit" className={sharedStyles.buttonPrimary} style={{width: '100%'}} disabled={isLoading}>
+            {/* --- LÍNEA CORREGIDA --- */}
+            <button 
+              type="submit" 
+              className={`${sharedStyles.button} ${sharedStyles.primary}`} 
+              style={{width: '100%'}} 
+              disabled={isLoading}
+            >
               {isLoading ? 'Creando...' : 'Crear Evento'}
             </button>
           </div>

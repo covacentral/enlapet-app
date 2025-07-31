@@ -1,19 +1,17 @@
 // frontend/src/PetEditModal.jsx
-// Versión: 3.4 - Refactorización a CSS Modules
-// TAREA: Se implementan los módulos de estilos local y compartido para el modal de edición.
+// Versión: 3.5 - Corrección Final de Estilos de Botón
+// TAREA: Se aplican las clases correctas del sistema de botones compartidos a todos los botones.
 
 import { useState, useEffect, useRef } from 'react';
 import { colombiaData, departments } from './utils/colombiaData';
 import { auth } from './firebase';
 import { Plus, Trash2 } from 'lucide-react';
 
-// 1. IMPORTAMOS los nuevos módulos de CSS
 import styles from './PetEditModal.module.css';
 import sharedStyles from './shared.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-// --- Sub-componente para el formulario de añadir vacuna ---
 const AddVaccineForm = ({ onSave, onCancel }) => {
   const [vaccine, setVaccine] = useState({ name: '', date: '', nextDate: '' });
   const handleChange = (e) => setVaccine({ ...vaccine, [e.target.name]: e.target.value });
@@ -41,14 +39,14 @@ const AddVaccineForm = ({ onSave, onCancel }) => {
         </div>
       </div>
       <div className={styles.addRecordFormActions}>
-        <button type="button" className={styles.cancel} onClick={onCancel}>Cancelar</button>
-        <button type="button" className={styles.save} onClick={handleSave}>Guardar</button>
+        {/* --- LÍNEAS CORREGIDAS --- */}
+        <button type="button" className={`${sharedStyles.button} ${sharedStyles.secondary}`} onClick={onCancel}>Cancelar</button>
+        <button type="button" className={`${sharedStyles.button} ${sharedStyles.primary}`} onClick={handleSave}>Guardar</button>
       </div>
     </div>
   );
 };
 
-// --- Sub-componente para el formulario de añadir historial ---
 const AddMedicalHistoryForm = ({ onSave, onCancel }) => {
   const [entry, setEntry] = useState({ title: '', date: '', description: '' });
   const handleChange = (e) => setEntry({ ...entry, [e.target.name]: e.target.value });
@@ -74,8 +72,9 @@ const AddMedicalHistoryForm = ({ onSave, onCancel }) => {
         <textarea name="description" rows="3" value={entry.description} onChange={handleChange}></textarea>
       </div>
       <div className={styles.addRecordFormActions}>
-        <button type="button" className={styles.cancel} onClick={onCancel}>Cancelar</button>
-        <button type="button" className={styles.save} onClick={handleSave}>Guardar</button>
+        {/* --- LÍNEAS CORREGIDAS --- */}
+        <button type="button" className={`${sharedStyles.button} ${sharedStyles.secondary}`} onClick={onCancel}>Cancelar</button>
+        <button type="button" className={`${sharedStyles.button} ${sharedStyles.primary}`} onClick={handleSave}>Guardar</button>
       </div>
     </div>
   );
@@ -253,7 +252,7 @@ function PetEditModal({ pet, user, onClose, onUpdate }) {
                 <>
                   <div className={sharedStyles.formGroup}>
                       <label>Foto de Perfil:</label>
-                      <button type="button" onClick={() => fileInputRef.current.click()} className={sharedStyles.buttonSecondary} disabled={isUploading}>
+                      <button type="button" onClick={() => fileInputRef.current.click()} className={`${sharedStyles.button} ${sharedStyles.secondary}`} disabled={isUploading}>
                           {isUploading ? 'Subiendo...' : 'Cambiar Foto'}
                       </button>
                       <input type="file" ref={fileInputRef} onChange={handleFileChange} style={{ display: 'none' }} accept="image/*" />
@@ -342,8 +341,15 @@ function PetEditModal({ pet, user, onClose, onUpdate }) {
             </div>
 
             <div className={sharedStyles.modalFooter}>
-              {message && <p className={sharedStyles.responseMessage}>{message}</p>}
-              <button type="submit" className={sharedStyles.buttonPrimary} style={{width:'100%'}} disabled={isLoading || isUploading}>{isLoading ? 'Guardando...' : 'Guardar Cambios'}</button>
+              {message && <p className={message.startsWith('Error') ? sharedStyles.responseMessageError : sharedStyles.responseMessage}>{message}</p>}
+              <button 
+                type="submit" 
+                className={`${sharedStyles.button} ${sharedStyles.primary}`} 
+                style={{width:'100%'}} 
+                disabled={isLoading || isUploading}
+              >
+                {isLoading ? 'Guardando...' : 'Guardar Cambios'}
+              </button>
             </div>
           </form>
         </div>
