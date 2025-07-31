@@ -1,6 +1,6 @@
 // frontend/src/FeedPage.jsx
-// Versión: 2.2 - Refactorización a CSS Modules y Corrección Final
-// TAREA: Se implementa el módulo de estilos local para corregir el botón "Ver más".
+// Versión: 2.3 - Corrección de Error Crítico de Build
+// TAREA: Se corrige la sintaxis de className en el h2 para permitir el despliegue.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { auth } from './firebase';
@@ -9,7 +9,6 @@ import LoadingComponent from './LoadingComponent';
 import CreatePostPrompt from './CreatePostPrompt';
 import CreatePostModal from './CreatePostModal';
 
-// 1. IMPORTAMOS los nuevos módulos de CSS
 import styles from './FeedPage.module.css';
 import sharedStyles from './shared.module.css';
 
@@ -151,9 +150,9 @@ function FeedPage({ userProfile, pets }) {
           ))}
         </div>
       ) : (
-        // 2. APLICAMOS las clases de los módulos de CSS
         <div className={sharedStyles.emptyStateMessage}>
-          <h2 className={styles.emptyStateMessage h2}>¡Bienvenido a EnlaPet!</h2>
+          {/* --- LÍNEA CORREGIDA --- */}
+          <h2 className={styles.emptyStateMessage}>¡Bienvenido a EnlaPet!</h2>
           <p>Tu feed de inicio está un poco vacío.</p>
           <p>Empieza a seguir a otras mascotas para no perderte sus momentos.</p>
         </div>
