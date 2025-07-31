@@ -1,0 +1,122 @@
+/* frontend/src/PetsTab.module.css */
+/* Estilos encapsulados para la pestaña de gestión de mascotas. */
+
+.container {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 30px;
+  }
+  
+  .addPetColumn {
+    background-color: var(--background-light);
+    padding: 25px;
+    border-radius: 15px;
+    align-self: start; /* Para que no se estire verticalmente */
+    border: 1px solid var(--border-color);
+  }
+  
+  .addPetColumn h2 {
+      margin-top: 0;
+      margin-bottom: 1.5rem;
+  }
+  
+  .petsListColumn h2 {
+      text-align: left;
+      margin-top: 0;
+      margin-bottom: 1.5rem;
+  }
+  
+  .list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .petCard {
+    display: flex;
+    background-color: var(--background-light);
+    border: 1px solid var(--border-color);
+    border-radius: 15px;
+    padding: 20px;
+    gap: 20px;
+    align-items: center;
+  }
+  
+  .imageContainer {
+    width: 120px;
+    flex-shrink: 0;
+  }
+  
+  .image {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 4px solid var(--border-color);
+  }
+  
+  .placeholder {
+    composes: image;
+    background-color: var(--background-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    color: var(--primary-accent);
+  }
+  
+  .info {
+    width: 100%;
+    text-align: left;
+  }
+  
+  .nameButton {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    color: white;
+  }
+  
+  .nameBreedWrapper {
+    margin-bottom: 8px;
+  }
+  
+  .nameBreedWrapper h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    line-height: 1.2;
+  }
+  
+  .breedSubtitle {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    font-weight: normal;
+  }
+  
+  .updatePrompt { 
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem; 
+    color: var(--warning-yellow);
+    padding: 4px 8px; 
+    background-color: rgba(245, 158, 11, 0.1);
+    border-radius: 6px; 
+  }
+  
+  .actions {
+    margin-top: 12px;
+  }
+  
+  /* --- Media Queries --- */
+  @media (max-width: 900px) {
+    .container {
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+  }
