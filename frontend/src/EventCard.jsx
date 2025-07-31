@@ -1,12 +1,11 @@
 // frontend/src/EventCard.jsx
-// Versión: 1.4 - Refactorización a CSS Modules
-// TAREA: Se implementan los módulos de estilos local y compartido.
+// Versión: 1.5 - Corrección de Estilos de Botón de Menú
+// TAREA: Se aplica la clase de botón correcta al menú desplegable.
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Calendar, Clock, MapPin, MoreVertical } from 'lucide-react';
 import ReportModal from './ReportModal';
 
-// 1. IMPORTAMOS los nuevos módulos de CSS
 import styles from './EventCard.module.css';
 import sharedStyles from './shared.module.css';
 
@@ -63,7 +62,6 @@ function EventCard({ event, onDetailsClick }) {
           onClose={() => setIsReportModalOpen(false)}
         />
       )}
-      {/* 2. APLICAMOS las clases de los módulos de CSS */}
       <div className={styles.card}>
         <div className={styles.imageWrapper}>
           <img src={event.coverImage} alt={event.name} className={styles.image} />
@@ -78,7 +76,8 @@ function EventCard({ event, onDetailsClick }) {
               </button>
               {isMenuOpen && (
                 <div className={styles.menuDropdown}>
-                  <button onClick={() => { setIsReportModalOpen(true); setIsMenuOpen(false); }}>Reportar evento</button>
+                  {/* --- LÍNEA CORREGIDA --- */}
+                  <button className={styles.menuButton} onClick={() => { setIsReportModalOpen(true); setIsMenuOpen(false); }}>Reportar evento</button>
                 </div>
               )}
             </div>

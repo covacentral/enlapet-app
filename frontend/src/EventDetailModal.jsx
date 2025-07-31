@@ -1,6 +1,6 @@
 // frontend/src/EventDetailModal.jsx
-// Versión: 1.4 - Refactorización a CSS Modules
-// TAREA: Se implementan los módulos de estilos local y compartido.
+// Versión: 1.5 - Corrección de Imagen Desbordada
+// TAREA: Se aplica la clase .imagePreview para contener la imagen en modo edición.
 
 import React, { useState, useEffect, useRef } from 'react';
 import { auth } from './firebase';
@@ -8,7 +8,6 @@ import { X, MapPin, Calendar, Clock, Edit, AlertCircle, MoreVertical, UploadClou
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
 import ReportModal from './ReportModal';
 
-// 1. IMPORTAMOS los nuevos módulos de CSS
 import styles from './EventDetailModal.module.css';
 import sharedStyles from './shared.module.css';
 
@@ -195,8 +194,8 @@ function EventDetailModal({ event, user, onClose, onUpdate }) {
               <button onClick={() => setIsMenuOpen(!isMenuOpen)} className={sharedStyles.closeButton}><MoreVertical size={20} /></button>
               {isMenuOpen && (
                 <div className={styles.menuDropdown}>
-                  <button onClick={() => { setIsReportModalOpen(true); setIsMenuOpen(false); }}>Reportar evento</button>
-                  {isOrganizer && event.status !== 'cancelled' && event.status !== 'finished' && <button onClick={() => handleStatusChange('cancelled')} style={{color: 'var(--error-red)'}}>Cancelar Evento</button>}
+                  <button className={styles.menuButton} onClick={() => { setIsReportModalOpen(true); setIsMenuOpen(false); }}>Reportar evento</button>
+                  {isOrganizer && event.status !== 'cancelled' && event.status !== 'finished' && <button className={styles.menuButton} onClick={() => handleStatusChange('cancelled')} style={{color: 'var(--error-red)'}}>Cancelar Evento</button>}
                 </div>
               )}
             </div>
@@ -206,7 +205,14 @@ function EventDetailModal({ event, user, onClose, onUpdate }) {
         
         {isEditMode ? (
           <form onSubmit={handleDetailsUpdate} className={sharedStyles.form}>
-            <div className={sharedStyles.formGroup}><label>Imagen de Portada</label><div className={styles.imageUploadArea} onClick={() => fileInputRef.current.click()}><img src={previewImage} alt="Previsualización" className={styles.imagePreview} /></div><input type="file" ref={fileInputRef} onChange={handleImageChange} style={{ display: 'none' }} accept="image/*" /></div>
+            {/* --- LÍNEA CORREGIDA --- */}
+            <div className={sharedStyles.formGroup}>
+              <label>Imagen de Portada</label>
+              <div className={styles.imageUploadArea} onClick={() => fileInputRef.current.click()}>
+                <img src={previewImage} alt="Previsualización" className={styles.imagePreview} />
+              </div>
+              <input type="file" ref={fileInputRef} onChange={handleImageChange} style={{ display: 'none' }} accept="image/*" />
+            </div>
             <div className={sharedStyles.formGroup}><label>Nombre</label><input type="text" name="name" value={formData.name} onChange={handleChange} required/></div>
             <div className={sharedStyles.formGroup}><label>Categoría</label><select name="category" value={formData.category} onChange={handleChange} required>{eventCategories.map(cat => <option key={cat.id} value={cat.key}>{cat.name}</option>)}</select></div>
             <div className={sharedStyles.formGroup}><label>Descripción</label><textarea name="description" rows="3" value={formData.description} onChange={handleChange} required></textarea></div>

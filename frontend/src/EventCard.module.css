@@ -40,7 +40,7 @@
   .planned { background-color: rgba(52, 152, 219, 0.9); }
   .active { background-color: rgba(46, 204, 113, 0.9); }
   .finished { background-color: rgba(149, 165, 166, 0.9); }
-  .cancelled { background-color: rgba(225, 29, 72, 0.9); } /* Usando --error-red */
+  .cancelled { background-color: rgba(225, 29, 72, 0.9); }
   
   .content {
     padding: 16px;
@@ -86,5 +86,40 @@
     gap: 8px;
   }
   .button {
-    margin-top: auto; /* Empuja el botón al final del contenedor flex */
+    margin-top: auto;
+  }
+  
+  /* --- ESTILOS PARA MENÚ DESPLEGABLE --- */
+  .menuContainer {
+      position: relative;
+  }
+    
+  .menuDropdown {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      background-color: var(--background-dark);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 8px;
+      width: 180px;
+      z-index: 10;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  }
+  
+  /* --- [NUEVO] Botón específico para el menú --- */
+  .menuButton {
+      background: none;
+      border: none;
+      color: var(--text-primary);
+      padding: 10px;
+      width: 100%;
+      text-align: left;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+  }
+    
+  .menuButton:hover {
+      background-color: var(--border-color);
   }
