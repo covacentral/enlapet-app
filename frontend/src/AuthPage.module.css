@@ -88,17 +88,20 @@
     color: var(--text-secondary);
 }
 
-.passwordGroup {
+/* --- [NUEVO] Contenedor para el input y el botón --- */
+.passwordInputWrapper {
     position: relative;
+    width: 100%;
 }
 
-.passwordGroup input {
-    padding-right: 50px !important;
+.passwordInputWrapper input {
+    padding-right: 50px !important; /* Asegura espacio para el botón */
 }
 
+/* --- [CORREGIDO] Posicionamiento del botón --- */
 .passwordToggleButton {
     position: absolute;
-    top: 50%; /* Se centra respecto al div */
+    top: 50%; /* Ahora se centra respecto al wrapper del input */
     right: 10px;
     transform: translateY(-50%);
     background: none;

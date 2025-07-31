@@ -1,0 +1,7 @@
+/* frontend/src/ProfileLayout.module.css */
+/* Estilos para el contenedor principal del layout del perfil. */
+
+.container {
+    /* Añadimos un padding en la parte inferior igual a la altura de la barra de navegación (60px) más un margen de seguridad (10px). */
+    padding-bottom: 70px;
+  }

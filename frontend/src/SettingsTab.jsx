@@ -1,12 +1,11 @@
 // frontend/src/SettingsTab.jsx
-// Versión: 2.5 - Refactorización a CSS Modules
-// TAREA: Se implementan los módulos de estilos local y compartido para la página de Ajustes.
+// Versión: 2.6 - Corrección Final de Estilos de Botón
+// TAREA: Se aplican las clases correctas del sistema de botones compartidos a todos los botones.
 
 import { useState, useEffect, useRef } from 'react';
 import { auth } from './firebase';
 import { signOut } from "firebase/auth";
 
-// 1. IMPORTAMOS los nuevos módulos de CSS
 import styles from './SettingsTab.module.css';
 import sharedStyles from './shared.module.css';
 
@@ -59,7 +58,6 @@ function SettingsTab({ user, userProfile, onProfileUpdate }) {
       }
     }
   };
-
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
@@ -122,7 +120,7 @@ function SettingsTab({ user, userProfile, onProfileUpdate }) {
       <div className={styles.header}>
         <h2>Perfil</h2>
         {!isEditMode && (
-          <button onClick={() => setIsEditMode(true)} className={`${sharedStyles.button} ${sharedStyles.buttonPrimary}`}>
+          <button onClick={() => setIsEditMode(true)} className={`${sharedStyles.button} ${sharedStyles.primary}`}>
             Editar Perfil
           </button>
         )}
@@ -156,10 +154,10 @@ function SettingsTab({ user, userProfile, onProfileUpdate }) {
             <small className={styles.charCounter}>{formData.bio.length} / 70</small>
           </div>
           <div className={styles.formActions}>
-            <button type="submit" className={`${sharedStyles.button} ${sharedStyles.buttonPrimary}`} disabled={isUpdating}>
+            <button type="submit" className={`${sharedStyles.button} ${sharedStyles.primary}`} disabled={isUpdating}>
               {isUpdating ? 'Guardando...' : 'Guardar Cambios'}
             </button>
-            <button type="button" className={`${sharedStyles.button} ${sharedStyles.buttonSecondary}`} onClick={handleCancelEdit} disabled={isUpdating}>
+            <button type="button" className={`${sharedStyles.button} ${sharedStyles.secondary}`} onClick={handleCancelEdit} disabled={isUpdating}>
               Cancelar
             </button>
           </div>
@@ -171,7 +169,7 @@ function SettingsTab({ user, userProfile, onProfileUpdate }) {
           <div className={styles.infoItem}><strong>Biografía:</strong><p>{userProfile?.bio || 'Sin biografía.'}</p></div>
           <div className={styles.pictureSection}>
             <p>Tu foto de perfil actual se muestra en la cabecera principal.</p>
-            <button onClick={() => fileInputRef.current.click()} className={sharedStyles.buttonSecondary} disabled={isUploading}>
+            <button onClick={() => fileInputRef.current.click()} className={`${sharedStyles.button} ${sharedStyles.secondary}`} disabled={isUploading}>
               {isUploading ? 'Subiendo...' : 'Cambiar Foto de Perfil'}
             </button>
             <input type="file" ref={fileInputRef} onChange={handleFileChange} style={{ display: 'none' }} accept="image/*" />
@@ -180,7 +178,7 @@ function SettingsTab({ user, userProfile, onProfileUpdate }) {
       )}
 
       <div className={styles.logoutSection}>
-        <button onClick={handleLogout} className={styles.logoutButton}>
+        <button onClick={handleLogout} className={`${sharedStyles.button} ${sharedStyles.danger}`}>
             Cerrar Sesión
         </button>
       </div>

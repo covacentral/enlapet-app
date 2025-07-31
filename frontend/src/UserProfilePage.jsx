@@ -1,6 +1,6 @@
 // frontend/src/UserProfilePage.jsx
-// Versión: 4.2 - Refactorización a CSS Modules
-// TAREA: Se implementa el módulo de estilos local para la página de perfil de usuario.
+// Versión: 4.3 - Corrección de Estilos de Botón
+// TAREA: Se corrige la clase del botón "Editar Perfil" para que use el sistema compartido.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
@@ -8,13 +8,11 @@ import { auth } from './firebase';
 import LoadingComponent from './LoadingComponent';
 import PostCard from './PostCard';
 
-// 1. IMPORTAMOS los nuevos módulos de CSS
 import styles from './UserProfilePage.module.css';
 import sharedStyles from './shared.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-// --- Componente interno UserPetCard (ahora usa CSS Modules) ---
 const UserPetCard = ({ pet }) => (
   <Link to={`/dashboard/pet/${pet.id}`} className={styles.petCard}>
     <div className={styles.petCardImageWrapper}>
@@ -177,12 +175,13 @@ function UserProfilePage() {
           </div>
           <div className={styles.actions}>
             {isOwnProfile ? (
-              <Link to="/dashboard/settings" className={`${sharedStyles.button} ${sharedStyles.buttonPrimary}`}>
+              // --- LÍNEA CORREGIDA ---
+              <Link to="/dashboard/settings" className={`${sharedStyles.button} ${sharedStyles.primary}`}>
                 Editar Perfil
               </Link>
             ) : (
               <button 
-                className={`${sharedStyles.button} ${isFollowing ? sharedStyles.buttonSecondary : sharedStyles.buttonPrimary}`} 
+                className={`${sharedStyles.button} ${isFollowing ? sharedStyles.secondary : sharedStyles.primary}`} 
                 disabled={followLoading}
                 onClick={handleFollowToggle}
               >
