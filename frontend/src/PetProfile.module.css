@@ -1,0 +1,124 @@
+/* frontend/src/PetProfile.module.css */
+/* Estilos encapsulados para la página de perfil público (vista NFC). */
+
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 20px;
+    box-sizing: border-box;
+  }
+  
+  .card {
+    background-color: var(--background-light);
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    text-align: center;
+    max-width: 500px;
+    width: 100%;
+    position: relative;
+    border: 1px solid var(--border-color);
+  }
+  
+  .picture {
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 6px solid var(--border-color);
+    margin-bottom: 20px;
+  }
+  
+  .placeholder {
+    composes: picture;
+    background-color: var(--background-dark);
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 5rem;
+  }
+  
+  .name {
+    font-size: 2.5rem;
+    margin: 0;
+    color: var(--brand-cream);
+  }
+  
+  .breed {
+    font-size: 1.2rem;
+    margin-top: 5px;
+    color: var(--text-secondary);
+  }
+  
+  .ownerInfo {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+  }
+  
+  .ownerInfo h2 {
+    font-size: 1.6rem;
+    color: var(--brand-cream);
+  }
+  
+  .ownerInfo p {
+    font-size: 1.1rem;
+    color: var(--text-primary);
+  }
+  
+  .footer {
+    margin-top: 30px;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+  }
+  
+  .errorContainer {
+    composes: card;
+    background-color: #4a3a3a;
+    border: 1px solid var(--error-red);
+  }
+  
+  .whatsappButton {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background-color: var(--whatsapp-green);
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 25px;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 1.1rem;
+    margin-top: 20px;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  }
+  
+  .whatsappButton:hover {
+    background-color: #1DA851;
+    transform: translateY(-2px);
+  }
+  
+  .backButton {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      background-color: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 8px 16px;
+      color: var(--text-primary);
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 0.9rem;
+      transition: background-color 0.2s;
+      z-index: 10;
+  }
+  
+  .backButton:hover {
+      background-color: rgba(0, 0, 0, 0.7);
+  }

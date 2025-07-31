@@ -1,23 +1,24 @@
 // frontend/src/UserProfilePage.jsx
-// Versión: 4.1 - Botón de Editar Perfil
-// AÑADIDO: Se muestra un botón "Editar Perfil" en el perfil del propio usuario,
-// enlazando a la página de ajustes.
+// Versión: 4.3 - Corrección de Estilos de Botón
+// TAREA: Se corrige la clase del botón "Editar Perfil" para que use el sistema compartido.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { auth } from './firebase';
 import LoadingComponent from './LoadingComponent';
 import PostCard from './PostCard';
-import { Users } from 'lucide-react';
+
+import styles from './UserProfilePage.module.css';
+import sharedStyles from './shared.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const UserPetCard = ({ pet }) => (
-  <Link to={`/dashboard/pet/${pet.id}`} className="user-pet-card">
-    <div className="user-pet-card-image-wrapper">
+  <Link to={`/dashboard/pet/${pet.id}`} className={styles.petCard}>
+    <div className={styles.petCardImageWrapper}>
       <img src={pet.petPictureUrl || 'https://placehold.co/150x150/E2E8F0/4A5568?text=🐾'} alt={pet.name} />
     </div>
-    <div className="user-pet-card-info">
+    <div className={styles.petCardInfo}>
       <strong>{pet.name}</strong>
       <span>{pet.breed}</span>
     </div>
@@ -142,50 +143,45 @@ function UserProfilePage() {
     const isCurrentlyLiked = !!likedStatuses[postId];
     setLikedStatuses(prev => ({ ...prev, [postId]: !isCurrentlyLiked }));
     setPosts(prev => prev.map(p => p.id === postId ? { ...p, likesCount: p.likesCount + (isCurrentlyLiked ? -1 : 1) } : p));
-    // Lógica de API en segundo plano...
   };
   const handleSaveToggle = async (postId) => {
     const isCurrentlySaved = !!savedStatuses[postId];
     setSavedStatuses(prev => ({ ...prev, [postId]: !isCurrentlySaved }));
-    // Lógica de API en segundo plano...
   };
   const handleCommentAdded = (postId) => setPosts(prev => prev.map(p => p.id === postId ? { ...p, commentsCount: p.commentsCount + 1 } : p));
 
 
   if (isLoading) return <LoadingComponent text="Cargando perfil..." />;
-  if (error) return <div className="error-message" style={{padding: '2rem'}}>{error}</div>;
-  if (!userProfile) return <div className="empty-state-message">No se encontró el perfil del usuario.</div>;
+  if (error) return <div className={sharedStyles.responseMessageError} style={{padding: '2rem'}}>{error}</div>;
+  if (!userProfile) return <p className={sharedStyles.emptyStateMessage}>No se encontró el perfil del usuario.</p>;
 
   return (
-    <>
-      <header className="pet-social-profile-container">
-        <div className="profile-cover-photo"></div>
-        <div className="social-profile-header">
-          <div className="social-profile-details">
-            <div className="social-profile-picture-wrapper">
+    <div className={styles.pageContainer}>
+      <header className={styles.profileHeader}>
+        <div className={styles.coverPhoto}></div>
+        <div className={styles.headerContent}>
+          <div className={styles.details}>
+            <div className={styles.pictureWrapper}>
               <img 
                 src={userProfile.profilePictureUrl || 'https://placehold.co/300x300/9B89B3/FFFFFF?text=U'} 
                 alt={userProfile.name} 
-                className="social-profile-picture"
+                className={styles.picture}
               />
             </div>
-            <div className="social-profile-info">
+            <div className={styles.info}>
               <h1>{userProfile.name}</h1>
               <p>{userProfile.bio}</p>
-              <div className="user-profile-stats" style={{marginTop: '10px'}}>
-                {/* Stats omitidos por brevedad, pero deberían ir aquí */}
-              </div>
             </div>
           </div>
-          <div className="social-profile-actions">
-            {/* --- LÓGICA DE BOTÓN CORREGIDA --- */}
+          <div className={styles.actions}>
             {isOwnProfile ? (
-              <Link to="/dashboard/settings" className="profile-action-button follow">
+              // --- LÍNEA CORREGIDA ---
+              <Link to="/dashboard/settings" className={`${sharedStyles.button} ${sharedStyles.primary}`}>
                 Editar Perfil
               </Link>
             ) : (
               <button 
-                className={`profile-action-button ${isFollowing ? 'following' : 'follow'}`} 
+                className={`${sharedStyles.button} ${isFollowing ? sharedStyles.secondary : sharedStyles.primary}`} 
                 disabled={followLoading}
                 onClick={handleFollowToggle}
               >
@@ -196,22 +192,22 @@ function UserProfilePage() {
         </div>
       </header>
       
-      <div className="modal-tabs" style={{margin: '0', borderRadius: '0', borderTop: '1px solid var(--border-color)'}}>
-        <button type="button" className={`modal-tab-button ${activeTab === 'pets' ? 'active' : ''}`} onClick={() => setActiveTab('pets')}>
+      <div className={sharedStyles.modalTabs} style={{borderRadius: 0}}>
+        <button type="button" className={`${sharedStyles.modalTabButton} ${activeTab === 'pets' ? sharedStyles.active : ''}`} onClick={() => setActiveTab('pets')}>
           Mascotas
         </button>
-        <button type="button" className={`modal-tab-button ${activeTab === 'posts' ? 'active' : ''}`} onClick={() => setActiveTab('posts')}>
+        <button type="button" className={`${sharedStyles.modalTabButton} ${activeTab === 'posts' ? sharedStyles.active : ''}`} onClick={() => setActiveTab('posts')}>
           Publicaciones
         </button>
       </div>
 
-      <main className="profile-content">
+      <main className={styles.profileContent}>
         {activeTab === 'pets' && (
-          <div className="user-pets-grid">
+          <div className={styles.petsGrid}>
             {pets.length > 0 ? (
               pets.map(pet => <UserPetCard key={pet.id} pet={pet} />)
             ) : (
-              <p className="empty-state-message">Este usuario aún no ha registrado ninguna mascota.</p>
+              <p className={sharedStyles.emptyStateMessage}>Este usuario aún no ha registrado ninguna mascota.</p>
             )}
           </div>
         )}
@@ -230,12 +226,12 @@ function UserProfilePage() {
                   />
                 ))
              ) : (
-                <p className="empty-state-message">Este usuario aún no ha hecho ninguna publicación.</p>
+                <p className={sharedStyles.emptyStateMessage}>Este usuario aún no ha hecho ninguna publicación.</p>
              )}
           </div>
         )}
       </main>
-    </>
+    </div>
   );
 }
 

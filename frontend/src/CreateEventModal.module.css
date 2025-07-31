@@ -1,0 +1,93 @@
+/* frontend/src/CreateEventModal.module.css */
+/* Estilos específicos para el modal de "Crear Evento". */
+
+.content {
+    background-color: var(--background-light);
+    border: 1px solid var(--border-color);
+    border-radius: 15px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    padding: 24px;
+  }
+  
+  .imageUploadArea {
+    width: 100%;
+    height: 250px;
+    background-color: var(--background-dark);
+    border-radius: 8px;
+    border: 2px dashed var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    overflow: hidden;
+  }
+  
+  .imageUploadArea:hover {
+    border-color: var(--primary-accent);
+  }
+  
+  .uploadPromptContent {
+    text-align: center;
+    color: var(--text-secondary);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .imagePreview {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  .formRow {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+  }
+  
+  .formRow > div {
+    flex: 1;
+    min-width: 200px;
+  }
+  
+  .miniMapWrapper {
+    width: 100%;
+    height: 350px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+  }
+  
+  .miniMapWrapper > div {
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+  }
+  
+  .mapPrompt {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    text-align: center;
+    margin-top: 8px;
+  }
+  
+  .mapPromptSuccess {
+    composes: mapPrompt;
+    color: var(--success-green);
+    font-weight: bold;
+  }

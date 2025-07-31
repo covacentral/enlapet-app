@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import './App.css';
+// 1. ELIMINAMOS la dependencia del monolito App.css
+// import './App.css'; 
 
-// --- Base de datos de frases sobre animales ---
+// 2. IMPORTAMOS nuestro nuevo módulo de estilos encapsulados
+import styles from './LoadingComponent.module.css';
+
+// --- Base de datos de frases sobre animales (sin cambios) ---
 const animalFacts = [
   "Laika fue el primer ser vivo en orbitar la Tierra en 1957.",
   "Hachiko, un perro Akita, esperó a su dueño en una estación de tren por 9 años tras su muerte.",
@@ -58,19 +62,19 @@ const animalFacts = [
 function LoadingComponent({ text = "Cargando..." }) {
   const [fact, setFact] = useState('');
 
-  // Selecciona una frase al azar solo cuando el componente se monta por primera vez
   useEffect(() => {
     const randomIndex = Math.floor(Math.random() * animalFacts.length);
     setFact(animalFacts[randomIndex]);
   }, []);
 
   return (
-    <div className="loading-overlay">
-      <div className="loading-content">
-        <div className="loading-spinner"></div>
-        <p className="loading-fact">{fact}</p>
+    // 3. ACTUALIZAMOS los className para que apunten al objeto 'styles' del módulo
+    <div className={styles.overlay}>
+      <div className={styles.content}>
+        <div className={styles.spinner}></div>
+        <p className={styles.fact}>{fact}</p>
       </div>
-      <p className="loading-text">{text}</p>
+      <p className={styles.text}>{text}</p>
     </div>
   );
 }

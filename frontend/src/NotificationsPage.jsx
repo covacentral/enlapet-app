@@ -1,6 +1,6 @@
 // frontend/src/NotificationsPage.jsx
-// Versión 2.0 - Notificaciones Enriquecidas y Enlazadas
-// IMPLEMENTA: Muestra de texto contextual y vista previa. Enlaza al modal del post.
+// Versión 2.1 - Refactorización a CSS Modules
+// TAREA: Se implementan los módulos de estilos local y compartido.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
@@ -8,6 +8,10 @@ import { auth } from './firebase';
 import LoadingComponent from './LoadingComponent';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
+
+// 1. IMPORTAMOS los nuevos módulos de CSS
+import styles from './NotificationsPage.module.css';
+import sharedStyles from './shared.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -29,7 +33,6 @@ function NotificationsPage({ onMarkAsRead }) {
       const data = await response.json();
       setNotifications(data);
       
-      // Notificar al layout que las notificaciones se han visto
       onMarkAsRead();
 
     } catch (err) {
@@ -43,13 +46,10 @@ function NotificationsPage({ onMarkAsRead }) {
     fetchNotifications();
   }, [fetchNotifications]);
 
-  // --- LÓGICA DE NOTIFICACIONES ACTUALIZADA ---
   const getNotificationLinkAndText = (notification) => {
     const { type, entityId, entityContext } = notification;
     let text = '';
     let link = '/dashboard';
-
-    // Usamos el nombre del autor del post (si existe) para un texto más rico.
     const targetName = entityContext?.authorName ? `el momento de ${entityContext.authorName}` : 'tu momento';
 
     switch (type) {
@@ -72,37 +72,37 @@ function NotificationsPage({ onMarkAsRead }) {
   };
 
   if (isLoading) return <LoadingComponent text="Cargando tus notificaciones..." />;
-  if (error) return <p className="response-message error">{error}</p>;
+  if (error) return <p className={sharedStyles.responseMessageError}>{error}</p>;
 
   return (
-    <div className="notifications-page">
-      <h2 className="tab-title">Notificaciones</h2>
+    // 2. APLICAMOS las clases de los módulos de CSS
+    <div className={styles.page}>
+      <h2 className={sharedStyles.tabTitle}>Notificaciones</h2>
       {notifications.length > 0 ? (
-        <div className="notifications-list">
+        <div className={styles.list}>
           {notifications.map(notif => {
             const { text, link } = getNotificationLinkAndText(notif);
             const timeAgo = formatDistanceToNow(new Date(notif.createdAt), { addSuffix: true, locale: es });
             return (
-              <Link to={link} key={notif.id} className={`notification-item ${!notif.read ? 'unread' : ''}`}>
-                <img src={notif.actorProfilePic || 'https://placehold.co/100x100/E2E8F0/4A5568?text=:)'} alt={notif.actorName} className="notification-actor-pic" />
-                <div className="notification-content">
-                  <p className="notification-text">
+              <Link to={link} key={notif.id} className={`${styles.item} ${!notif.read ? styles.unread : ''}`}>
+                <img src={notif.actorProfilePic || 'https://placehold.co/100x100/E2E8F0/4A5568?text=:)'} alt={notif.actorName} className={styles.actorPic} />
+                <div className={styles.content}>
+                  <p className={styles.text}>
                     <strong>{notif.actorName}</strong> {text}
                   </p>
-                  {/* --- VISTA PREVIA DEL CONTENIDO --- */}
                   {notif.entityContext?.preview && (
-                    <p className="notification-preview">
+                    <p className={styles.preview}>
                       "{notif.entityContext.preview}..."
                     </p>
                   )}
-                  <p className="notification-time">{timeAgo}</p>
+                  <p className={styles.time}>{timeAgo}</p>
                 </div>
               </Link>
             );
           })}
         </div>
       ) : (
-        <p className="empty-state-message">No tienes notificaciones nuevas.</p>
+        <p className={sharedStyles.emptyStateMessage}>No tienes notificaciones nuevas.</p>
       )}
     </div>
   );

@@ -1,20 +1,24 @@
 // frontend/src/CreatePostPrompt.jsx
-// Versión: 1.1 - Texto de Invitación Mejorado
-// Se actualiza el texto para que sea más significativo y alineado con la marca.
+// Versión: 1.2 - Refactorización a CSS Modules
+// TAREA: Se implementa el módulo de estilos local para restaurar la apariencia del componente.
 
 import React from 'react';
+
+// 1. IMPORTAMOS el nuevo módulo de estilos
+import styles from './CreatePostPrompt.module.css';
 
 function CreatePostPrompt({ userProfile, onClick }) {
   if (!userProfile) return null;
 
   return (
-    <div className="create-post-prompt-container" onClick={onClick}>
+    // 2. APLICAMOS las clases desde el objeto 'styles'
+    <div className={styles.container} onClick={onClick}>
       <img 
         src={userProfile.profilePictureUrl || 'https://placehold.co/100x100/E2E8F0/4A5568?text=:)'} 
         alt="Tu perfil" 
-        className="prompt-profile-pic"
+        className={styles.profilePic}
       />
-      <div className="prompt-input-fake">
+      <div className={styles.fakeInput}>
         Crea un nuevo momento para la comunidad...
       </div>
     </div>

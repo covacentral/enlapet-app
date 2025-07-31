@@ -1,11 +1,14 @@
 // frontend/src/ReportModal.jsx
-// Versión: 1.2 - Robustez y Claridad Mejoradas
-// MEJORA: Se ajusta el texto para que sea más claro y se manejan mejor los casos
-// donde las props no se reciben, evitando comportamientos inesperados.
+// Versión: 1.3 - Refactorización a CSS Modules
+// TAREA: Se implementan los módulos de estilos local y compartido.
 
 import React, { useState } from 'react';
 import { auth } from './firebase';
 import { X } from 'lucide-react';
+
+// 1. IMPORTAMOS los nuevos módulos de CSS
+import styles from './ReportModal.module.css';
+import sharedStyles from './shared.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -24,7 +27,6 @@ function ReportModal({ contentId, contentType, contentCreatorName, onClose }) {
   const [error, setError] = useState('');
 
   const handleSubmitReport = async () => {
-    // [MEJORA] Verificación más robusta al inicio
     if (!selectedReason || !contentId || !contentType) {
       setError('Error: No se pudo identificar el contenido a reportar. Inténtalo de nuevo.');
       return;
@@ -65,52 +67,52 @@ function ReportModal({ contentId, contentType, contentCreatorName, onClose }) {
   const contentTypeName = contentType === 'post' ? 'publicación' : 'evento';
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="report-modal-content" onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
+    <div className={sharedStyles.modalBackdrop} onClick={onClose}>
+      <div className={styles.content} onClick={e => e.stopPropagation()}>
+        <div className={sharedStyles.modalHeader}>
           <h2>{step === 1 ? `Reportar ${contentTypeName}` : 'Reporte Enviado'}</h2>
-          <button onClick={onClose} className="close-button">
+          <button onClick={onClose} className={sharedStyles.closeButton}>
             <X size={24} />
           </button>
         </div>
         
         {step === 1 ? (
           <>
-            <div className="modal-body">
-              {/* [MEJORA] Texto más claro y dinámico */}
-              <p className="report-description">
+            <div className={styles.body}>
+              <p className={styles.description}>
                 Ayúdanos a entender el problema. ¿Por qué estás reportando est{contentType === 'post' ? 'a' : 'e'} {contentTypeName} 
                 {contentCreatorName ? ` de ` : ''}
                 <strong>{contentCreatorName || ''}</strong>?
               </p>
-              <div className="report-reasons-list">
+              <div className={styles.reasonsList}>
                 {REPORT_REASONS.map(reason => (
                   <button 
                     key={reason}
-                    className={`reason-button ${selectedReason === reason ? 'selected' : ''}`}
+                    className={`${styles.reasonButton} ${selectedReason === reason ? styles.selected : ''}`}
                     onClick={() => setSelectedReason(reason)}
                   >
                     {reason}
                   </button>
                 ))}
               </div>
-              {error && <p className="response-message error">{error}</p>}
+              {error && <p className={sharedStyles.responseMessageError}>{error}</p>}
             </div>
-            <div className="modal-footer">
+            <div className={sharedStyles.modalFooter}>
               <button 
-                className="submit-report-button" 
+                className={`${sharedStyles.button} ${sharedStyles.primary}`} 
                 onClick={handleSubmitReport}
                 disabled={isLoading || !selectedReason}
+                style={{width: '100%'}}
               >
                 {isLoading ? 'Enviando...' : 'Enviar Reporte'}
               </button>
             </div>
           </>
         ) : (
-          <div className="modal-body confirmation-view">
+          <div className={styles.confirmationView}>
             <h3>¡Gracias por tu ayuda!</h3>
             <p>Hemos recibido tu reporte y nuestro equipo lo revisará pronto. Tu contribución es muy importante para mantener a EnlaPet como una comunidad segura y amigable.</p>
-            <button className="submit-report-button" onClick={onClose}>Entendido</button>
+            <button className={`${sharedStyles.button} ${sharedStyles.primary}`} onClick={onClose}>Entendido</button>
           </div>
         )}
       </div>

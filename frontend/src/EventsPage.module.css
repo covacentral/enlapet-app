@@ -1,0 +1,44 @@
+/* frontend/src/EventsPage.module.css */
+/* Estilos restaurados y encapsulados para la página de Eventos. */
+
+.container {
+    background-color: var(--background-light);
+    padding: 25px;
+    border-radius: 15px;
+    border: 1px solid var(--border-color);
+  }
+  
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 15px;
+  }
+  
+  .section {
+      margin-top: 2rem;
+  }
+  
+  .section h3 {
+    text-align: left;
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+  }
+  
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+  }
+  
+  .emptyMessageSmall {
+    text-align: center;
+    color: var(--text-secondary);
+    padding: 2rem 1rem;
+    font-size: 1rem;
+  }

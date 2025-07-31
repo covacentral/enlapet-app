@@ -1,0 +1,16 @@
+/* frontend/src/PostDetailModal.module.css */
+/* Estilos para el contenedor del modal de detalle de post. */
+
+.wrapper {
+    width: 95vw; /* Ocupa el 95% del ancho en móviles */
+    max-width: 550px; /* Límite de ancho para escritorio */
+    margin: auto;
+  }
+  
+  .errorMessage {
+      background-color: var(--background-light);
+      padding: 2rem;
+      border-radius: 15px;
+      border: 1px solid var(--border-color);
+      color: white;
+  }

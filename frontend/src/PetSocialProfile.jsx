@@ -1,7 +1,6 @@
 // frontend/src/PetSocialProfile.jsx
-// Versión: 3.2 - Limpieza de UI
-// ELIMINADO: Se quita el botón flotante de creación de posts, ya que ahora
-// esta función está centralizada en la barra de navegación inferior.
+// Versión: 3.3 - Refactorización a CSS Modules
+// TAREA: Se implementa el módulo de estilos local para la página de perfil social de la mascota.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
@@ -10,6 +9,9 @@ import LoadingComponent from './LoadingComponent';
 import CreatePostModal from './CreatePostModal';
 import PetEditModal from './PetEditModal';
 import PostCard from './PostCard';
+
+// 1. IMPORTAMOS el nuevo módulo de estilos
+import styles from './PetSocialProfile.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -66,7 +68,7 @@ function PetSocialProfile({ user, userProfile, pets, onUpdate }) {
         } finally {
             setIsLoading(false);
         }
-    }, [petId, user]);
+    }, [petId, user, petProfile]);
 
     useEffect(() => {
         fetchData();
@@ -133,28 +135,29 @@ function PetSocialProfile({ user, userProfile, pets, onUpdate }) {
 
     return (
         <>
-            <header className="pet-social-profile-container">
-                <div className="profile-cover-photo"></div>
-                <div className="social-profile-header">
-                    <div className="social-profile-details">
-                        <div className="social-profile-picture-wrapper">
+            {/* 2. APLICAMOS las clases desde el objeto 'styles' */}
+            <header className={styles.container}>
+                <div className={styles.coverPhoto}></div>
+                <div className={styles.header}>
+                    <div className={styles.details}>
+                        <div className={styles.pictureWrapper}>
                             <img 
                                 src={petProfile.petPictureUrl || 'https://placehold.co/300x300/E2E8F0/4A5568?text=🐾'} 
                                 alt={petProfile.name} 
-                                className="social-profile-picture"
+                                className={styles.picture}
                             />
                         </div>
-                        <div className="social-profile-info">
+                        <div className={styles.info}>
                             <h1>{petProfile.name}</h1>
                             <p>{petProfile.breed}</p>
                         </div>
                     </div>
-                     <div className="social-profile-actions">
+                     <div className={styles.actions}>
                         {isOwner ? (
-                            <button onClick={() => setIsEditModalOpen(true)} className="profile-action-button follow">Editar Perfil</button> 
+                            <button onClick={() => setIsEditModalOpen(true)} className={styles.follow}>Editar Perfil</button> 
                         ) : (
                             <button 
-                                className={`profile-action-button ${isFollowing ? 'following' : 'follow'}`} 
+                                className={isFollowing ? styles.following : styles.follow} 
                                 onClick={handleFollowToggle} 
                                 disabled={followLoading}
                             >
@@ -165,7 +168,7 @@ function PetSocialProfile({ user, userProfile, pets, onUpdate }) {
                 </div>
             </header>
 
-            <main className="profile-timeline">
+            <main className={styles.timeline}>
                 {posts.length > 0 ? (
                     posts.map(post => (
                         <PostCard 
@@ -179,7 +182,7 @@ function PetSocialProfile({ user, userProfile, pets, onUpdate }) {
                         />
                     ))
                 ) : (
-                    <p className="no-posts-message" style={{padding: '4rem 1rem'}}>
+                    <p className={styles.noPostsMessage}>
                         ¡{petProfile.name} todavía no ha compartido ningún momento!
                     </p>
                 )}
