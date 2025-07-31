@@ -1,0 +1,63 @@
+/* frontend/src/LoadingComponent.module.css */
+/* Estilos encapsulados exclusivamente para el componente de carga. */
+
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: var(--background-dark);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    padding: 20px;
+    box-sizing: border-box;
+  }
+  
+  .content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 30px;
+    text-align: center;
+  }
+  
+  .spinner {
+    width: 60px;
+    height: 60px;
+    border: 5px solid var(--border-color);
+    border-top-color: var(--primary-accent);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  
+  .fact {
+    font-size: 1.2rem;
+    color: var(--text-secondary);
+    max-width: 600px;
+    font-style: italic;
+    animation: fadeIn 0.8s ease-in-out;
+  }
+  
+  .text {
+    position: absolute;
+    bottom: 5vh;
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    opacity: 0.8;
+  }
+  
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }

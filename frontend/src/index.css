@@ -1,68 +1,124 @@
+/* frontend/src/index.css */
+/* Versión Refactorizada: Base de Estilos Globales y Variables de Diseño */
+/* Este archivo define los estilos más fundamentales y la paleta de colores. */
+
+/* --- Importación de Tipografía --- */
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&display=swap');
+
+/* --- [NUEVO] Paleta de Colores "OLED Slate & Teal" --- */
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+  /* -- Tipografía -- */
+  --font-family-sans: 'Nunito', sans-serif;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  /* -- Colores Base -- */
+  --background-dark: #000000; /* Negro OLED para el fondo principal */
+  --background-light: #0f172a; /* Slate 900 para superficies y tarjetas (no #0f172b) */
+  --border-color: #1e293b; /* Slate 800 para bordes sutiles (no #1d293d) */
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
+  /* -- Colores de Acento y Marca -- */
+  --primary-accent: #00bba7; /* Teal 500, nuestro color de acción principal */
+  --primary-accent-hover: #009689; /* Teal 600 para interacciones */
+  --brand-cream: #FDFBF5; /* Un blanco cálido para textos importantes sobre fondos oscuros */
+
+  /* -- Colores de Texto -- */
+  --text-primary: #f8fafc; /* Slate 50, casi blanco para máxima legibilidad */
+  --text-secondary: #94a3b8; /* Slate 400 para texto de apoyo y metadatos (no #90a1b9) */
+
+  /* -- Colores Semánticos -- */
+  --error-red: #e11d48; /* Rose 600, un rojo más vibrante */
+  --like-red: #f43f5e; /* Rose 500 para los "me gusta" */
+  --success-green: #22c55e; /* Green 500 para confirmaciones */
+  --warning-yellow: #f59e0b; /* Amber 500 para advertencias */
+  --whatsapp-green: #25D366;
+
+  /* -- Otros -- */
+  --cover-photo-bg: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+}
+
+/* --- Reseteo y Estilos Base --- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
 body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+  font-family: var(--font-family-sans);
+  background-color: var(--background-dark);
+  color: var(--text-primary);
+  line-height: 1.5;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 1rem; /* Padding reducido para móviles */
+  text-align: center;
+  width: 100%;
+}
+
+/* Media query para pantallas más grandes */
+@media (min-width: 640px) {
+  #root {
+    padding: 2rem;
+  }
+}
+
+/* --- Estilos base para elementos comunes --- */
+a {
+  color: var(--primary-accent);
+  text-decoration: none;
+  transition: color 0.2s ease-in-out;
+}
+
+a:hover {
+  color: var(--primary-accent-hover);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 800;
+  color: var(--text-primary);
 }
 
 button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
+  font-family: var(--font-family-sans);
   cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+/* --- Limpieza de estilos de input y textarea --- */
+input,
+button,
+textarea,
+select {
+  font: inherit;
+  border-radius: 0; /* Un-style default browser radius */
+}
+
+/* --- Scrollbar Styling --- */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background-dark);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
 }
