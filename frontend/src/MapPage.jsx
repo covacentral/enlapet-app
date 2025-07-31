@@ -1,9 +1,6 @@
 // frontend/src/MapPage.jsx
-// Versión: 1.6 - Navegación Libre
-// CORRIGE: El bug crítico que causaba un bucle de recentrado en el mapa.
-// ELIMINADO: Se elimina el componente <ChangeView /> que forzaba el reseteo
-// de la vista en cada renderizado. Ahora el mapa se centra una vez en la
-// geolocalización del usuario y luego permite la navegación libre.
+// Versión: 1.7 - Refactorización a CSS Modules
+// TAREA: Se implementan los módulos de estilos local y compartido para restaurar la apariencia.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
@@ -14,9 +11,14 @@ import AddLocationModal from './AddLocationModal';
 import CreateEventModal from './CreateEventModal';
 import { Plus, Map, Calendar } from 'lucide-react';
 
+// 1. IMPORTAMOS los nuevos módulos de CSS
+import styles from './MapPage.module.css';
+import sharedStyles from './shared.module.css';
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 const initialPosition = [4.5709, -74.2973];
 
+// --- Configuración de íconos de Leaflet (sin cambios) ---
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -127,29 +129,30 @@ function MapPage() {
       {isModalOpen && viewMode === 'locations' && <AddLocationModal categories={categories} onClose={() => setIsModalOpen(false)} onLocationAdded={fetchData} />}
       {isModalOpen && viewMode === 'events' && <CreateEventModal onClose={() => setIsModalOpen(false)} onEventCreated={fetchData} />}
 
-      <div className="map-page-container">
-        <div className="map-header">
-            <h2 className="tab-title">Mapa Comunitario</h2>
-            <div className="map-view-toggle">
-                <button onClick={() => setViewMode('locations')} className={viewMode === 'locations' ? 'active' : ''}><Map size={16}/> Lugares</button>
-                <button onClick={() => setViewMode('events')} className={viewMode === 'events' ? 'active' : ''}><Calendar size={16}/> Eventos</button>
+      {/* 2. APLICAMOS las clases de los módulos de CSS */}
+      <div className={styles.container}>
+        <div className={styles.header}>
+            <h2 className={sharedStyles.tabTitle} style={{marginBottom: 0}}>Mapa Comunitario</h2>
+            <div className={styles.viewToggle}>
+                <button onClick={() => setViewMode('locations')} className={viewMode === 'locations' ? styles.active : ''}><Map size={16}/> Lugares</button>
+                <button onClick={() => setViewMode('events')} className={viewMode === 'events' ? styles.active : ''}><Calendar size={16}/> Eventos</button>
             </div>
-            <button className="add-location-button" onClick={() => setIsModalOpen(true)}>
+            <button className={`${sharedStyles.button} ${sharedStyles.buttonPrimary}`} onClick={() => setIsModalOpen(true)}>
                 <Plus size={18} /> {viewMode === 'locations' ? 'Añadir Lugar' : 'Crear Evento'}
             </button>
         </div>
 
-        <div className="map-filter-bar">
-          <button className={`filter-button ${!activeCategory ? 'active' : ''}`} onClick={() => handleCategoryFilter(null)}>Todos</button>
+        <div className={styles.filterBar}>
+          <button className={`${styles.filterButton} ${!activeCategory ? styles.active : ''}`} onClick={() => handleCategoryFilter(null)}>Todos</button>
           {categories.map(cat => (
-            <button key={cat.id} className={`filter-button ${activeCategory === cat.key ? 'active' : ''}`} onClick={() => handleCategoryFilter(cat.key)}>{cat.name}</button>
+            <button key={cat.id} className={`${styles.filterButton} ${activeCategory === cat.key ? styles.active : ''}`} onClick={() => handleCategoryFilter(cat.key)}>{cat.name}</button>
           ))}
         </div>
 
-        {error && <p className="response-message error">{error}</p>}
+        {error && <p className={sharedStyles.responseMessageError}>{error}</p>}
 
-        <div className="map-wrapper">
-          <MapContainer center={mapCenter} zoom={13} scrollWheelZoom={true} className="leaflet-container" whenCreated={setMapInstance}>
+        <div className={styles.mapWrapper}>
+          <MapContainer center={mapCenter} zoom={13} scrollWheelZoom={true} style={{width: '100%', height: '100%'}} whenCreated={setMapInstance}>
             <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
             {items.map(item => {
               const position = item.coordinates ? [item.coordinates._latitude, item.coordinates._longitude] : (item.customLocation ? [item.customLocation.coordinates._latitude, item.customLocation.coordinates._longitude] : null);

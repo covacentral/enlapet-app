@@ -1,0 +1,89 @@
+/* frontend/src/MapPage.module.css */
+/* Estilos restaurados y encapsulados para la página del Mapa Comunitario. */
+
+.container {
+    background-color: var(--background-light);
+    padding: 25px;
+    border-radius: 15px;
+    border: 1px solid var(--border-color);
+  }
+  
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap; 
+    gap: 15px;
+  }
+  
+  .viewToggle {
+    display: flex;
+    background-color: var(--background-dark);
+    border-radius: 8px;
+    padding: 4px;
+  }
+  
+  .viewToggle button {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-weight: bold;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease-in-out;
+  }
+  
+  .viewToggle button.active {
+    background-color: var(--primary-accent);
+    color: var(--brand-cream);
+  }
+  
+  .filterBar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    overflow-x: auto;
+    padding-bottom: 10px;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;  /* IE and Edge */
+  }
+  
+  .filterBar::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+  
+  .filterButton {
+    background-color: var(--background-dark);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 8px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+  }
+  
+  .filterButton:hover {
+    border-color: var(--primary-accent);
+    color: var(--text-primary);
+  }
+  
+  .filterButton.active {
+    background-color: var(--primary-accent);
+    color: var(--brand-cream);
+    border-color: var(--primary-accent);
+    font-weight: bold;
+  }
+  
+  .mapWrapper {
+    height: 60vh;
+    min-height: 500px;
+    border-radius: 15px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+  }
