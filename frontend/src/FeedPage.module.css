@@ -1,0 +1,28 @@
+/* frontend/src/FeedPage.module.css */
+/* Estilos para la página del Feed. */
+
+.loadMoreButton {
+    background-color: var(--primary-accent);
+    color: var(--brand-cream);
+    border: none;
+    padding: 12px 24px;
+    border-radius: 25px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+  }
+  
+  .loadMoreButton:hover {
+    background-color: var(--primary-accent-hover);
+    transform: scale(1.05);
+  }
+  
+  .loadMoreContainer {
+      text-align: center;
+      margin-top: 2rem;
+  }
+  
+  .emptyStateMessage h2 {
+      font-size: 1.5rem;
+      font-weight: 800;
+  }
