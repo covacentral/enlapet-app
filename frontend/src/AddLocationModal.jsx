@@ -1,13 +1,12 @@
 // frontend/src/AddLocationModal.jsx
-// Versión: 1.7 - Refactorización a CSS Modules
-// TAREA: Se implementan los módulos de estilos local y compartido.
+// Versión: 1.8 - Corrección de Estilos de Botón
+// TAREA: Se aplican las clases correctas del sistema de botones compartidos.
 
 import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import { auth } from './firebase';
 import { X } from 'lucide-react';
 
-// 1. IMPORTAMOS los nuevos módulos de CSS
 import styles from './AddLocationModal.module.css';
 import sharedStyles from './shared.module.css';
 
@@ -109,7 +108,6 @@ function AddLocationModal({ categories, onClose, onLocationAdded }) {
   };
 
   return (
-    // 2. APLICAMOS las clases de los módulos de CSS
     <div className={sharedStyles.modalBackdrop} onClick={onClose}>
       <div className={styles.content} onClick={e => e.stopPropagation()}>
         <div className={sharedStyles.modalHeader}>
@@ -157,7 +155,13 @@ function AddLocationModal({ categories, onClose, onLocationAdded }) {
           </div>
           <div className={sharedStyles.modalFooter}>
             {message && <p className={message.startsWith('Error') ? sharedStyles.responseMessageError : sharedStyles.responseMessage}>{message}</p>}
-            <button type="submit" className={sharedStyles.buttonPrimary} style={{width: '100%'}} disabled={isLoading || !coordinates || !formData.category}>
+            {/* --- LÍNEA CORREGIDA --- */}
+            <button 
+              type="submit" 
+              className={`${sharedStyles.button} ${sharedStyles.primary}`} 
+              style={{width: '100%'}} 
+              disabled={isLoading || !coordinates || !formData.category}
+            >
               {isLoading ? 'Guardando...' : 'Añadir Lugar al Mapa'}
             </button>
           </div>

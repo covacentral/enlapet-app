@@ -1,18 +1,16 @@
 // frontend/src/CreatePostModal.jsx
-// Versión: 2.4 - Refactorización a CSS Modules
-// TAREA: Se implementan los módulos de estilos local y compartido.
+// Versión: 2.5 - Corrección de Estilos de Botón
+// TAREA: Se aplican las clases correctas del sistema de botones compartidos.
 
 import { useState, useRef } from 'react';
 import { X, UploadCloud } from 'lucide-react';
 import { auth } from './firebase';
 
-// 1. IMPORTAMOS los módulos de CSS necesarios
 import styles from './CreatePostModal.module.css';
 import sharedStyles from './shared.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-// --- Componente para el selector de autor (ahora usa CSS Modules) ---
 const AuthorSelector = ({ userProfile, pets, selectedAuthor, onSelectAuthor }) => {
   const userProfileWithId = { ...userProfile, id: auth.currentUser.uid };
   const allProfiles = [userProfileWithId, ...pets];
@@ -113,7 +111,6 @@ function CreatePostModal({ userProfile, pets, initialAuthor, onClose, onPostCrea
     return (
         <div className={sharedStyles.modalBackdrop} onClick={onClose}>
             <div className={styles.content} onClick={e => e.stopPropagation()}>
-                {/* 2. APLICAMOS estilos compartidos para elementos comunes como el header y footer */}
                 <div className={sharedStyles.modalHeader}>
                     <h2>Crear un nuevo Momento</h2>
                     <button onClick={onClose} className={sharedStyles.closeButton} disabled={isLoading}>
@@ -165,7 +162,13 @@ function CreatePostModal({ userProfile, pets, initialAuthor, onClose, onPostCrea
                     </div>
                     <div className={sharedStyles.modalFooter}>
                         {message && <p className={sharedStyles.responseMessage}>{message}</p>}
-                        <button type="submit" className={sharedStyles.buttonPrimary} disabled={isLoading}>
+                        {/* --- LÍNEA CORREGIDA --- */}
+                        <button 
+                          type="submit" 
+                          className={`${sharedStyles.button} ${sharedStyles.primary}`} 
+                          style={{width: '100%'}} 
+                          disabled={isLoading}
+                        >
                             {isLoading ? 'Publicando...' : 'Publicar Momento'}
                         </button>
                     </div>
