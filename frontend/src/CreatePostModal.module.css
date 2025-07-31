@@ -1,0 +1,118 @@
+/* frontend/src/CreatePostModal.module.css */
+/* Estilos específicos para el modal de creación de "Momentos". */
+
+.content {
+    background-color: var(--background-light);
+    border: 1px solid var(--border-color);
+    border-radius: 15px;
+    width: 90%;
+    max-width: 550px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  }
+  
+  .form {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+  
+  .body {
+    padding: 16px;
+  }
+  
+  .imageUploadArea {
+    width: 100%;
+    height: 300px;
+    background-color: var(--background-dark);
+    border-radius: 8px;
+    border: 2px dashed var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  
+  .imageUploadArea:hover {
+    border-color: var(--primary-accent);
+  }
+  
+  .uploadPromptContent {
+    text-align: center;
+    color: var(--text-secondary);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .imagePreview {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  /* --- Selector de Autor --- */
+  .authorSelectorContainer {
+    padding: 16px 0 16px 16px;
+    border-bottom: 1px solid var(--border-color);
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  
+  .authorSelectorContainer::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .authorSelectorScroll {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+  }
+  
+  .authorBubble {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    text-decoration: none;
+    color: var(--text-secondary);
+    transition: color 0.2s;
+  }
+  
+  .authorBubble:hover {
+    color: var(--text-primary);
+  }
+  
+  .authorBubbleImage {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    padding: 2px;
+    transition: border-color 0.2s;
+  }
+  
+  .authorBubbleImage img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+  }
+  
+  .authorBubble.selected .authorBubbleImage {
+    border-color: var(--primary-accent);
+  }
+  
+  .authorBubbleName {
+    font-size: 0.8rem;
+    font-weight: bold;
+    white-space: nowrap;
+  }
