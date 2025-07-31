@@ -1,12 +1,17 @@
 // frontend/src/CommentsModal.jsx
-// Versión: 2.0 - Enlaces a Perfiles de Usuario
-// TAREA 5: El nombre del autor de cada comentario ahora enlaza a su perfil público.
+// Versión: 2.1 - Refactorización a CSS Modules
+// TAREA: Se implementa el módulo de estilos local para desacoplarlo del CSS global.
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom'; // Importamos Link
+import { Link } from 'react-router-dom';
 import { auth } from './firebase';
 import LoadingComponent from './LoadingComponent';
 import { X } from 'lucide-react';
+
+// 1. IMPORTAMOS nuestro nuevo módulo de estilos
+import styles from './CommentsModal.module.css';
+// Se importan los estilos compartidos para elementos comunes como el backdrop.
+import sharedStyles from './shared.module.css'; 
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -66,30 +71,30 @@ function CommentsModal({ postId, onClose, onCommentAdded }) {
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="comments-modal-content" onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
+    // 2. APLICAMOS las nuevas clases de estilo. Usamos el módulo compartido para el backdrop.
+    <div className={sharedStyles.modalBackdrop} onClick={onClose}>
+      <div className={styles.content} onClick={e => e.stopPropagation()}>
+        <div className={styles.header}>
           <h2>Comentarios</h2>
-          <button onClick={onClose} className="close-button" disabled={isSubmitting}>
+          <button onClick={onClose} className={styles.closeButton} disabled={isSubmitting}>
             <X size={24} />
           </button>
         </div>
-        <div className="comments-list">
+        <div className={styles.list}>
           {isLoading && <p>Cargando...</p>}
-          {error && <p className="text-red-500 text-center">{error}</p>}
+          {error && <p className={sharedStyles.responseMessageError}>{error}</p>}
           {!isLoading && comments.length === 0 && (
-            <p className="text-gray-500 text-center py-4">No hay comentarios. ¡Sé el primero!</p>
+            <p className={styles.emptyMessage}>No hay comentarios. ¡Sé el primero!</p>
           )}
           {comments.map((comment) => (
-            <div key={comment.id} className="comment-item">
+            <div key={comment.id} className={styles.item}>
               <img 
                 src={comment.authorProfilePic || 'https://placehold.co/100x100/E2E8F0/4A5568?text=:)'} 
                 alt={comment.authorName} 
-                className="comment-author-pic"
+                className={styles.authorPic}
               />
-              <div className="comment-text-content">
-                {/* --- ENLACE AÑADIDO --- */}
-                <Link to={`/dashboard/user/${comment.authorId}`} className="inline-profile-link">
+              <div className={styles.textContent}>
+                <Link to={`/dashboard/user/${comment.authorId}`} className={styles.authorLink}>
                   {comment.authorName}
                 </Link>
                 <p>{comment.text}</p>
@@ -97,8 +102,8 @@ function CommentsModal({ postId, onClose, onCommentAdded }) {
             </div>
           ))}
         </div>
-        <div className="comments-modal-footer">
-          <form onSubmit={handleSubmitComment} className="comment-form">
+        <div className={styles.footer}>
+          <form onSubmit={handleSubmitComment} className={styles.form}>
             <input
               type="text"
               value={newComment}

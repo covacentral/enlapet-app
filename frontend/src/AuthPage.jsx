@@ -1,6 +1,6 @@
 // frontend/src/AuthPage.jsx
-// Versión: 2.2 - Corrección de Ruta de Registro
-// CORRIGE: Se actualiza la URL del endpoint de registro para que coincida con la nueva arquitectura del backend.
+// Versión: 2.3 - Refactorización a CSS Modules
+// TAREA: Se implementan los módulos de estilos local y compartido para la página de autenticación.
 
 import { useState, useEffect } from 'react';
 import { auth } from './firebase';
@@ -10,10 +10,14 @@ import {
   GoogleAuthProvider,
   signInWithPopup
 } from "firebase/auth";
-import './App.css';
+
+// 1. IMPORTAMOS los nuevos módulos de CSS
+import styles from './AuthPage.module.css';
+import sharedStyles from './shared.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
+// --- Iconos (sin cambios) ---
 const GoogleIcon = () => (
   <svg className="google-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24">
     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -76,7 +80,6 @@ function AuthPage() {
     setIsLoading(true);
     setMessage('Registrando...');
     try {
-      // --- LÍNEA CORREGIDA ---
       const response = await fetch(`${API_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -127,29 +130,30 @@ function AuthPage() {
     }
   };
 
+  // 2. RENDERIZAMOS los componentes usando las clases de los módulos importados
   const renderForm = () => {
     switch (view) {
       case 'login':
         return (
           <>
             <h2>Iniciar Sesión con Email</h2>
-            <form onSubmit={handleLogin} className="register-form">
-              <div className="form-group"><label htmlFor="email">Email:</label><input type="email" name="email" value={formData.email} onChange={handleChange} required disabled={isLoading} /></div>
-              <div className="form-group password-group"><label htmlFor="password">Contraseña:</label><input type={showPassword ? 'text' : 'password'} name="password" value={formData.password} onChange={handleChange} required disabled={isLoading} /><button type="button" className="password-toggle-button" onClick={() => setShowPassword(!showPassword)}>{showPassword ? <EyeOffIcon /> : <EyeIcon />}</button></div>
-              <button type="submit" disabled={isLoading}>{isLoading ? 'Verificando...' : 'Iniciar Sesión'}</button>
+            <form onSubmit={handleLogin}>
+              <div className={sharedStyles.formGroup}><label htmlFor="email">Email:</label><input type="email" name="email" value={formData.email} onChange={handleChange} required disabled={isLoading} /></div>
+              <div className={`${sharedStyles.formGroup} ${styles.passwordGroup}`}><label htmlFor="password">Contraseña:</label><input type={showPassword ? 'text' : 'password'} name="password" value={formData.password} onChange={handleChange} required disabled={isLoading} /><button type="button" className={styles.passwordToggleButton} onClick={() => setShowPassword(!showPassword)}>{showPassword ? <EyeOffIcon /> : <EyeIcon />}</button></div>
+              <button type="submit" className={sharedStyles.buttonPrimary} style={{width: '100%'}} disabled={isLoading}>{isLoading ? 'Verificando...' : 'Iniciar Sesión'}</button>
             </form>
-            <button className="link-button" onClick={() => setView('forgot-password')} disabled={isLoading}>Olvidé mi contraseña</button>
+            <button className={sharedStyles.linkButton} onClick={() => setView('forgot-password')} disabled={isLoading}>Olvidé mi contraseña</button>
           </>
         );
       case 'register':
         return (
           <>
             <h2>Registrarse con Email</h2>
-            <form onSubmit={handleRegister} className="register-form">
-              <div className="form-group"><label htmlFor="name">Nombre:</label><input type="text" name="name" value={formData.name} onChange={handleChange} required disabled={isLoading} /></div>
-              <div className="form-group"><label htmlFor="email">Email:</label><input type="email" name="email" value={formData.email} onChange={handleChange} required disabled={isLoading} /></div>
-              <div className="form-group password-group"><label htmlFor="password">Contraseña:</label><input type={showPassword ? 'text' : 'password'} name="password" value={formData.password} onChange={handleChange} required minLength="6" disabled={isLoading} /><button type="button" className="password-toggle-button" onClick={() => setShowPassword(!showPassword)}>{showPassword ? <EyeOffIcon /> : <EyeIcon />}</button></div>
-              <button type="submit" disabled={isLoading}>{isLoading ? 'Creando cuenta...' : 'Registrarse'}</button>
+            <form onSubmit={handleRegister}>
+              <div className={sharedStyles.formGroup}><label htmlFor="name">Nombre:</label><input type="text" name="name" value={formData.name} onChange={handleChange} required disabled={isLoading} /></div>
+              <div className={sharedStyles.formGroup}><label htmlFor="email">Email:</label><input type="email" name="email" value={formData.email} onChange={handleChange} required disabled={isLoading} /></div>
+              <div className={`${sharedStyles.formGroup} ${styles.passwordGroup}`}><label htmlFor="password">Contraseña:</label><input type={showPassword ? 'text' : 'password'} name="password" value={formData.password} onChange={handleChange} required minLength="6" disabled={isLoading} /><button type="button" className={styles.passwordToggleButton} onClick={() => setShowPassword(!showPassword)}>{showPassword ? <EyeOffIcon /> : <EyeIcon />}</button></div>
+              <button type="submit" className={sharedStyles.buttonPrimary} style={{width: '100%'}} disabled={isLoading}>{isLoading ? 'Creando cuenta...' : 'Registrarse'}</button>
             </form>
           </>
         );
@@ -157,10 +161,10 @@ function AuthPage() {
         return (
             <>
               <h2>Restablecer Contraseña</h2>
-              <form onSubmit={handlePasswordReset} className="register-form">
-                <p className="form-description">Ingresa tu correo y te enviaremos un enlace para que puedas restablecer tu contraseña.</p>
-                <div className="form-group"><label htmlFor="email">Email:</label><input type="email" name="email" value={formData.email} onChange={handleChange} required disabled={isLoading} /></div>
-                <button type="submit" disabled={isLoading}>{isLoading ? 'Enviando...' : 'Enviar Enlace'}</button>
+              <form onSubmit={handlePasswordReset}>
+                <p className={styles.formDescription}>Ingresa tu correo y te enviaremos un enlace para que puedas restablecer tu contraseña.</p>
+                <div className={sharedStyles.formGroup}><label htmlFor="email">Email:</label><input type="email" name="email" value={formData.email} onChange={handleChange} required disabled={isLoading} /></div>
+                <button type="submit" className={sharedStyles.buttonPrimary} style={{width: '100%'}} disabled={isLoading}>{isLoading ? 'Enviando...' : 'Enviar Enlace'}</button>
               </form>
             </>
         );
@@ -169,30 +173,20 @@ function AuthPage() {
   };
 
   return (
-    <>
-    <style>{`
-        .auth-container { max-width: 400px; margin: 2rem auto; padding: 2rem; background-color: var(--background-light); border-radius: 12px; text-align: center; }
-        .google-btn { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; padding: 12px; font-size: 1rem; font-weight: bold; background-color: #fff; color: #444; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; transition: background-color 0.3s, box-shadow 0.3s; }
-        .google-btn:hover:not(:disabled) { background-color: #f5f5f5; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .google-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-        .divider { display: flex; align-items: center; text-align: center; color: var(--text-secondary); margin: 1.5rem 0; }
-        .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid #444; }
-        .divider:not(:empty)::before { margin-right: .5em; }
-        .divider:not(:empty)::after { margin-left: .5em; }
-    `}</style>
-    <header className="App-header">
-        <div className="auth-container">
-            <h1>Bienvenido a EnlaPet</h1>
-            <p>La red social para tu mejor amigo.</p>
-            <button className="google-btn" onClick={handleGoogleSignIn} disabled={isLoading}><GoogleIcon />Continuar con Google</button>
-            <div className="divider">o</div>
+    <div className={styles.pageContainer}>
+        <div className={styles.authContainer}>
+            <h1 className={styles.brandTitle}>Bienvenido a EnlaPet</h1>
+            <p className={styles.brandSubtitle}>La red social para tu mejor amigo.</p>
+            <button className={styles.googleBtn} onClick={handleGoogleSignIn} disabled={isLoading}><GoogleIcon />Continuar con Google</button>
+            <div className={styles.divider}>o</div>
             {renderForm()}
-            {view === 'login' && (<p>¿No tienes cuenta? <button className="link-button" onClick={() => setView('register')} disabled={isLoading}>Regístrate</button></p>)}
-            {(view === 'register' || view === 'forgot-password') && (<p>¿Ya tienes cuenta? <button className="link-button" onClick={() => setView('login')} disabled={isLoading}>Inicia Sesión</button></p>)}
-            {message && <p className="response-message">{message}</p>}
+            <div className={styles.toggleViewText}>
+              {view === 'login' && (<p>¿No tienes cuenta? <button className={sharedStyles.linkButton} onClick={() => setView('register')} disabled={isLoading}>Regístrate</button></p>)}
+              {(view === 'register' || view === 'forgot-password') && (<p>¿Ya tienes cuenta? <button className={sharedStyles.linkButton} onClick={() => setView('login')} disabled={isLoading}>Inicia Sesión</button></p>)}
+            </div>
+            {message && <p className={sharedStyles.responseMessage}>{message}</p>}
         </div>
-    </header>
-    </>
+    </div>
   );
 }
 
