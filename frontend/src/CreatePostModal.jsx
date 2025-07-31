@@ -1,22 +1,23 @@
 // frontend/src/CreatePostModal.jsx
-// Versión: 2.3 - Devolución de Post Creado
-// La función onPostCreated ahora pasa el objeto del post recién
-// creado para una actualización instantánea de la UI.
+// Versión: 2.5 - Corrección de Estilos de Botón
+// TAREA: Se aplican las clases correctas del sistema de botones compartidos.
 
 import { useState, useRef } from 'react';
 import { X, UploadCloud } from 'lucide-react';
 import { auth } from './firebase';
 
+import styles from './CreatePostModal.module.css';
+import sharedStyles from './shared.module.css';
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-// --- Componente para el selector de autor ---
 const AuthorSelector = ({ userProfile, pets, selectedAuthor, onSelectAuthor }) => {
   const userProfileWithId = { ...userProfile, id: auth.currentUser.uid };
   const allProfiles = [userProfileWithId, ...pets];
 
   return (
-    <div className="author-selector-container">
-      <div className="author-selector-scroll">
+    <div className={styles.authorSelectorContainer}>
+      <div className={styles.authorSelectorScroll}>
         {allProfiles.map(profile => {
           const isSelected = profile.id === selectedAuthor.id;
           const isUser = !profile.ownerId; 
@@ -25,13 +26,13 @@ const AuthorSelector = ({ userProfile, pets, selectedAuthor, onSelectAuthor }) =
           return (
             <div 
               key={profile.id} 
-              className={`author-bubble ${isSelected ? 'selected' : ''}`}
+              className={`${styles.authorBubble} ${isSelected ? styles.selected : ''}`}
               onClick={() => onSelectAuthor(profile)}
             >
-              <div className="author-bubble-image">
+              <div className={styles.authorBubbleImage}>
                 <img src={profilePic || 'https://placehold.co/100x100/E2E8F0/4A5568?text=:)'} alt={profile.name} />
               </div>
-              <span className="author-bubble-name">{isUser ? 'Tú' : profile.name.split(' ')[0]}</span>
+              <span className={styles.authorBubbleName}>{isUser ? 'Tú' : profile.name.split(' ')[0]}</span>
             </div>
           );
         })}
@@ -90,7 +91,6 @@ function CreatePostModal({ userProfile, pets, initialAuthor, onClose, onPostCrea
             }
 
             setMessage('¡Momento publicado con éxito!');
-            // [REFINADO] Pasamos el objeto del post del backend a la función callback.
             onPostCreated(data.post); 
             setTimeout(() => {
                 onClose();
@@ -98,7 +98,7 @@ function CreatePostModal({ userProfile, pets, initialAuthor, onClose, onPostCrea
 
         } catch (error) {
             setMessage(error.message);
-            onPostCreated(null); // Indicamos que no se pudo crear para que el feed se recargue
+            onPostCreated(null);
         } finally {
             setIsLoading(false);
         }
@@ -109,11 +109,11 @@ function CreatePostModal({ userProfile, pets, initialAuthor, onClose, onPostCrea
       : `¿Qué estás pensando, ${selectedAuthor.name.split(' ')[0]}?`;
 
     return (
-        <div className="modal-backdrop" onClick={onClose}>
-            <div className="create-post-modal-content" onClick={e => e.stopPropagation()}>
-                <div className="modal-header">
+        <div className={sharedStyles.modalBackdrop} onClick={onClose}>
+            <div className={styles.content} onClick={e => e.stopPropagation()}>
+                <div className={sharedStyles.modalHeader}>
                     <h2>Crear un nuevo Momento</h2>
-                    <button onClick={onClose} className="close-button" disabled={isLoading}>
+                    <button onClick={onClose} className={sharedStyles.closeButton} disabled={isLoading}>
                         <X size={24} />
                     </button>
                 </div>
@@ -125,16 +125,16 @@ function CreatePostModal({ userProfile, pets, initialAuthor, onClose, onPostCrea
                   onSelectAuthor={setSelectedAuthor}
                 />
 
-                <form onSubmit={handleSubmit} className="create-post-form">
-                    <div className="modal-body" style={{paddingTop: '16px'}}>
+                <form onSubmit={handleSubmit} className={styles.form}>
+                    <div className={styles.body}>
                         <div 
-                            className="image-upload-area" 
+                            className={styles.imageUploadArea} 
                             onClick={() => fileInputRef.current.click()}
                         >
                             {previewImage ? (
-                                <img src={previewImage} alt="Previsualización" className="image-preview" />
+                                <img src={previewImage} alt="Previsualización" className={styles.imagePreview} />
                             ) : (
-                                <div className="upload-prompt-content">
+                                <div className={styles.uploadPromptContent}>
                                     <UploadCloud size={48} />
                                     <p>Haz clic aquí para seleccionar una foto</p>
                                 </div>
@@ -147,7 +147,7 @@ function CreatePostModal({ userProfile, pets, initialAuthor, onClose, onPostCrea
                             onChange={handleImageChange} 
                             style={{ display: 'none' }} 
                         />
-                        <div className="form-group">
+                        <div className={sharedStyles.formGroup}>
                             <textarea
                                 id="caption"
                                 value={caption}
@@ -160,9 +160,15 @@ function CreatePostModal({ userProfile, pets, initialAuthor, onClose, onPostCrea
                             ></textarea>
                         </div>
                     </div>
-                    <div className="modal-footer">
-                        {message && <p className="response-message">{message}</p>}
-                        <button type="submit" className="publish-button" disabled={isLoading}>
+                    <div className={sharedStyles.modalFooter}>
+                        {message && <p className={sharedStyles.responseMessage}>{message}</p>}
+                        {/* --- LÍNEA CORREGIDA --- */}
+                        <button 
+                          type="submit" 
+                          className={`${sharedStyles.button} ${sharedStyles.primary}`} 
+                          style={{width: '100%'}} 
+                          disabled={isLoading}
+                        >
                             {isLoading ? 'Publicando...' : 'Publicar Momento'}
                         </button>
                     </div>

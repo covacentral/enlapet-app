@@ -1,11 +1,13 @@
 // frontend/src/ProfileLayout.jsx
-// Versión: 3.3 - Enrutamiento de Modales de Post
-// AÑADIDO: Se importa y se enruta el nuevo PostDetailModal.
+// Versión: 3.4 - Corrección de Layout y CSS Modules
+// TAREA: Se implementa el módulo de estilos para corregir la superposición de la barra de navegación.
 
 import { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import { auth } from './firebase';
-import './App.css';
+
+// 1. IMPORTAMOS el nuevo módulo de estilos para el layout
+import styles from './ProfileLayout.module.css';
 
 // Importación de Páginas
 import FeedPage from './FeedPage.jsx';
@@ -23,7 +25,7 @@ import LoadingComponent from './LoadingComponent.jsx';
 import BottomNavBar from './BottomNavBar.jsx';
 import CreatePostModal from './CreatePostModal.jsx';
 import MainHeader from './MainHeader.jsx';
-import PostDetailModal from './PostDetailModal.jsx'; // <-- 1. Importar el nuevo modal
+import PostDetailModal from './PostDetailModal.jsx';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -102,7 +104,8 @@ function ProfileLayout({ user }) {
   if (loading) return <LoadingComponent text="Cargando tu universo EnlaPet..." />;
 
   return (
-    <div className="profile-container">
+    // 2. APLICAMOS la nueva clase de estilo al contenedor principal
+    <div className={styles.container}>
       {isCreateModalOpen && (
         <CreatePostModal 
           userProfile={userProfile}
@@ -114,7 +117,7 @@ function ProfileLayout({ user }) {
 
       <MainHeader userProfile={userProfile} pets={pets} />
 
-      <main className="tab-content">
+      <main>
         <Routes>
           <Route index element={<FeedPage userProfile={userProfile} pets={pets} />} />
           <Route path="map" element={<MapPage />} />
@@ -125,15 +128,10 @@ function ProfileLayout({ user }) {
           <Route path="settings" element={<SettingsTab user={user} userProfile={userProfile} onProfileUpdate={fetchCoreData} />} />
           <Route path="pet/:petId" element={<PetSocialProfile user={user} userProfile={userProfile} pets={pets} onUpdate={fetchCoreData} />} />
           <Route path="user/:userId" element={<UserProfilePage />} />
-          
-          {/* --- 2. AÑADIMOS UNA RUTA ANIDADA PARA EL MODAL --- */}
-          {/* Esta ruta permite que el modal se muestre sobre la página de notificaciones */}
           <Route path="notifications/post/:postId" element={<NotificationsPage onMarkAsRead={handleMarkAsRead} />} />
         </Routes>
       </main>
 
-      {/* --- 3. RENDERIZAMOS EL MODAL SI LA RUTA COINCIDE --- */}
-      {/* Este bloque de Routes se encarga de mostrar los modales que dependen de la URL */}
       <Routes>
         <Route path="notifications/post/:postId" element={<PostDetailModal />} />
       </Routes>

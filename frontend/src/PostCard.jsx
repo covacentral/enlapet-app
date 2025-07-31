@@ -1,13 +1,14 @@
 // frontend/src/PostCard.jsx
-// Versión: 2.1 - Corrección de Sistema de Reportes
-// CORRIGE: Se asegura de pasar todas las props necesarias (contentId, contentType, contentCreatorName)
-// al ReportModal para que los reportes de publicaciones funcionen correctamente.
+// Versión: 2.2 - Refactorización a CSS Modules
+// TAREA: Se eliminan las clases globales y se implementa el módulo de estilos local.
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, MessageCircle, Bookmark, MoreVertical } from 'lucide-react';
 import CommentsModal from './CommentsModal';
 import ReportModal from './ReportModal';
+// 1. IMPORTAMOS nuestro nuevo módulo de estilos
+import styles from './PostCard.module.css';
 
 function PostCard({ post, isLiked, isSaved, onLikeToggle, onSaveToggle, onCommentAdded }) {
   const [isCommentsModalOpen, setIsCommentsModalOpen] = useState(false);
@@ -48,7 +49,6 @@ function PostCard({ post, isLiked, isSaved, onLikeToggle, onSaveToggle, onCommen
     <>
       {isCommentsModalOpen && ( <CommentsModal postId={post.id} onClose={() => setIsCommentsModalOpen(false)} onCommentAdded={onCommentAdded} /> )}
       
-      {/* [CORRECCIÓN] Se pasan las props correctas al ReportModal */}
       {isReportModalOpen && ( 
         <ReportModal 
           contentId={post.id}
@@ -58,44 +58,52 @@ function PostCard({ post, isLiked, isSaved, onLikeToggle, onSaveToggle, onCommen
         /> 
       )}
 
-      <div className="post-card-container">
-        <div className="post-card-header">
-          <Link to={authorProfileLink} className="post-author-info">
-            <img src={profilePic} alt={post.author.name} className="post-author-pic"/>
-            <span className="post-author-name">{post.author.name}</span>
+      {/* 2. APLICAMOS los nuevos estilos desde el objeto 'styles' */}
+      <div className={styles.container}>
+        <header className={styles.header}>
+          <Link to={authorProfileLink} className={styles.authorInfo}>
+            <img src={profilePic} alt={post.author.name} className={styles.authorPic}/>
+            <span className={styles.authorName}>{post.author.name}</span>
           </Link>
           
-          <div className="post-menu-container" ref={menuRef}>
-            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="action-button">
+          <div className={styles.menuContainer} ref={menuRef}>
+            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className={styles.actionButton}>
               <MoreVertical size={20} />
             </button>
             {isMenuOpen && (
-              <div className="post-menu-dropdown">
+              <div className={styles.menuDropdown}>
                 <button onClick={handleOpenReportModal}>Reportar publicación</button>
               </div>
             )}
           </div>
-        </div>
+        </header>
 
-        <div className="post-image-wrapper">
+        <div className={styles.imageWrapper}>
           <img src={post.imageUrl} alt={post.caption} />
         </div>
-        <div className="post-card-body">
-          <div className="post-actions">
-            <button onClick={handleLikeClick} className={`action-button ${isLiked ? 'liked' : ''}`} aria-label="Dar Me Gusta">
+        <div className={styles.body}>
+          <div className={styles.actions}>
+            {/* 3. GESTIONAMOS clases condicionales con template literals */}
+            <button onClick={handleLikeClick} className={`${styles.actionButton} ${isLiked ? styles.liked : ''}`} aria-label="Dar Me Gusta">
               <Heart size={20} fill={isLiked ? 'currentColor' : 'none'} />
               <span>{post.likesCount}</span>
             </button>
-            <button onClick={() => setIsCommentsModalOpen(true)} className="action-button" aria-label="Comentar">
+            <button onClick={() => setIsCommentsModalOpen(true)} className={styles.actionButton} aria-label="Comentar">
               <MessageCircle size={20} />
               <span>{post.commentsCount}</span>
             </button>
-            <button onClick={handleSaveClick} className={`action-button save-button ${isSaved ? 'saved' : ''}`} aria-label="Guardar">
+            <button onClick={handleSaveClick} className={`${styles.actionButton} ${styles.saveButton} ${isSaved ? styles.saved : ''}`} aria-label="Guardar">
               <Bookmark size={20} fill={isSaved ? 'currentColor' : 'none'} />
             </button>
           </div>
-          <p className="post-caption">{post.caption}</p>
-          <p className="post-date">{postDate}</p>
+          {/* Mejora de UI: El caption ahora incluye al autor, como en redes populares */}
+          <p className={styles.caption}>
+            <Link to={authorProfileLink} className={styles.authorInfo} style={{ display: 'inline', fontWeight: 700, color: 'var(--text-primary)'}}>
+              <strong>{post.author.name}</strong>
+            </Link>
+            {' '}{post.caption}
+          </p>
+          <p className={styles.date}>{postDate}</p>
         </div>
       </div>
     </>

@@ -1,21 +1,29 @@
+// frontend/src/PetProfile.jsx
+// Versión 1.1 - Refactorización a CSS Modules
+// TAREA: Se implementa el módulo de estilos local para el perfil público (NFC).
+
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import './App.css';
 import LoadingComponent from './LoadingComponent.jsx';
+
+// 1. IMPORTAMOS los nuevos módulos de CSS
+import styles from './PetProfile.module.css';
+import sharedStyles from './shared.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const BackButton = () => {
     const navigate = useNavigate();
+    // Botón "Atrás" ahora usa su propio estilo del módulo
     return (
-        <button onClick={() => navigate(-1)} className="back-button text-button">
+        <button onClick={() => navigate(-1)} className={styles.backButton}>
             &larr; Atrás
         </button>
     );
 };
 
 const PetPicturePlaceholder = () => (
-  <div className="pet-profile-picture-placeholder">
+  <div className={styles.placeholder}>
     <span>🐾</span>
   </div>
 );
@@ -27,7 +35,7 @@ const WhatsAppButton = ({ phoneNumber }) => {
   const whatsappLink = `https://wa.me/${cleanedPhone}`;
 
   return (
-    <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="whatsapp-button">
+    <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className={styles.whatsappButton}>
       Contactar por WhatsApp
     </a>
   );
@@ -68,44 +76,44 @@ function PetProfile() {
 
   if (error) {
     return (
-      <div className="public-profile-container error-container">
+      <div className={`${styles.container} ${styles.errorContainer}`}>
         <BackButton />
         <h2>Error</h2>
         <p>{error}</p>
-        <Link to="/" className="link-button">Volver al inicio</Link>
+        <Link to="/" className={sharedStyles.linkButton}>Volver al inicio</Link>
       </div>
     );
   }
 
   if (!profileData) {
-    return <div className="public-profile-container"><h1>Perfil no disponible.</h1></div>;
+    return <div className={styles.container}><h1>Perfil no disponible.</h1></div>;
   }
 
   return (
-    <div className="public-profile-container">
-      <div className="pet-profile-card">
+    // 2. APLICAMOS las clases desde el objeto 'styles'
+    <div className={styles.container}>
+      <div className={styles.card}>
         <BackButton />
         
         {profileData.pet.petPictureUrl ? (
-          <img src={profileData.pet.petPictureUrl} alt={profileData.pet.name} className="pet-profile-picture" />
+          <img src={profileData.pet.petPictureUrl} alt={profileData.pet.name} className={styles.picture} />
         ) : (
           <PetPicturePlaceholder />
         )}
-        <h1 className="pet-name">{profileData.pet.name}</h1>
-        <p className="pet-breed">Raza: {profileData.pet.breed || 'No especificada'}</p>
+        <h1 className={styles.name}>{profileData.pet.name}</h1>
+        <p className={styles.breed}>Raza: {profileData.pet.breed || 'No especificada'}</p>
         
-        <div className="owner-info">
+        <div className={styles.ownerInfo}>
           <h2>¡Ayúdame a volver a casa!</h2>
-          {/* --- CAMBIO DE TEXTO --- */}
           <p><strong>Responsable:</strong> {profileData.owner.name}</p>
           <p><strong>Su teléfono es:</strong> {profileData.owner.phone || 'No proporcionado'}</p>
           
           <WhatsAppButton phoneNumber={profileData.owner.phone} />
         </div>
 
-        <footer className="profile-footer">
+        <footer className={styles.footer}>
           <p>Gracias por escanear mi placa EnlaPet.</p>
-          <Link to="/" className="link-button small">Crear un perfil para mi mascota</Link>
+          <Link to="/" className={sharedStyles.linkButton} style={{fontSize: '0.8rem'}}>Crear un perfil para mi mascota</Link>
         </footer>
       </div>
     </div>

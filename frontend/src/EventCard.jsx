@@ -1,10 +1,13 @@
 // frontend/src/EventCard.jsx
-// Versión: 1.3 - Menú de Opciones y Reporte
-// NUEVO: Se añade el botón "..." con la opción para reportar un evento.
+// Versión: 1.5 - Corrección de Estilos de Botón de Menú
+// TAREA: Se aplica la clase de botón correcta al menú desplegable.
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Calendar, Clock, MapPin, MoreVertical } from 'lucide-react';
-import ReportModal from './ReportModal'; // Asumimos que ReportModal es genérico
+import ReportModal from './ReportModal';
+
+import styles from './EventCard.module.css';
+import sharedStyles from './shared.module.css';
 
 function EventCard({ event, onDetailsClick }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -24,16 +27,12 @@ function EventCard({ event, onDetailsClick }) {
   const formatEventDuration = (startIso, endIso) => {
     const startDate = new Date(startIso);
     const endDate = new Date(endIso);
-
     const optionsDate = { year: 'numeric', month: 'long', day: 'numeric' };
     const optionsTime = { hour: '2-digit', minute: '2-digit', hour12: true };
-
     const startDateString = startDate.toLocaleDateString('es-ES', optionsDate);
     const endDateString = endDate.toLocaleDateString('es-ES', optionsDate);
-
     const startTimeString = startDate.toLocaleTimeString('es-CO', optionsTime);
     const endTimeString = endDate.toLocaleTimeString('es-CO', optionsTime);
-
     if (startDateString === endDateString) {
       return `${startDateString}, ${startTimeString} - ${endTimeString}`;
     } else {
@@ -43,11 +42,11 @@ function EventCard({ event, onDetailsClick }) {
 
   const getStatusInfo = (status) => {
     switch (status) {
-      case 'planned': return { text: 'Planeado', className: 'status-planned' };
-      case 'active': return { text: 'Activo Ahora', className: 'status-active' };
-      case 'finished': return { text: 'Finalizado', className: 'status-finished' };
-      case 'cancelled': return { text: 'Cancelado', className: 'status-cancelled' };
-      default: return { text: 'Desconocido', className: 'status-planned' };
+      case 'planned': return { text: 'Planeado', className: styles.planned };
+      case 'active': return { text: 'Activo Ahora', className: styles.active };
+      case 'finished': return { text: 'Finalizado', className: styles.finished };
+      case 'cancelled': return { text: 'Cancelado', className: styles.cancelled };
+      default: return { text: 'Desconocido', className: styles.planned };
     }
   };
 
@@ -63,39 +62,40 @@ function EventCard({ event, onDetailsClick }) {
           onClose={() => setIsReportModalOpen(false)}
         />
       )}
-      <div className="event-card">
-        <div className="event-card-image-wrapper">
-          <img src={event.coverImage} alt={event.name} className="event-card-image" />
-          <span className={`event-status-badge ${statusInfo.className}`}>{statusInfo.text}</span>
+      <div className={styles.card}>
+        <div className={styles.imageWrapper}>
+          <img src={event.coverImage} alt={event.name} className={styles.image} />
+          <span className={`${styles.statusBadge} ${statusInfo.className}`}>{statusInfo.text}</span>
         </div>
-        <div className="event-card-content">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <h3 className="event-card-title">{event.name}</h3>
-            <div className="post-menu-container" ref={menuRef}>
-              <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="action-button">
+        <div className={styles.content}>
+          <div className={styles.header}>
+            <h3 className={styles.title}>{event.name}</h3>
+            <div className={styles.menuContainer} ref={menuRef}>
+              <button onClick={() => setIsMenuOpen(!isMenuOpen)} className={sharedStyles.closeButton} style={{padding: '4px'}}>
                 <MoreVertical size={20} />
               </button>
               {isMenuOpen && (
-                <div className="post-menu-dropdown">
-                  <button onClick={() => { setIsReportModalOpen(true); setIsMenuOpen(false); }}>Reportar evento</button>
+                <div className={styles.menuDropdown}>
+                  {/* --- LÍNEA CORREGIDA --- */}
+                  <button className={styles.menuButton} onClick={() => { setIsReportModalOpen(true); setIsMenuOpen(false); }}>Reportar evento</button>
                 </div>
               )}
             </div>
           </div>
-          <p className="event-card-organizer">Organizado por: <strong>{event.organizerName}</strong></p>
-          <div className="event-card-details">
-            <div className="detail-item">
+          <p className={styles.organizer}>Organizado por: <strong>{event.organizerName}</strong></p>
+          <div className={styles.details}>
+            <div className={styles.detailItem}>
               <Calendar size={16} />
               <span>{formatEventDuration(event.startDate, event.endDate)}</span>
             </div>
             {event.customLocation?.address && (
-              <div className="detail-item">
+              <div className={styles.detailItem}>
                   <MapPin size={16} />
                   <span>{event.customLocation.address}</span>
               </div>
             )}
           </div>
-          <button className="event-card-button" onClick={() => onDetailsClick(event)}>Ver Detalles</button>
+          <button className={`${sharedStyles.button} ${sharedStyles.primary} ${styles.button}`} onClick={() => onDetailsClick(event)}>Ver Detalles</button>
         </div>
       </div>
     </>

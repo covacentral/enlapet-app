@@ -1,12 +1,13 @@
 // frontend/src/App.jsx
-// Versión: 2.4 - Añadida Ruta de Notificaciones
-// Se añade la ruta para la nueva página de notificaciones.
+// Versión: 2.5 - Refactorización de CSS Completada
+// TAREA: Se elimina la importación del monolito App.css, ahora obsoleto.
 
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { auth } from './firebase';
 import { onAuthStateChanged } from "firebase/auth";
-import './App.css';
+
+// --- Se ha eliminado la línea "import './App.css';" ---
 
 import AuthPage from './AuthPage.jsx';
 import ProfileLayout from './ProfileLayout.jsx';

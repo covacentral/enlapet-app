@@ -1,11 +1,13 @@
 // frontend/src/SettingsTab.jsx
-// Versión: 2.4 - Funcionalidad de Cerrar Sesión
-// AÑADIDO: Se importa 'signOut' y se añade un botón para cerrar la sesión del usuario.
+// Versión: 2.6 - Corrección Final de Estilos de Botón
+// TAREA: Se aplican las clases correctas del sistema de botones compartidos a todos los botones.
 
 import { useState, useEffect, useRef } from 'react';
 import { auth } from './firebase';
-import { signOut } from "firebase/auth"; // <-- 1. Importar signOut
-import './App.css';
+import { signOut } from "firebase/auth";
+
+import styles from './SettingsTab.module.css';
+import sharedStyles from './shared.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -47,19 +49,15 @@ function SettingsTab({ user, userProfile, onProfileUpdate }) {
     }));
   };
   
-  // --- 2. NUEVA FUNCIÓN PARA CERRAR SESIÓN ---
   const handleLogout = async () => {
     if (window.confirm('¿Estás seguro de que quieres cerrar sesión?')) {
       try {
         await signOut(auth);
-        // No es necesario redirigir aquí. El listener onAuthStateChanged en App.jsx
-        // se encargará de llevar al usuario a la página de login.
       } catch (error) {
         setMessage({ text: 'Error al cerrar sesión.', isError: true });
       }
     }
   };
-
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
@@ -118,34 +116,33 @@ function SettingsTab({ user, userProfile, onProfileUpdate }) {
   };
 
   return (
-    <div className="settings-tab">
-      <div className="settings-header">
+    <div className={styles.container}>
+      <div className={styles.header}>
         <h2>Perfil</h2>
         {!isEditMode && (
-          <button onClick={() => setIsEditMode(true)} className="edit-button">
+          <button onClick={() => setIsEditMode(true)} className={`${sharedStyles.button} ${sharedStyles.primary}`}>
             Editar Perfil
           </button>
         )}
       </div>
 
       {message.text && (
-        <p className={`response-message ${message.isError ? 'error' : 'success'}`}>
+        <p className={message.isError ? sharedStyles.responseMessageError : sharedStyles.responseMessageSuccess}>
           {message.text}
         </p>
       )}
 
       {isEditMode ? (
-        <form onSubmit={handleUpdateProfile} className="register-form">
-          {/* ... campos del formulario sin cambios ... */}
-          <div className="form-group">
+        <form onSubmit={handleUpdateProfile}>
+          <div className={sharedStyles.formGroup}>
             <label htmlFor="name">Nombre:</label>
             <input type="text" id="name" value={formData.name} onChange={handleChange} required />
           </div>
-          <div className="form-group">
+          <div className={sharedStyles.formGroup}>
             <label htmlFor="phone">Teléfono de Contacto:</label>
             <input type="tel" id="phone" value={formData.phone} onChange={handleChange} placeholder="Ej: 573001234567" />
           </div>
-          <div className="form-group">
+          <div className={sharedStyles.formGroup}>
             <label htmlFor="bio">Biografía (máx. 70 caracteres):</label>
             <textarea 
               id="bio" 
@@ -154,26 +151,25 @@ function SettingsTab({ user, userProfile, onProfileUpdate }) {
               rows="3"
               maxLength="70"
             ></textarea>
-            <small className="char-counter">{formData.bio.length} / 70</small>
+            <small className={styles.charCounter}>{formData.bio.length} / 70</small>
           </div>
-          <div className="form-actions">
-            <button type="submit" disabled={isUpdating}>
+          <div className={styles.formActions}>
+            <button type="submit" className={`${sharedStyles.button} ${sharedStyles.primary}`} disabled={isUpdating}>
               {isUpdating ? 'Guardando...' : 'Guardar Cambios'}
             </button>
-            <button type="button" className="cancel-button" onClick={handleCancelEdit} disabled={isUpdating}>
+            <button type="button" className={`${sharedStyles.button} ${sharedStyles.secondary}`} onClick={handleCancelEdit} disabled={isUpdating}>
               Cancelar
             </button>
           </div>
         </form>
       ) : (
-        <div className="display-profile">
-          {/* ... vista de perfil sin cambios ... */}
-          <div className="profile-info-item"><strong>Nombre:</strong><p>{userProfile?.name || 'No establecido'}</p></div>
-          <div className="profile-info-item"><strong>Teléfono:</strong><p>{userProfile?.phone || 'No establecido'}</p></div>
-          <div className="profile-info-item"><strong>Biografía:</strong><p>{userProfile?.bio || 'Sin biografía.'}</p></div>
-          <div className="profile-picture-section">
-            <p>Tu foto de perfil se muestra en la cabecera.</p>
-            <button onClick={() => fileInputRef.current.click()} className="upload-button-secondary" disabled={isUploading}>
+        <div className={styles.displayProfile}>
+          <div className={styles.infoItem}><strong>Nombre:</strong><p>{userProfile?.name || 'No establecido'}</p></div>
+          <div className={styles.infoItem}><strong>Teléfono:</strong><p>{userProfile?.phone || 'No establecido'}</p></div>
+          <div className={styles.infoItem}><strong>Biografía:</strong><p>{userProfile?.bio || 'Sin biografía.'}</p></div>
+          <div className={styles.pictureSection}>
+            <p>Tu foto de perfil actual se muestra en la cabecera principal.</p>
+            <button onClick={() => fileInputRef.current.click()} className={`${sharedStyles.button} ${sharedStyles.secondary}`} disabled={isUploading}>
               {isUploading ? 'Subiendo...' : 'Cambiar Foto de Perfil'}
             </button>
             <input type="file" ref={fileInputRef} onChange={handleFileChange} style={{ display: 'none' }} accept="image/*" />
@@ -181,9 +177,8 @@ function SettingsTab({ user, userProfile, onProfileUpdate }) {
         </div>
       )}
 
-      {/* --- 3. NUEVA SECCIÓN Y BOTÓN DE LOGOUT --- */}
-      <div className="logout-section">
-        <button onClick={handleLogout} className="logout-button">
+      <div className={styles.logoutSection}>
+        <button onClick={handleLogout} className={`${sharedStyles.button} ${sharedStyles.danger}`}>
             Cerrar Sesión
         </button>
       </div>

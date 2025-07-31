@@ -1,0 +1,125 @@
+/* frontend/src/AuthPage.module.css */
+/* Estilos específicos para la página de autenticación (AuthPage). */
+
+.pageContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 4rem); /* Ajuste para padding en #root */
+    width: 100%;
+}
+
+.authContainer {
+    max-width: 400px;
+    width: 100%;
+    margin: 2rem auto;
+    padding: 2rem;
+    background-color: var(--background-light);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    text-align: center;
+}
+
+.brandTitle {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--brand-cream);
+}
+
+.brandSubtitle {
+    color: var(--text-secondary);
+    margin-top: -8px;
+    margin-bottom: 24px;
+}
+
+.googleBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+    padding: 12px;
+    font-size: 1rem;
+    font-weight: bold;
+    background-color: #fff;
+    color: #444;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s, box-shadow 0.3s;
+}
+
+.googleBtn:hover:not(:disabled) {
+    background-color: #f5f5f5;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.googleBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    color: var(--text-secondary);
+    margin: 1.5rem 0;
+}
+
+.divider::before,
+.divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.divider:not(:empty)::before {
+    margin-right: .5em;
+}
+
+.divider:not(:empty)::after {
+    margin-left: .5em;
+}
+
+.toggleViewText {
+    margin-top: 1.5rem;
+    color: var(--text-secondary);
+}
+
+/* --- [NUEVO] Contenedor para el input y el botón --- */
+.passwordInputWrapper {
+    position: relative;
+    width: 100%;
+}
+
+.passwordInputWrapper input {
+    padding-right: 50px !important; /* Asegura espacio para el botón */
+}
+
+/* --- [CORREGIDO] Posicionamiento del botón --- */
+.passwordToggleButton {
+    position: absolute;
+    top: 50%; /* Ahora se centra respecto al wrapper del input */
+    right: 10px;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.passwordToggleButton:hover {
+    color: var(--primary-accent);
+}
+
+.formDescription {
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+}
