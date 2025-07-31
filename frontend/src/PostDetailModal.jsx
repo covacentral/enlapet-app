@@ -1,11 +1,16 @@
 // frontend/src/PostDetailModal.jsx
-// (NUEVO Y FUNCIONAL) Componente para mostrar un post individual en una vista modal.
+// Versión: 1.1 - Refactorización a CSS Modules
+// TAREA: Se implementan los módulos de estilos para corregir el posicionamiento.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { auth } from './firebase';
 import PostCard from './PostCard';
 import LoadingComponent from './LoadingComponent';
+
+// 1. IMPORTAMOS los nuevos módulos de CSS
+import styles from './PostDetailModal.module.css';
+import sharedStyles from './shared.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -19,10 +24,8 @@ function PostDetailModal() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // La función para cerrar el modal simplemente nos lleva a la página anterior.
   const onClose = () => navigate(-1);
 
-  // Hook para cargar todos los datos necesarios para el post.
   const fetchPostData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -32,13 +35,11 @@ function PostDetailModal() {
       const idToken = await user.getIdToken();
       const headers = { 'Authorization': `Bearer ${idToken}` };
 
-      // 1. Cargar los datos principales del post usando el nuevo endpoint.
       const postRes = await fetch(`${API_URL}/api/posts/${postId}`, { headers });
       if (!postRes.ok) throw new Error('No se pudo cargar la publicación.');
       const postData = await postRes.json();
       setPost(postData);
 
-      // 2. Cargar los estados de 'like' y 'guardado' para este post.
       const postIds = [postId];
       const [likeStatusRes, saveStatusRes] = await Promise.all([
         fetch(`${API_URL}/api/posts/like-statuses`, {
@@ -67,13 +68,11 @@ function PostDetailModal() {
     fetchPostData();
   }, [fetchPostData]);
 
-  // Funciones para manejar la interactividad del PostCard desde este modal.
   const handleLikeToggle = () => {
     if (!post) return;
     const newLikedState = !isLiked;
     setIsLiked(newLikedState);
     setPost(p => ({...p, likesCount: p.likesCount + (newLikedState ? 1 : -1)}));
-    // Llamada a la API en segundo plano
     (async () => {
         const user = auth.currentUser; if (!user) return;
         const idToken = await user.getIdToken();
@@ -101,10 +100,11 @@ function PostDetailModal() {
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="post-detail-modal-wrapper" onClick={e => e.stopPropagation()}>
+    // 2. APLICAMOS las clases de los módulos de CSS
+    <div className={sharedStyles.modalBackdrop} onClick={onClose}>
+      <div className={styles.wrapper} onClick={e => e.stopPropagation()}>
         {isLoading && <LoadingComponent text="Cargando momento..." />}
-        {error && <div className="error-message" style={{padding: '2rem', color: 'white'}}>{error}</div>}
+        {error && <div className={styles.errorMessage}>{error}</div>}
         {post && (
             <PostCard 
                 post={post}
