@@ -1,7 +1,6 @@
 // frontend/src/FeedPage.jsx
-// Versión: 2.1 - Publicación Inmediata
-// Implementa la lógica para mostrar un nuevo post en el feed
-// instantáneamente después de su creación.
+// Versión: 2.2 - Refactorización a CSS Modules y Corrección Final
+// TAREA: Se implementa el módulo de estilos local para corregir el botón "Ver más".
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { auth } from './firebase';
@@ -9,6 +8,10 @@ import PostCard from './PostCard';
 import LoadingComponent from './LoadingComponent';
 import CreatePostPrompt from './CreatePostPrompt';
 import CreatePostModal from './CreatePostModal';
+
+// 1. IMPORTAMOS los nuevos módulos de CSS
+import styles from './FeedPage.module.css';
+import sharedStyles from './shared.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -75,13 +78,11 @@ function FeedPage({ userProfile, pets }) {
     fetchFeed(null, true);
   }, []);
 
-  // [REFINADO] La función ahora acepta el nuevo post y lo añade al estado.
   const handlePostCreated = (newPost) => {
     setIsModalOpen(false);
     if (newPost) {
       setPosts(prevPosts => [newPost, ...prevPosts]);
     } else {
-      // Fallback si el backend no devuelve el post, recargamos todo.
       fetchFeed(null, true);
     }
   };
@@ -121,7 +122,7 @@ function FeedPage({ userProfile, pets }) {
   const handleLoadMore = () => { if (hasMore) fetchFeed(nextCursor); };
 
   return (
-    <div className="feed-page-container">
+    <div>
       {isModalOpen && (
         <CreatePostModal 
           userProfile={userProfile}
@@ -150,18 +151,19 @@ function FeedPage({ userProfile, pets }) {
           ))}
         </div>
       ) : (
-        <div className="empty-state-message">
-          <h2 style={{fontSize: '1.5rem', fontWeight: 800}}>¡Bienvenido a EnlaPet!</h2>
+        // 2. APLICAMOS las clases de los módulos de CSS
+        <div className={sharedStyles.emptyStateMessage}>
+          <h2 className={styles.emptyStateMessage h2}>¡Bienvenido a EnlaPet!</h2>
           <p>Tu feed de inicio está un poco vacío.</p>
           <p>Empieza a seguir a otras mascotas para no perderte sus momentos.</p>
         </div>
       )}
       
-      {error && <p className="response-message error">{error}</p>}
+      {error && <p className={sharedStyles.responseMessageError}>{error}</p>}
 
       {!isLoading && hasMore && posts.length > 0 && (
-        <div style={{textAlign: 'center', marginTop: '2rem'}}>
-          <button onClick={handleLoadMore} className="load-more-button">Ver más momentos</button>
+        <div className={styles.loadMoreContainer}>
+          <button onClick={handleLoadMore} className={styles.loadMoreButton}>Ver más momentos</button>
         </div>
       )}
     </div>
