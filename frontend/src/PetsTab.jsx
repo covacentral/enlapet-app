@@ -1,12 +1,11 @@
 // frontend/src/PetsTab.jsx
-// Versión: 2.1 - Refactorización a CSS Modules
-// TAREA: Se implementan los módulos de estilos local y compartido, y se elimina la etiqueta <style> en línea.
+// Versión: 2.2 - Corrección de Estilos de Botón
+// TAREA: Se corrige la clase del botón "Ver Perfil Público" para que use el sistema compartido.
 
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import PetEditModal from './PetEditModal';
 
-// 1. IMPORTAMOS los módulos de CSS necesarios
 import styles from './PetsTab.module.css';
 import sharedStyles from './shared.module.css';
 
@@ -40,7 +39,8 @@ function PetCard({ pet, onEdit }) {
             {isProfileIncomplete && <UpdatePrompt />}
         </button>
         <div className={styles.actions}>
-           <Link to={`/pet/${pet.id}`} className={`${sharedStyles.button} ${sharedStyles.buttonPrimary}`} style={{width: '100%', textDecoration: 'none'}}>Ver Perfil Público</Link>
+           {/* --- LÍNEA CORREGIDA --- */}
+           <Link to={`/pet/${pet.id}`} className={`${sharedStyles.button} ${sharedStyles.primary}`} style={{width: '100%', textDecoration: 'none'}}>Ver Perfil Público</Link>
         </div>
       </div>
     </div>
@@ -99,7 +99,6 @@ function PetsTab({ user, initialPets, onPetsUpdate }) {
 
   return (
     <>
-      {/* 2. APLICAMOS las clases de los módulos de CSS */}
       <div className={styles.container}>
         <div className={styles.addPetColumn}>
           <h2>Registrar Nueva Mascota</h2>
@@ -112,7 +111,7 @@ function PetsTab({ user, initialPets, onPetsUpdate }) {
                 <label htmlFor="petBreed">Raza (Opcional):</label>
                 <input type="text" id="petBreed" value={petBreed} onChange={(e) => setPetBreed(e.target.value)} disabled={isAdding} />
             </div>
-            <button type="submit" className={`${sharedStyles.button} ${sharedStyles.buttonPrimary}`} style={{width: '100%'}} disabled={isAdding}>
+            <button type="submit" className={`${sharedStyles.button} ${sharedStyles.primary}`} style={{width: '100%'}} disabled={isAdding}>
                 {isAdding ? 'Añadiendo...' : 'Añadir Mascota'}
             </button>
           </form>
