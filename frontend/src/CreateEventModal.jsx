@@ -1,13 +1,15 @@
 // frontend/src/CreateEventModal.jsx
-// Versión: 1.5 - Geolocalización Inteligente
-// CORRIGE: Restaura la funcionalidad de centrado inicial por geolocalización en el mini-mapa.
-// REFACTOR: Se aísla la lógica de geolocalización en su propio useEffect para mayor
-// estabilidad y predictibilidad, replicando el comportamiento del mapa principal.
+// Versión: 1.6 - Refactorización a CSS Modules
+// TAREA: Se implementan los módulos de estilos local y compartido.
 
 import React, { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import { auth } from './firebase';
 import { X, UploadCloud } from 'lucide-react';
+
+// 1. IMPORTAMOS los nuevos módulos de CSS
+import styles from './CreateEventModal.module.css';
+import sharedStyles from './shared.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 const initialPosition = [4.5709, -74.2973];
@@ -48,7 +50,6 @@ function CreateEventModal({ onClose, onEventCreated }) {
   const [mapInstance, setMapInstance] = useState(null);
   const fileInputRef = useRef(null);
 
-  // --- Lógica de Geolocalización (Refactorizada) ---
   useEffect(() => {
     if (!mapInstance) return;
     navigator.geolocation.getCurrentPosition(
@@ -62,7 +63,6 @@ function CreateEventModal({ onClose, onEventCreated }) {
     );
   }, [mapInstance]);
 
-  // --- Lógica de Carga de Datos (Aislada) ---
   useEffect(() => {
     const fetchCategories = async () => {
         try {
@@ -148,67 +148,67 @@ function CreateEventModal({ onClose, onEventCreated }) {
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="add-location-modal-content" onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
+    <div className={sharedStyles.modalBackdrop} onClick={onClose}>
+      <div className={styles.content} onClick={e => e.stopPropagation()}>
+        <div className={sharedStyles.modalHeader}>
           <h2>Crear un Nuevo Evento</h2>
-          <button onClick={onClose} className="close-button" disabled={isLoading}>
+          <button onClick={onClose} className={sharedStyles.closeButton} disabled={isLoading}>
             <X size={24} />
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="add-location-form">
-          <div className="form-group">
+        <form onSubmit={handleSubmit} className={styles.form}>
+          <div className={sharedStyles.formGroup}>
             <label>Imagen de Portada</label>
-            <div className="image-upload-area" onClick={() => fileInputRef.current.click()}>
-              {previewImage ? <img src={previewImage} alt="Previsualización" className="image-preview" /> : 
-                <div className="upload-prompt-content"><UploadCloud size={48} /><p>Selecciona una imagen</p></div>
+            <div className={styles.imageUploadArea} onClick={() => fileInputRef.current.click()}>
+              {previewImage ? <img src={previewImage} alt="Previsualización" className={styles.imagePreview} /> : 
+                <div className={styles.uploadPromptContent}><UploadCloud size={48} /><p>Selecciona una imagen</p></div>
               }
             </div>
             <input type="file" ref={fileInputRef} onChange={handleImageChange} style={{ display: 'none' }} accept="image/*" required />
           </div>
-          <div className="form-group">
+          <div className={sharedStyles.formGroup}>
             <label htmlFor="name">Nombre del Evento</label>
             <input type="text" id="name" name="name" value={formData.name} onChange={handleChange} required />
           </div>
-          <div className="form-group">
+          <div className={sharedStyles.formGroup}>
             <label htmlFor="category">Categoría del Evento</label>
             <select id="category" name="category" value={formData.category} onChange={handleChange} required >
               <option value="" disabled>Selecciona una categoría...</option>
               {eventCategories.map(cat => <option key={cat.id} value={cat.key}>{cat.name}</option>)}
             </select>
           </div>
-          <div className="form-group">
+          <div className={sharedStyles.formGroup}>
             <label htmlFor="description">Descripción</label>
             <textarea id="description" name="description" rows="4" value={formData.description} onChange={handleChange} required></textarea>
           </div>
-          <div className="form-row">
-            <div className="form-group">
+          <div className={styles.formRow}>
+            <div className={sharedStyles.formGroup}>
               <label htmlFor="startDate">Fecha y Hora de Inicio</label>
               <input type="datetime-local" id="startDate" name="startDate" value={formData.startDate} onChange={handleChange} required />
             </div>
-            <div className="form-group">
+            <div className={sharedStyles.formGroup}>
               <label htmlFor="endDate">Fecha y Hora de Fin</label>
               <input type="datetime-local" id="endDate" name="endDate" value={formData.endDate} onChange={handleChange} required />
             </div>
           </div>
-          <div className="form-group">
+          <div className={sharedStyles.formGroup}>
             <label>Ubicación del Evento</label>
-            <div className="mini-map-wrapper">
-              <MapContainer center={initialPosition} zoom={13} className="leaflet-container mini-map" whenCreated={setMapInstance}>
+            <div className={styles.miniMapWrapper}>
+              <MapContainer center={initialPosition} zoom={13} whenCreated={setMapInstance}>
                 <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
                 <LocationPicker onLocationSelect={(latlng) => setCoordinates({ latitude: latlng.lat, longitude: latlng.lng })} />
               </MapContainer>
             </div>
-            {!coordinates && <small className="map-prompt">Haz clic en el mapa para marcar el punto exacto.</small>}
-            {coordinates && <small className="map-prompt success">¡Ubicación seleccionada!</small>}
+            {!coordinates && <small className={styles.mapPrompt}>Haz clic en el mapa para marcar el punto exacto.</small>}
+            {coordinates && <small className={styles.mapPromptSuccess}>¡Ubicación seleccionada!</small>}
           </div>
-          <div className="form-group">
+          <div className={sharedStyles.formGroup}>
             <label htmlFor="customAddress">Dirección (Opcional)</label>
             <input type="text" id="customAddress" name="customAddress" value={formData.customAddress} onChange={handleChange} />
           </div>
-          <div className="modal-footer">
-            {message && <p className="response-message">{message}</p>}
-            <button type="submit" className="publish-button" disabled={isLoading}>
+          <div className={sharedStyles.modalFooter}>
+            {message && <p className={message.startsWith('Error') ? sharedStyles.responseMessageError : sharedStyles.responseMessage}>{message}</p>}
+            <button type="submit" className={sharedStyles.buttonPrimary} style={{width: '100%'}} disabled={isLoading}>
               {isLoading ? 'Creando...' : 'Crear Evento'}
             </button>
           </div>
