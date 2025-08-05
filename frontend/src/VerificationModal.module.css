@@ -1,0 +1,89 @@
+/* frontend/src/VerificationModal.module.css */
+/* Estilos específicos para el modal de solicitud de verificación. */
+
+.content {
+    background-color: var(--background-light);
+    border: 1px solid var(--border-color);
+    border-radius: 15px;
+    width: 90%;
+    max-width: 550px;
+    max-height: 90vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.form {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.description {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+    text-align: left;
+}
+
+.fileUploadArea {
+    border: 2px dashed var(--border-color);
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background-color 0.2s;
+}
+
+.fileUploadArea:hover {
+    border-color: var(--primary-accent);
+    background-color: rgba(0, 187, 167, 0.05);
+}
+
+.uploadPrompt {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-secondary);
+}
+
+.fileList {
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    text-align: left;
+}
+
+.fileItem {
+    background-color: var(--background-dark);
+    padding: 8px 12px;
+    border-radius: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+    border: 1px solid var(--border-color);
+}
+
+.fileItem span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 10px;
+}
+
+.removeFileButton {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.removeFileButton:hover {
+    color: var(--error-red);
+}
