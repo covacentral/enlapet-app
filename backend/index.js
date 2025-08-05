@@ -10,7 +10,7 @@ const cors = require('cors');
 // --- Importación de Módulos Locales ---
 const authenticateUser = require('./middleware/authenticateUser');
 const authRoutes = require('./routes/auth.routes');
-const publicRoutes = require('./routes/public.routes'); // <-- NUEVO: Importamos las rutas públicas
+const publicRoutes = require('./routes/public.routes');
 const petRoutes = require('./routes/pets.routes');
 const profileRoutes = require('./routes/profile.routes');
 const postRoutes = require('./routes/posts.routes');
@@ -18,6 +18,7 @@ const eventRoutes = require('./routes/events.routes');
 const locationRoutes = require('./routes/locations.routes');
 const notificationRoutes = require('./routes/notifications.routes');
 const reportRoutes = require('./routes/reports.routes');
+const verificationRoutes = require('./routes/verification.routes'); // <-- NUEVO: Importamos las rutas de verificación
 
 // --- 2. INICIALIZACIÓN DE LA APP ---
 const app = express();
@@ -45,9 +46,9 @@ app.use(express.json());
 // --- 4. DEFINICIÓN DE RUTAS (ORDEN CORREGIDO) ---
 
 // A. Rutas Públicas (No requieren autenticación)
-app.get('/', (req, res) => res.json({ message: "¡Bienvenido a la API de EnlaPet! v1.1 - Arquitectura Corregida" }));
-app.use('/api/auth', authRoutes); // Rutas de registro y login.
-app.use('/api', publicRoutes);     // <-- NUEVO: Registramos el enrutador de rutas públicas.
+app.get('/', (req, res) => res.json({ message: "¡Bienvenido a la API de EnlaPet! v1.2 - Sistema de Verificación" }));
+app.use('/api/auth', authRoutes);
+app.use('/api', publicRoutes);
 
 // B. Middleware de Autenticación
 // A partir de este punto, TODAS las rutas subsiguientes requerirán un token.
@@ -62,6 +63,7 @@ app.use('/api', eventRoutes);
 app.use('/api', locationRoutes);
 app.use('/api', notificationRoutes);
 app.use('/api', reportRoutes);
+app.use('/api', verificationRoutes); // <-- NUEVO: Registramos el enrutador de verificación
 
 // --- 5. INICIAR SERVIDOR ---
 app.listen(PORT, () => console.log(`Servidor modularizado y corregido corriendo en el puerto ${PORT}`));
