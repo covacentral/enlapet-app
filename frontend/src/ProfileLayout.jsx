@@ -1,6 +1,6 @@
 // frontend/src/ProfileLayout.jsx
-// Versión: 3.5 - CORRECCIÓN CRÍTICA de Bucle Infinito
-// TAREA: Se corrige la dependencia en useCallback para evitar un ciclo infinito de fetching de datos.
+// Versión: 3.6 - Añadida la ruta para el Panel de Veterinario
+// TAREA: Se añade la nueva ruta y se importa el componente VetDashboardPage.
 
 import { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
@@ -18,6 +18,7 @@ import PetsTab from './PetsTab.jsx';
 import PetSocialProfile from './PetSocialProfile.jsx';
 import UserProfilePage from './UserProfilePage.jsx';
 import NotificationsPage from './NotificationsPage.jsx';
+import VetDashboardPage from './VetDashboardPage.jsx'; // <-- 1. IMPORTAMOS la nueva página
 
 // Importación de Componentes
 import LoadingComponent from './LoadingComponent.jsx';
@@ -31,19 +32,13 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 function ProfileLayout({ user }) {
   const [userProfile, setUserProfile] = useState(null);
   const [pets, setPets] = useState([]);
-  const [loading, setLoading] = useState(true); // <-- Inicia en true
+  const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const navigate = useNavigate();
 
-  // --- LÍNEA CORREGIDA ---
-  // Se elimina `userProfile` del array de dependencias de useCallback.
-  // La función de fetching no debe depender del estado que ella misma establece.
-  // Ahora solo depende de `user`, por lo que solo se recreará si el usuario cambia (logout/login).
   const fetchCoreData = useCallback(async () => {
     if (!user) return;
-    
-    // El estado de carga se gestiona en el useEffect principal para mayor control.
     try {
       const idToken = await user.getIdToken();
       const [profileResponse, petsResponse] = await Promise.all([
@@ -58,9 +53,6 @@ function ProfileLayout({ user }) {
       setPets(petsData);
     } catch (error) {
       console.error("Error fetching core data:", error);
-      // Opcional: Podríamos redirigir a una página de error o mostrar un mensaje.
-    } finally {
-      // setLoading(false) se moverá al useEffect para asegurar que se llame solo una vez.
     }
   }, [user]);
 
@@ -77,37 +69,43 @@ function ProfileLayout({ user }) {
       console.error("Error fetching unread count:", error);
     }
   }, [user]);
-  
-  // --- LÓGICA DE useEffect CORREGIDA ---
-  // Se estructura para ejecutar el fetching de datos una sola vez cuando el componente se monta
-  // o cuando el usuario cambia.
+
   useEffect(() => {
-    setLoading(true); // Inicia la carga
-    
+    setLoading(true);
     Promise.all([
         fetchCoreData(),
         fetchUnreadCount()
     ]).finally(() => {
-        setLoading(false); // Finaliza la carga después de que AMBAS promesas se resuelvan
+        setLoading(false);
     });
-
     const interval = setInterval(fetchUnreadCount, 60000);
     return () => clearInterval(interval);
   }, [fetchCoreData, fetchUnreadCount]);
 
-
   const handleMarkAsRead = useCallback(async () => {
-    // ... (sin cambios)
+    setUnreadCount(0);
+    try {
+      const idToken = await user.getIdToken();
+      await fetch(`${API_URL}/api/notifications/mark-as-read`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${idToken}` }
+      });
+    } catch (error) {
+      console.error("Error marking notifications as read:", error);
+      fetchUnreadCount();
+    }
   }, [user, fetchUnreadCount]);
 
   const handlePostCreated = (newPost) => {
-    // ... (sin cambios)
+    setIsCreateModalOpen(false);
+    if (newPost) {
+      navigate('/dashboard');
+    }
   };
 
   if (loading) return <LoadingComponent text="Cargando tu universo EnlaPet..." />;
 
   return (
-    // ... (El resto del JSX no necesita cambios)
     <div className={styles.container}>
       {isCreateModalOpen && (
         <CreatePostModal 
@@ -132,6 +130,9 @@ function ProfileLayout({ user }) {
           <Route path="pet/:petId" element={<PetSocialProfile user={user} userProfile={userProfile} pets={pets} onUpdate={fetchCoreData} />} />
           <Route path="user/:userId" element={<UserProfilePage />} />
           <Route path="notifications/post/:postId" element={<NotificationsPage onMarkAsRead={handleMarkAsRead} />} />
+          
+          {/* --- 2. AÑADIMOS LA NUEVA RUTA PROTEGIDA --- */}
+          <Route path="vet-panel" element={<VetDashboardPage />} />
         </Routes>
       </main>
 
