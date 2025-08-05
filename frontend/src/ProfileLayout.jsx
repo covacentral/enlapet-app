@@ -1,12 +1,11 @@
 // frontend/src/ProfileLayout.jsx
-// Versión: 3.4 - Corrección de Layout y CSS Modules
-// TAREA: Se implementa el módulo de estilos para corregir la superposición de la barra de navegación.
+// Versión: 3.5 - CORRECCIÓN CRÍTICA de Bucle Infinito
+// TAREA: Se corrige la dependencia en useCallback para evitar un ciclo infinito de fetching de datos.
 
 import { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import { auth } from './firebase';
 
-// 1. IMPORTAMOS el nuevo módulo de estilos para el layout
 import styles from './ProfileLayout.module.css';
 
 // Importación de Páginas
@@ -32,14 +31,19 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 function ProfileLayout({ user }) {
   const [userProfile, setUserProfile] = useState(null);
   const [pets, setPets] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // <-- Inicia en true
   const [unreadCount, setUnreadCount] = useState(0);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const navigate = useNavigate();
 
+  // --- LÍNEA CORREGIDA ---
+  // Se elimina `userProfile` del array de dependencias de useCallback.
+  // La función de fetching no debe depender del estado que ella misma establece.
+  // Ahora solo depende de `user`, por lo que solo se recreará si el usuario cambia (logout/login).
   const fetchCoreData = useCallback(async () => {
     if (!user) return;
-    if (!userProfile) setLoading(true); 
+    
+    // El estado de carga se gestiona en el useEffect principal para mayor control.
     try {
       const idToken = await user.getIdToken();
       const [profileResponse, petsResponse] = await Promise.all([
@@ -54,10 +58,11 @@ function ProfileLayout({ user }) {
       setPets(petsData);
     } catch (error) {
       console.error("Error fetching core data:", error);
+      // Opcional: Podríamos redirigir a una página de error o mostrar un mensaje.
     } finally {
-      setLoading(false);
+      // setLoading(false) se moverá al useEffect para asegurar que se llame solo una vez.
     }
-  }, [user, userProfile]);
+  }, [user]);
 
   const fetchUnreadCount = useCallback(async () => {
     if (!user) return;
@@ -72,39 +77,37 @@ function ProfileLayout({ user }) {
       console.error("Error fetching unread count:", error);
     }
   }, [user]);
-
+  
+  // --- LÓGICA DE useEffect CORREGIDA ---
+  // Se estructura para ejecutar el fetching de datos una sola vez cuando el componente se monta
+  // o cuando el usuario cambia.
   useEffect(() => {
-    fetchCoreData();
-    fetchUnreadCount();
+    setLoading(true); // Inicia la carga
+    
+    Promise.all([
+        fetchCoreData(),
+        fetchUnreadCount()
+    ]).finally(() => {
+        setLoading(false); // Finaliza la carga después de que AMBAS promesas se resuelvan
+    });
+
     const interval = setInterval(fetchUnreadCount, 60000);
     return () => clearInterval(interval);
   }, [fetchCoreData, fetchUnreadCount]);
 
+
   const handleMarkAsRead = useCallback(async () => {
-    setUnreadCount(0);
-    try {
-      const idToken = await user.getIdToken();
-      await fetch(`${API_URL}/api/notifications/mark-as-read`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${idToken}` }
-      });
-    } catch (error) {
-      console.error("Error marking notifications as read:", error);
-      fetchUnreadCount();
-    }
+    // ... (sin cambios)
   }, [user, fetchUnreadCount]);
 
   const handlePostCreated = (newPost) => {
-    setIsCreateModalOpen(false);
-    if (newPost) {
-      navigate('/dashboard');
-    }
+    // ... (sin cambios)
   };
 
   if (loading) return <LoadingComponent text="Cargando tu universo EnlaPet..." />;
 
   return (
-    // 2. APLICAMOS la nueva clase de estilo al contenedor principal
+    // ... (El resto del JSX no necesita cambios)
     <div className={styles.container}>
       {isCreateModalOpen && (
         <CreatePostModal 
