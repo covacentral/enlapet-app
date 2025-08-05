@@ -7,7 +7,8 @@ const {
     getMyPets,
     createPet,
     updatePet,
-    uploadPetPicture
+    uploadPetPicture,
+    managePatientLink // <-- 1. Importamos la nueva función del controlador
 } = require('../controllers/pet.controller');
 
 // Configuración de Multer para la subida de archivos en memoria
@@ -36,5 +37,10 @@ router.put('/pets/:petId', updatePet);
 // Método: POST
 // Función: Sube la foto de perfil para una mascota específica.
 router.post('/pets/:petId/picture', upload.single('petPicture'), uploadPetPicture);
+
+// URL: /api/pets/:petId/manage-link
+// Método: POST
+// Función: Permite al dueño de la mascota aprobar o rechazar una solicitud de vínculo de un veterinario.
+router.post('/pets/:petId/manage-link', managePatientLink); // <-- 2. Añadimos la nueva ruta
 
 module.exports = router;
