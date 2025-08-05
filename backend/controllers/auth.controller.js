@@ -1,8 +1,8 @@
 // backend/controllers/auth.controller.js
 // Lógica de negocio para el registro y la autenticación.
 
-// Importamos los servicios que necesitamos desde nuestra configuración centralizada.
 const { db, auth } = require('../config/firebase');
+const { getNewUserProfile } = require('../models/user.model'); // <-- 1. IMPORTAMOS el nuevo modelo de usuario
 
 /**
  * Registra un nuevo usuario con email y contraseña.
@@ -17,21 +17,9 @@ const registerUser = async (req, res) => {
     // 1. Crear el usuario en Firebase Authentication.
     const userRecord = await auth.createUser({ email, password, displayName: name });
 
-    // 2. Crear el documento de perfil del usuario en Firestore.
-    const newUserProfile = {
-      name,
-      email,
-      createdAt: new Date().toISOString(),
-      userType: 'personal',
-      profilePictureUrl: '',
-      coverPhotoUrl: '',
-      bio: '',
-      phone: '',
-      location: { country: 'Colombia', department: '', city: '' },
-      privacySettings: { profileVisibility: 'public', showEmail: 'private' },
-      followersCount: 0, // Inicializar contadores
-      followingCount: 0
-    };
+    // 2. Crear el documento de perfil del usuario en Firestore usando el modelo.
+    // <-- 2. UTILIZAMOS el modelo para generar la estructura de datos
+    const newUserProfile = getNewUserProfile(name, email);
     await db.collection('users').doc(userRecord.uid).set(newUserProfile);
 
     res.status(201).json({ message: 'Usuario registrado con éxito', uid: userRecord.uid });
@@ -62,22 +50,10 @@ const googleAuth = async (req, res) => {
     const userRef = db.collection('users').doc(uid);
     const userDoc = await userRef.get();
 
-    // 1. Si el usuario no existe en Firestore, lo creamos.
+    // 1. Si el usuario no existe en Firestore, lo creamos usando el modelo.
     if (!userDoc.exists) {
-      const newUserProfile = {
-        name,
-        email,
-        createdAt: new Date().toISOString(),
-        userType: 'personal',
-        profilePictureUrl: picture || '', // Usar la foto de Google si existe
-        coverPhotoUrl: '',
-        bio: '',
-        phone: '',
-        location: { country: 'Colombia', department: '', city: '' },
-        privacySettings: { profileVisibility: 'public', showEmail: 'private' },
-        followersCount: 0,
-        followingCount: 0
-      };
+      // <-- 3. UTILIZAMOS el modelo también para el registro con Google
+      const newUserProfile = getNewUserProfile(name, email, picture || '');
       await userRef.set(newUserProfile);
       return res.status(201).json({ message: 'Usuario registrado y autenticado con Google.', uid });
     } else {

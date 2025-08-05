@@ -1,4 +1,5 @@
 // frontend/src/VerificationModal.jsx
+// Versión 2.0 - Actualizado para la nueva arquitectura de backend.
 // Componente para que los usuarios soliciten la verificación de su cuenta.
 
 import { useState, useRef } from 'react';
@@ -10,7 +11,6 @@ import sharedStyles from './shared.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-// Opciones de perfiles a verificar. Coinciden con el backend.
 const VERIFICATION_TYPES = [
   { value: 'vet', label: 'Veterinaria o Profesional de la Salud Animal' },
   { value: 'shop', label: 'Tienda de Mascotas (Pet Shop)' },
@@ -68,7 +68,7 @@ function VerificationModal({ onClose, onVerificationRequested }) {
       if (!response.ok) throw new Error(data.message || 'Error al enviar la solicitud.');
       
       setMessage('¡Solicitud enviada con éxito! La revisaremos y te notificaremos.');
-      onVerificationRequested(); // Llama a la función para actualizar la UI anterior
+      onVerificationRequested();
       setTimeout(() => onClose(), 2500);
 
     } catch (error) {
