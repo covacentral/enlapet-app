@@ -1,6 +1,6 @@
 // frontend/src/SettingsTab.jsx
-// Versión: 2.8 - CORRECCIÓN FINAL con Sistema de Pestañas
-// TAREA: Se reestructura el componente para funcionar con pestañas y se integra el flujo de verificación.
+// Versión: 2.9 - CORRECCIÓN LÓGICA FINAL
+// TAREA: Se corrige el subcomponente VerificationStatus para que se muestre correctamente en usuarios sin historial de verificación.
 
 import { useState, useEffect, useRef } from 'react';
 import { auth } from './firebase';
@@ -13,10 +13,14 @@ import sharedStyles from './shared.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-// --- SUBCOMPONENTES (SIN CAMBIOS) ---
+// --- SUBCOMPONENTES (CON LÍNEA CORREGIDA) ---
 const VerificationStatus = ({ verification, onOpenModal }) => {
-  if (!verification) return null;
-  const { status, type, rejectionReason } = verification;
+  // --- LÍNEA CORREGIDA ---
+  // Antes: if (!verification) return null;
+  // Ahora: Asignamos un valor por defecto si 'verification' no existe. Esto asegura que el componente SIEMPRE se renderice.
+  const verif = verification || { status: 'none', type: 'none' };
+  const { status, type, rejectionReason } = verif;
+
   switch (status) {
     case 'verified':
       return (
@@ -39,7 +43,7 @@ const VerificationStatus = ({ verification, onOpenModal }) => {
           <div><strong>Solicitud Rechazada</strong><span>{rejectionReason || 'No se cumplieron los requisitos.'}</span><button className={sharedStyles.linkButton} onClick={onOpenModal}>Reintentar solicitud</button></div>
         </div>
       );
-    default:
+    default: // 'none'
       return (
         <div className={styles.statusBox}>
           <div><strong>Tu cuenta no está verificada.</strong><span>Verifica tu perfil para acceder a herramientas profesionales y generar más confianza.</span><button className={`${sharedStyles.button} ${sharedStyles.secondary}`} style={{marginTop: '10px'}} onClick={onOpenModal}>Solicitar Verificación</button></div>
@@ -48,9 +52,9 @@ const VerificationStatus = ({ verification, onOpenModal }) => {
   }
 };
 
-// --- COMPONENTE PRINCIPAL REFACTORIZADO ---
+// --- COMPONENTE PRINCIPAL (SIN CAMBIOS) ---
 function SettingsTab({ user, userProfile, onProfileUpdate }) {
-  const [activeTab, setActiveTab] = useState('profile'); // <-- 1. NUEVO ESTADO PARA PESTAÑAS
+  const [activeTab, setActiveTab] = useState('profile');
   const [isEditMode, setIsEditMode] = useState(false);
   const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
   const [formData, setFormData] = useState({ name: '', phone: '', bio: '' });
@@ -145,7 +149,6 @@ function SettingsTab({ user, userProfile, onProfileUpdate }) {
             <h2>Ajustes de la Cuenta</h2>
         </div>
         
-        {/* --- 2. LÓGICA DE PESTAÑAS IMPLEMENTADA --- */}
         <div className={sharedStyles.modalTabs}>
             <button type="button" className={`${sharedStyles.modalTabButton} ${activeTab === 'profile' ? sharedStyles.active : ''}`} onClick={() => setActiveTab('profile')}>
                 Perfil Público
@@ -161,7 +164,6 @@ function SettingsTab({ user, userProfile, onProfileUpdate }) {
           </p>
         )}
 
-        {/* --- 3. RENDERIZADO CONDICIONAL DEL CONTENIDO DE LA PESTAÑA --- */}
         {activeTab === 'verification' && (
           <div className={styles.section}>
             <VerificationStatus verification={userProfile?.verification} onOpenModal={() => setIsVerificationModalOpen(true)} />
