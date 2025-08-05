@@ -1,14 +1,14 @@
 // frontend/src/MainHeader.jsx
-// Versión 1.2 - Refactorización a CSS Modules
-// TAREA: Se implementa el módulo de estilos local para la cabecera principal.
+// Versión 1.3 - Añade enlace condicional al Panel de Veterinario
+// TAREA: Se muestra un botón de acceso al panel solo si el usuario es un veterinario verificado.
 
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { auth } from './firebase';
-import { Plus } from 'lucide-react';
+import { Plus, Stethoscope } from 'lucide-react'; // <-- 1. Importamos un nuevo ícono
 
-// 1. IMPORTAMOS el nuevo módulo de estilos
 import styles from './MainHeader.module.css';
+import sharedStyles from './shared.module.css'; // <-- 2. Importamos estilos compartidos para el botón
 
 const PetBubble = ({ pet }) => (
   <Link to={`/dashboard/pet/${pet.id}`} className={styles.petBubble} title={pet.name}>
@@ -29,8 +29,10 @@ function MainHeader({ userProfile, pets }) {
   
   const currentUserId = auth.currentUser?.uid;
 
+  // --- 3. Lógica para determinar si mostrar el botón del panel ---
+  const isVerifiedVet = userProfile.verification?.status === 'verified' && userProfile.verification?.type === 'vet';
+
   return (
-    // 2. APLICAMOS las clases desde el objeto 'styles'
     <header className={styles.header}>
       <div className={styles.userProfileSection}>
         <Link to={`/dashboard/user/${currentUserId}`} className={styles.userProfileLink}>
@@ -44,6 +46,14 @@ function MainHeader({ userProfile, pets }) {
             </div>
             <p className={styles.profileBio}>{userProfile.bio || 'Sin biografía.'}</p>
         </Link>
+        
+        {/* --- 4. Renderizado condicional del botón --- */}
+        {isVerifiedVet && (
+            <Link to="/dashboard/vet-panel" className={`${sharedStyles.button} ${sharedStyles.primary}`} style={{marginTop: '15px', textDecoration: 'none'}}>
+                <Stethoscope size={18} />
+                Panel Veterinario
+            </Link>
+        )}
       </div>
       <div className={styles.userPetsSection}>
         <h1 className={styles.brandTitle}>enlapet</h1>
