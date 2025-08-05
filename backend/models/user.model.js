@@ -16,11 +16,9 @@
 
 /**
  * @typedef {Object} UserVerification
- * @property {'none' | 'vet' | 'shop' | 'foundation' | 'government'} type - El tipo de perfil verificado.
- * @property {'none' | 'pending' | 'verified' | 'rejected'} status - El estado de la solicitud.
- * @property {string | null} applicationDate - Fecha de la solicitud en formato ISO.
- * @property {Array<string>} documents - URLs a los documentos de soporte en Firebase Storage.
- * @property {string} rejectionReason - Motivo del rechazo (si aplica).
+ * @property {'none' | 'vet' | 'shop' | 'foundation' | 'government'} type - El tipo de perfil verificado solicitado.
+ * @property {'none' | 'pending' | 'verified' | 'rejected'} status - El estado actual de la solicitud.
+ * @property {string | null} lastApplicationDate - Fecha de la última solicitud en formato ISO.
  */
 
 /**
@@ -34,7 +32,7 @@ const getNewUserProfile = (name, email, profilePictureUrl = '') => ({
     name,
     email,
     createdAt: new Date().toISOString(),
-    userType: 'personal', // Tipo de cuenta por defecto
+    userType: 'personal',
     profilePictureUrl,
     coverPhotoUrl: '',
     bio: '',
@@ -49,9 +47,8 @@ const getNewUserProfile = (name, email, profilePictureUrl = '') => ({
     verification: {
       type: 'none',
       status: 'none',
-      applicationDate: null,
-      documents: [],
-      rejectionReason: ''
+      lastApplicationDate: null,
+      // Los documentos ya no se guardan aquí, sino en la solicitud individual.
     }
   });
   
