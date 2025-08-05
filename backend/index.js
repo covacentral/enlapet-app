@@ -18,7 +18,8 @@ const eventRoutes = require('./routes/events.routes');
 const locationRoutes = require('./routes/locations.routes');
 const notificationRoutes = require('./routes/notifications.routes');
 const reportRoutes = require('./routes/reports.routes');
-const verificationRoutes = require('./routes/verification.routes'); // <-- NUEVO: Importamos las rutas de verificación
+const verificationRoutes = require('./routes/verification.routes');
+const vetRoutes = require('./routes/vet.routes'); // <-- 1. IMPORTAMOS las nuevas rutas de veterinario
 
 // --- 2. INICIALIZACIÓN DE LA APP ---
 const app = express();
@@ -46,7 +47,7 @@ app.use(express.json());
 // --- 4. DEFINICIÓN DE RUTAS (ORDEN CORREGIDO) ---
 
 // A. Rutas Públicas (No requieren autenticación)
-app.get('/', (req, res) => res.json({ message: "¡Bienvenido a la API de EnlaPet! v1.2 - Sistema de Verificación" }));
+app.get('/', (req, res) => res.json({ message: "¡Bienvenido a la API de EnlaPet! v1.3 - Módulo Veterinario" }));
 app.use('/api/auth', authRoutes);
 app.use('/api', publicRoutes);
 
@@ -55,7 +56,6 @@ app.use('/api', publicRoutes);
 app.use(authenticateUser);
 
 // C. Rutas Protegidas
-// Se registran todos los enrutadores que contienen únicamente rutas privadas.
 app.use('/api', petRoutes);
 app.use('/api', profileRoutes);
 app.use('/api', postRoutes);
@@ -63,7 +63,8 @@ app.use('/api', eventRoutes);
 app.use('/api', locationRoutes);
 app.use('/api', notificationRoutes);
 app.use('/api', reportRoutes);
-app.use('/api', verificationRoutes); // <-- NUEVO: Registramos el enrutador de verificación
+app.use('/api', verificationRoutes);
+app.use('/api', vetRoutes); // <-- 2. REGISTRAMOS el nuevo enrutador de veterinario
 
 // --- 5. INICIAR SERVIDOR ---
 app.listen(PORT, () => console.log(`Servidor modularizado y corregido corriendo en el puerto ${PORT}`));
