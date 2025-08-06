@@ -1,6 +1,6 @@
 // frontend/src/PetsTab.jsx
-// Versión: 2.2 - Corrección de Estilos de Botón
-// TAREA: Se corrige la clase del botón "Ver Perfil Público" para que use el sistema compartido.
+// Versión: 2.3 - GESTIÓN DE VÍNCULOS DE VETERINARIO
+// TAREA: Se añade la lógica y la UI para que el dueño pueda aprobar o rechazar solicitudes.
 
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
@@ -18,8 +18,32 @@ const UpdatePrompt = () => (
     </div>
 );
 
-function PetCard({ pet, onEdit }) {
+// --- [NUEVO] Subcomponente para mostrar la solicitud de vínculo ---
+const VetRequest = ({ request, onManage }) => {
+    // Aquí, en una versión futura, buscaríamos los datos del veterinario por su vetId
+    // para mostrar su nombre. Por ahora, mostramos un texto genérico.
+    const [isLoading, setIsLoading] = useState(false);
+
+    const handleAction = async (action) => {
+        setIsLoading(true);
+        await onManage(request.vetId, action);
+        setIsLoading(false);
+    }
+
+    return (
+        <div className={styles.vetRequestBanner}>
+            <p><strong>Tienes una nueva solicitud:</strong> un veterinario verificado desea vincularse como paciente a tu mascota.</p>
+            <div className={styles.vetRequestActions}>
+                <button className={`${sharedStyles.button} ${sharedStyles.danger}`} onClick={() => handleAction('reject')} disabled={isLoading}>Rechazar</button>
+                <button className={`${sharedStyles.button} ${sharedStyles.primary}`} onClick={() => handleAction('approve')} disabled={isLoading}>Aprobar</button>
+            </div>
+        </div>
+    )
+}
+
+function PetCard({ pet, onEdit, onManageLink }) {
   const isProfileIncomplete = !pet.location?.city || !pet.healthRecord?.birthDate;
+  const pendingRequests = pet.linkedVets?.filter(link => link.status === 'pending') || [];
 
   return (
     <div className={styles.petCard}>
@@ -39,10 +63,13 @@ function PetCard({ pet, onEdit }) {
             {isProfileIncomplete && <UpdatePrompt />}
         </button>
         <div className={styles.actions}>
-           {/* --- LÍNEA CORREGIDA --- */}
            <Link to={`/pet/${pet.id}`} className={`${sharedStyles.button} ${sharedStyles.primary}`} style={{width: '100%', textDecoration: 'none'}}>Ver Perfil Público</Link>
         </div>
       </div>
+      {/* --- Renderizado condicional de la solicitud --- */}
+      {pendingRequests.length > 0 && (
+          <VetRequest request={pendingRequests[0]} onManage={(vetId, action) => onManageLink(pet.id, vetId, action)} />
+      )}
     </div>
   );
 }
@@ -75,7 +102,7 @@ function PetsTab({ user, initialPets, onPetsUpdate }) {
       const data = await response.json();
       if (!response.ok) throw new Error(data.message);
       
-      setMessage('¡Mascota añadida con éxito!');
+      setMessage(`¡Mascota añadida! Su EPID es: ${data.epid}`);
       setPetName('');
       setPetBreed('');
       onPetsUpdate();
@@ -83,9 +110,30 @@ function PetsTab({ user, initialPets, onPetsUpdate }) {
       setMessage(`Error: ${error.message}`);
     } finally {
       setIsAdding(false);
-      setTimeout(() => setMessage(''), 3000);
+      setTimeout(() => setMessage(''), 5000); // Más tiempo para ver el EPID
     }
   };
+  
+  // --- [NUEVO] Función para manejar la aprobación/rechazo ---
+  const handleManageLink = async (petId, vetId, action) => {
+      setMessage('Procesando solicitud...');
+      try {
+        const idToken = await user.getIdToken();
+        const response = await fetch(`${API_URL}/api/pets/${petId}/manage-link`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+            body: JSON.stringify({ vetId, action })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message);
+        setMessage(`¡Solicitud ${action === 'approve' ? 'aprobada' : 'rechazada'}!`);
+        onPetsUpdate(); // Refrescamos los datos para que la solicitud desaparezca
+      } catch (error) {
+          setMessage(`Error: ${error.message}`);
+      } finally {
+        setTimeout(() => setMessage(''), 3000);
+      }
+  }
 
   const handleOpenModal = (pet) => {
     setSelectedPet(pet);
@@ -103,17 +151,9 @@ function PetsTab({ user, initialPets, onPetsUpdate }) {
         <div className={styles.addPetColumn}>
           <h2>Registrar Nueva Mascota</h2>
           <form onSubmit={handleAddPet}>
-            <div className={sharedStyles.formGroup}>
-                <label htmlFor="petName">Nombre:</label>
-                <input type="text" id="petName" value={petName} onChange={(e) => setPetName(e.target.value)} required disabled={isAdding} />
-            </div>
-            <div className={sharedStyles.formGroup}>
-                <label htmlFor="petBreed">Raza (Opcional):</label>
-                <input type="text" id="petBreed" value={petBreed} onChange={(e) => setPetBreed(e.target.value)} disabled={isAdding} />
-            </div>
-            <button type="submit" className={`${sharedStyles.button} ${sharedStyles.primary}`} style={{width: '100%'}} disabled={isAdding}>
-                {isAdding ? 'Añadiendo...' : 'Añadir Mascota'}
-            </button>
+            <div className={sharedStyles.formGroup}><label htmlFor="petName">Nombre:</label><input type="text" id="petName" value={petName} onChange={(e) => setPetName(e.target.value)} required disabled={isAdding} /></div>
+            <div className={sharedStyles.formGroup}><label htmlFor="petBreed">Raza (Opcional):</label><input type="text" id="petBreed" value={petBreed} onChange={(e) => setPetBreed(e.target.value)} disabled={isAdding} /></div>
+            <button type="submit" className={`${sharedStyles.button} ${sharedStyles.primary}`} style={{width: '100%'}} disabled={isAdding}>{isAdding ? 'Añadiendo...' : 'Añadir Mascota'}</button>
           </form>
           {message && <p className={sharedStyles.responseMessage}>{message}</p>}
         </div>
@@ -122,7 +162,7 @@ function PetsTab({ user, initialPets, onPetsUpdate }) {
           <div className={styles.list}>
             {pets.length > 0 ? (
               pets.map(pet => (
-                <PetCard key={pet.id} pet={pet} onEdit={handleOpenModal} />
+                <PetCard key={pet.id} pet={pet} onEdit={handleOpenModal} onManageLink={handleManageLink} />
               ))
             ) : (
               <p>Aún no has registrado ninguna mascota.</p>
