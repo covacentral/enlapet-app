@@ -1,6 +1,6 @@
 // frontend/src/PetsTab.jsx
-// Versión: 2.3 - GESTIÓN DE VÍNCULOS DE VETERINARIO
-// TAREA: Se añade la lógica y la UI para que el dueño pueda aprobar o rechazar solicitudes.
+// Versión: 2.4 - CORRECCIÓN CRÍTICA DE ESTRUCTURA DE DATOS
+// TAREA: Se adapta el componente para leer `linkedVets` como un mapa, solucionando el crash.
 
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
@@ -18,10 +18,7 @@ const UpdatePrompt = () => (
     </div>
 );
 
-// --- [NUEVO] Subcomponente para mostrar la solicitud de vínculo ---
 const VetRequest = ({ request, onManage }) => {
-    // Aquí, en una versión futura, buscaríamos los datos del veterinario por su vetId
-    // para mostrar su nombre. Por ahora, mostramos un texto genérico.
     const [isLoading, setIsLoading] = useState(false);
 
     const handleAction = async (action) => {
@@ -43,7 +40,14 @@ const VetRequest = ({ request, onManage }) => {
 
 function PetCard({ pet, onEdit, onManageLink }) {
   const isProfileIncomplete = !pet.location?.city || !pet.healthRecord?.birthDate;
-  const pendingRequests = pet.linkedVets?.filter(link => link.status === 'pending') || [];
+  
+  // --- LÓGICA CORREGIDA ---
+  // Convertimos el objeto linkedVets en un array para poder iterar y filtrar.
+  const pendingRequests = pet.linkedVets 
+    ? Object.entries(pet.linkedVets)
+        .map(([vetId, data]) => ({ vetId, ...data }))
+        .filter(link => link.status === 'pending')
+    : [];
 
   return (
     <div className={styles.petCard}>
@@ -66,7 +70,6 @@ function PetCard({ pet, onEdit, onManageLink }) {
            <Link to={`/pet/${pet.id}`} className={`${sharedStyles.button} ${sharedStyles.primary}`} style={{width: '100%', textDecoration: 'none'}}>Ver Perfil Público</Link>
         </div>
       </div>
-      {/* --- Renderizado condicional de la solicitud --- */}
       {pendingRequests.length > 0 && (
           <VetRequest request={pendingRequests[0]} onManage={(vetId, action) => onManageLink(pet.id, vetId, action)} />
       )}
@@ -110,11 +113,10 @@ function PetsTab({ user, initialPets, onPetsUpdate }) {
       setMessage(`Error: ${error.message}`);
     } finally {
       setIsAdding(false);
-      setTimeout(() => setMessage(''), 5000); // Más tiempo para ver el EPID
+      setTimeout(() => setMessage(''), 5000);
     }
   };
   
-  // --- [NUEVO] Función para manejar la aprobación/rechazo ---
   const handleManageLink = async (petId, vetId, action) => {
       setMessage('Procesando solicitud...');
       try {
@@ -127,7 +129,7 @@ function PetsTab({ user, initialPets, onPetsUpdate }) {
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
         setMessage(`¡Solicitud ${action === 'approve' ? 'aprobada' : 'rechazada'}!`);
-        onPetsUpdate(); // Refrescamos los datos para que la solicitud desaparezca
+        onPetsUpdate();
       } catch (error) {
           setMessage(`Error: ${error.message}`);
       } finally {

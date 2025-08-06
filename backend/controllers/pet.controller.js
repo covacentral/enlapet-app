@@ -83,7 +83,8 @@ const createPet = async (req, res) => {
 };
 
 /**
- * Actualiza los datos de una mascota específica.
+ * [MODIFICADO] Actualiza los datos de una mascota específica.
+ * Permite la edición completa para el dueño y la edición del carné de salud para un veterinario vinculado.
  */
 const updatePet = async (req, res) => {
     const { uid } = req.user;
