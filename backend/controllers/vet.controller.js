@@ -2,14 +2,14 @@
 // Lógica de negocio para las acciones exclusivas de los veterinarios verificados.
 
 const { db } = require('../config/firebase');
-const { createNotification } = require('../services/notification.service'); // Asegúrate de que esta importación esté presente.
+const { createNotification } = require('../services/notification.service');
 const admin = require('firebase-admin');
 
 /**
  * Busca un perfil de mascota por su EnlaPet ID (EPID).
- * Devuelve un perfil público simplificado para la vinculación.
  */
 const findPetByEPID = async (req, res) => {
+  // ... (sin cambios en esta función)
   const { epid } = req.params;
 
   if (!epid) {
@@ -46,6 +46,7 @@ const findPetByEPID = async (req, res) => {
  * Permite a un veterinario enviar una solicitud para vincularse a una mascota como su paciente.
  */
 const requestPatientLink = async (req, res) => {
+  // ... (sin cambios en esta función)
   const { uid: vetId } = req.user;
   const { petId } = req.params;
 
@@ -76,9 +77,7 @@ const requestPatientLink = async (req, res) => {
       updatedLinks.push(newLinkRequest);
 
       transaction.update(petRef, { linkedVets: updatedLinks });
-
-      // --- LÍNEA ACTIVADA ---
-      // Ahora se enviará una notificación al dueño de la mascota.
+      
       await createNotification(petData.ownerId, vetId, 'vet_link_request', petId, 'pet');
     });
 
@@ -89,8 +88,37 @@ const requestPatientLink = async (req, res) => {
   }
 };
 
+/**
+ * [NUEVO] Obtiene la lista de mascotas vinculadas a un veterinario.
+ */
+const getLinkedPatients = async (req, res) => {
+    const { uid: vetId } = req.user;
+    try {
+        const snapshot = await db.collection('pets')
+            .where('linkedVets', 'array-contains', { vetId, status: 'active' })
+            .get();
+
+        if (snapshot.empty) {
+            return res.status(200).json([]);
+        }
+
+        const patients = snapshot.docs.map(doc => ({
+            id: doc.id,
+            name: doc.data().name,
+            breed: doc.data().breed,
+            petPictureUrl: doc.data().petPictureUrl,
+            epid: doc.data().epid
+        }));
+
+        res.status(200).json(patients);
+    } catch (error) {
+        console.error('Error en getLinkedPatients:', error);
+        res.status(500).json({ message: 'Error al obtener la lista de pacientes.' });
+    }
+};
 
 module.exports = {
   findPetByEPID,
   requestPatientLink,
+  getLinkedPatients // <-- Exportamos la nueva función
 };

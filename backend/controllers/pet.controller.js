@@ -1,6 +1,6 @@
 // backend/controllers/pet.controller.js
-// Versión 2.1 - CORRECCIÓN CRÍTICA Y MÓDULO VETERINARIO
-// Se restaura la lógica perdida y se integra el nuevo modelo y la gestión de vínculos.
+// Versión 2.2 - GESTIÓN DE PERMISOS DE EDICIÓN PARA VETERINARIOS
+// TAREA: Se actualiza la función updatePet para permitir a los veterinarios vinculados editar el carné de salud.
 
 const { db, bucket } = require('../config/firebase');
 const admin = require('firebase-admin');
@@ -83,30 +83,47 @@ const createPet = async (req, res) => {
 };
 
 /**
- * Actualiza los datos de una mascota específica.
+ * [MODIFICADO] Actualiza los datos de una mascota específica.
+ * Permite la edición completa para el dueño y la edición del carné de salud para un veterinario vinculado.
  */
 const updatePet = async (req, res) => {
     const { uid } = req.user;
     const { petId } = req.params;
-    const updateData = req.body;
+    let updateData = req.body;
 
+    if (!updateData || Object.keys(updateData).length === 0) {
+        return res.status(400).json({ message: 'No se proporcionaron datos para actualizar.' });
+    }
+
+    const petRef = db.collection('pets').doc(petId);
     try {
-        if (!updateData || Object.keys(updateData).length === 0) {
-            return res.status(400).json({ message: 'No se proporcionaron datos para actualizar.' });
-        }
-
-        const petRef = db.collection('pets').doc(petId);
         const petDoc = await petRef.get();
         if (!petDoc.exists) {
             return res.status(404).json({ message: 'Mascota no encontrada.' });
         }
-        if (petDoc.data().ownerId !== uid) {
+
+        const petData = petDoc.data();
+        const isOwner = petData.ownerId === uid;
+        const isLinkedVet = petData.linkedVets?.some(v => v.vetId === uid && v.status === 'active');
+
+        // Regla de autorización: O eres el dueño, o eres un veterinario vinculado.
+        if (!isOwner && !isLinkedVet) {
             return res.status(403).json({ message: 'No autorizado para modificar esta mascota.' });
         }
 
-        await petRef.set(updateData, { merge: true });
+        // Regla de permisos: Si es un veterinario, solo puede editar el 'healthRecord'.
+        if (isLinkedVet && !isOwner) {
+            const allowedKeys = ['healthRecord'];
+            const receivedKeys = Object.keys(updateData);
+            const isUpdateAllowed = receivedKeys.every(key => allowedKeys.includes(key));
+            
+            if (!isUpdateAllowed) {
+                return res.status(403).json({ message: 'Acción no permitida. Los veterinarios solo pueden actualizar el carné de salud.' });
+            }
+        }
 
-        if (updateData.location && updateData.location.city) {
+        // Si el dueño actualiza la ubicación, la propagamos a su perfil si no la tiene.
+        if (isOwner && updateData.location && updateData.location.city) {
             const userRef = db.collection('users').doc(uid);
             const userDoc = await userRef.get();
             if (userDoc.exists) {
@@ -117,7 +134,9 @@ const updatePet = async (req, res) => {
             }
         }
         
+        await petRef.set(updateData, { merge: true });
         res.status(200).json({ message: 'Mascota actualizada con éxito.' });
+
     } catch (error) {
         console.error(`Error en updatePet para petId ${petId}:`, error);
         res.status(500).json({ message: 'Error interno del servidor.' });
@@ -219,6 +238,7 @@ const managePatientLink = async (req, res) => {
         res.status(400).json({ message: error.message || 'No se pudo procesar la solicitud.' });
     }
 };
+
 
 module.exports = {
     getPetPublicProfile,
