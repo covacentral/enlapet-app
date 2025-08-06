@@ -1,0 +1,84 @@
+/* frontend/src/VetDashboardPage.module.css */
+/* Estilos para el panel de control del veterinario. */
+
+.container {
+    background-color: var(--background-light);
+    padding: 25px;
+    border-radius: 15px;
+    border: 1px solid var(--border-color);
+    text-align: left;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.searchSection {
+    width: 100%;
+    background-color: var(--background-dark);
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+}
+
+.searchSection h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+}
+
+.searchForm {
+    display: flex;
+    gap: 10px;
+}
+
+.searchInput {
+    flex-grow: 1;
+    padding: 12px;
+    border-radius: 8px;
+    background-color: var(--background-light);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    font-size: 1rem;
+    text-transform: uppercase;
+}
+
+.searchInput::placeholder {
+    text-transform: none;
+}
+
+.resultsSection {
+    margin-top: 2rem;
+    min-height: 200px;
+}
+
+.petResultCard {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    background-color: var(--background-dark);
+    padding: 1rem;
+    border-radius: 12px;
+}
+
+.petImage {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--border-color);
+}
+
+.petInfo h4 {
+    margin: 0 0 4px 0;
+    font-size: 1.2rem;
+}
+
+.petInfo p {
+    margin: 0;
+    color: var(--text-secondary);
+}
