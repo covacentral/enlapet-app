@@ -2,6 +2,7 @@
 // Lógica de negocio para las acciones exclusivas de los veterinarios verificados.
 
 const { db } = require('../config/firebase');
+const { createNotification } = require('../services/notification.service'); // Asegúrate de que esta importación esté presente.
 const admin = require('firebase-admin');
 
 /**
@@ -26,7 +27,6 @@ const findPetByEPID = async (req, res) => {
     const petDoc = snapshot.docs[0];
     const petData = petDoc.data();
 
-    // Devolvemos solo la información necesaria para que el veterinario confirme la mascota
     const petPreview = {
       id: petDoc.id,
       name: petData.name,
@@ -46,7 +46,7 @@ const findPetByEPID = async (req, res) => {
  * Permite a un veterinario enviar una solicitud para vincularse a una mascota como su paciente.
  */
 const requestPatientLink = async (req, res) => {
-  const { uid: vetId } = req.user; // UID del veterinario
+  const { uid: vetId } = req.user;
   const { petId } = req.params;
 
   const petRef = db.collection('pets').doc(petId);
@@ -61,16 +61,13 @@ const requestPatientLink = async (req, res) => {
       const petData = petDoc.data();
       const linkedVets = petData.linkedVets || [];
 
-      // Comprobar si ya existe un vínculo (activo o pendiente)
       const existingLink = linkedVets.find(link => link.vetId === vetId);
       if (existingLink && (existingLink.status === 'active' || existingLink.status === 'pending')) {
         throw new Error('Ya tienes un vínculo activo o una solicitud pendiente con esta mascota.');
       }
       
-      // Eliminar cualquier vínculo revocado o rechazado anterior para crear uno nuevo
       const updatedLinks = linkedVets.filter(link => link.vetId !== vetId);
 
-      // Añadir la nueva solicitud de vínculo pendiente
       const newLinkRequest = {
         vetId,
         linkedAt: new Date().toISOString(),
@@ -80,8 +77,9 @@ const requestPatientLink = async (req, res) => {
 
       transaction.update(petRef, { linkedVets: updatedLinks });
 
-      // Aquí se podría añadir una notificación para el dueño de la mascota
-      // await createNotification(petData.ownerId, vetId, 'vet_link_request', petId, 'pet');
+      // --- LÍNEA ACTIVADA ---
+      // Ahora se enviará una notificación al dueño de la mascota.
+      await createNotification(petData.ownerId, vetId, 'vet_link_request', petId, 'pet');
     });
 
     res.status(200).json({ message: 'Solicitud de vínculo enviada al responsable de la mascota.' });
