@@ -1,27 +1,26 @@
 // frontend/src/VetDashboardPage.jsx
-// Versión 2.1 - IMPLEMENTACIÓN DE MODAL DE EDICIÓN
-// TAREA: Se abre el PetEditModal en "modo veterinario" al hacer clic en un paciente.
+// Versión 3.1 - Integración con Vista ECD
+// TAREA: Se reemplaza el modal de edición por la navegación a la nueva página de ECD.
 
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { auth } from './firebase';
-import { Search, Send, CheckCircle } from 'lucide-react';
+import { Search, Send, CheckCircle, PawPrint, Activity, Eye, Check } from 'lucide-react';
 
 import styles from './VetDashboardPage.module.css';
 import sharedStyles from './shared.module.css';
 import LoadingComponent from './LoadingComponent';
-import PetEditModal from './PetEditModal'; // <-- 1. Importamos el modal
+// PetEditModal ya no es necesario aquí.
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 // Componente PetSearchResult (sin cambios)
 const PetSearchResult = ({ pet }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState('');
   const [requestSent, setRequestSent] = useState(false);
 
   const handleLinkRequest = async () => {
     setIsLoading(true);
-    setMessage('');
     try {
       const user = auth.currentUser;
       if (!user) throw new Error("No autenticado.");
@@ -32,10 +31,9 @@ const PetSearchResult = ({ pet }) => {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message);
-      setMessage(data.message);
       setRequestSent(true);
     } catch (error) {
-      setMessage(error.message);
+      console.error(error);
     } finally {
       setIsLoading(false);
     }
@@ -53,12 +51,32 @@ const PetSearchResult = ({ pet }) => {
   );
 };
 
-// Componente PatientCard (sin cambios)
-const PatientCard = ({ patient, onClick }) => {
+const PatientStatusBadge = ({ status }) => {
+    const statusMap = {
+        active: { text: 'Activo', icon: <Activity size={14} />, className: styles.statusActive },
+        observation: { text: 'En Observación', icon: <Eye size={14} />, className: styles.statusObservation },
+        discharged: { text: 'De Alta', icon: <Check size={14} />, className: styles.statusDischarged }
+    };
+    const currentStatus = statusMap[status] || { text: 'Desconocido', icon: <PawPrint size={14}/>, className: '' };
+    return <div className={`${styles.statusBadge} ${currentStatus.className}`}>{currentStatus.icon} {currentStatus.text}</div>;
+}
+
+// --- 1. PatientCard AHORA USA useNavigate ---
+const PatientCard = ({ patient }) => {
+    const navigate = useNavigate();
+    
+    const handleClick = () => {
+        navigate(`/dashboard/vet-panel/patient/${patient.id}`);
+    }
+
     return (
-        <div className={styles.patientCard} onClick={() => onClick(patient)}>
+        <div className={styles.patientCard} onClick={handleClick}>
             <img src={patient.petPictureUrl || 'https://placehold.co/150x150/E2E8F0/4A5568?text=🐾'} alt={patient.name} className={styles.patientImage}/>
-            <div className={styles.petInfo}><h4>{patient.name}</h4><p>EPID: {patient.epid}</p></div>
+            <div className={styles.petInfo}>
+                <h4>{patient.name}</h4>
+                <p>EPID: {patient.epid}</p>
+            </div>
+            <PatientStatusBadge status={patient.patientStatus} />
         </div>
     );
 }
@@ -72,18 +90,16 @@ function VetDashboardPage() {
   const [patients, setPatients] = useState([]);
   const [isLoadingPatients, setIsLoadingPatients] = useState(true);
   const [patientMessage, setPatientMessage] = useState('');
+  const [activeFilter, setActiveFilter] = useState('active');
+  const user = auth.currentUser;
 
-  // --- 2. Estados para manejar el modal ---
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedPet, setSelectedPet] = useState(null);
-  const user = auth.currentUser; // Obtenemos el usuario actual para pasarlo al modal
-
-  const fetchPatients = useCallback(async () => {
+  const fetchPatients = useCallback(async (filter) => {
     setIsLoadingPatients(true);
     setPatientMessage('');
     try {
         const idToken = await user.getIdToken();
-        const response = await fetch(`${API_URL}/api/vet/patients`, { headers: { 'Authorization': `Bearer ${idToken}` } });
+        const url = `${API_URL}/api/vet/patients?status=${filter}`;
+        const response = await fetch(url, { headers: { 'Authorization': `Bearer ${idToken}` } });
         if (!response.ok) throw new Error((await response.json()).message);
         const data = await response.json();
         setPatients(data);
@@ -95,8 +111,8 @@ function VetDashboardPage() {
   }, [user]);
 
   useEffect(() => {
-    if (user) fetchPatients();
-  }, [user, fetchPatients]);
+    if (user) fetchPatients(activeFilter);
+  }, [user, fetchPatients, activeFilter]);
 
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -117,30 +133,13 @@ function VetDashboardPage() {
     }
   };
   
-  // --- 3. Lógica para abrir el modal ---
-  const handlePatientCardClick = (patientData) => {
-      setSelectedPet(patientData);
-      setIsModalOpen(true);
-  }
-  
-  const handleCloseModal = () => {
-      setIsModalOpen(false);
-      setSelectedPet(null);
-  }
+  // --- 2. LÓGICA DEL MODAL ELIMINADA ---
+  // Los estados isModalOpen, selectedPet y los manejadores handlePatientCardClick, handleCloseModal
+  // han sido eliminados porque la navegación ahora se maneja directamente en PatientCard.
 
   return (
     <>
-      {/* --- 4. Renderizado del modal --- */}
-      {isModalOpen && (
-        <PetEditModal 
-            pet={selectedPet}
-            user={user}
-            onClose={handleCloseModal}
-            onUpdate={fetchPatients} // Al actualizar, refrescamos la lista de pacientes
-            isVetMode={true} // ¡La clave! Activamos el "modo veterinario"
-        />
-      )}
-
+      {/* El renderizado del modal también se ha eliminado */}
       <div className={styles.container}>
         <div className={styles.header}>
           <h2 className={sharedStyles.tabTitle} style={{ marginBottom: 0 }}>Panel de Veterinario</h2>
@@ -157,14 +156,22 @@ function VetDashboardPage() {
           </div>
         </div>
         <div className={styles.patientsSection}>
-          <h3>Mis Pacientes</h3>
+          <div className={styles.patientsHeader}>
+            <h3>Mis Pacientes</h3>
+            <div className={styles.filterGroup}>
+                <button onClick={() => setActiveFilter('active')} className={activeFilter === 'active' ? styles.activeFilter : ''}>Activos</button>
+                <button onClick={() => setActiveFilter('observation')} className={activeFilter === 'observation' ? styles.activeFilter : ''}>En Observación</button>
+                <button onClick={() => setActiveFilter('discharged')} className={activeFilter === 'discharged' ? styles.activeFilter : ''}>De Alta</button>
+            </div>
+          </div>
           {isLoadingPatients ? <LoadingComponent text="Cargando pacientes..." /> : 
            patientMessage ? <p className={sharedStyles.responseMessageError}>{patientMessage}</p> : 
            patients.length > 0 ? (
             <div className={styles.patientsGrid}>
-                {patients.map(p => <PatientCard key={p.id} patient={p} onClick={handlePatientCardClick} />)}
+                {/* 3. PatientCard ahora no necesita el handler onClick */}
+                {patients.map(p => <PatientCard key={p.id} patient={p} />)}
             </div>
-           ) : (<p className={sharedStyles.emptyStateMessage}>Aún no tienes pacientes vinculados.</p>)}
+           ) : (<p className={sharedStyles.emptyStateMessage}>No tienes pacientes con el estado seleccionado.</p>)}
         </div>
       </div>
     </>

@@ -1,5 +1,6 @@
 // backend/models/user.model.js
-// Define la estructura y los valores por defecto para un documento de usuario en Firestore.
+// Versión 2.0 - Arquitectura para Módulo de Veterinarias
+// TAREA: Se añade la estructura de `vetSettings` para soportar la configuración del agendamiento.
 
 /**
  * @typedef {Object} UserLocation
@@ -16,9 +17,15 @@
 
 /**
  * @typedef {Object} UserVerification
- * @property {'none' | 'vet' | 'shop' | 'foundation' | 'government'} type - El tipo de perfil verificado solicitado.
- * @property {'none' | 'pending' | 'verified' | 'rejected'} status - El estado actual de la solicitud.
- * @property {string | null} lastApplicationDate - Fecha de la última solicitud en formato ISO.
+ * @property {'none' | 'vet' | 'shop' | 'foundation' | 'government'} type
+ * @property {'none' | 'pending' | 'verified' | 'rejected'} status
+ * @property {string | null} lastApplicationDate
+ */
+
+/**
+ * @typedef {Object} VetSettings
+ * @property {number} consultationDurationMinutes - Duración estándar de una consulta.
+ * @property {Object} workHours - Horarios de trabajo.
  */
 
 /**
@@ -29,29 +36,30 @@
  * @returns {Object} El objeto de perfil de usuario para Firestore.
  */
 const getNewUserProfile = (name, email, profilePictureUrl = '') => ({
-    name,
-    email,
-    createdAt: new Date().toISOString(),
-    userType: 'personal',
-    profilePictureUrl,
-    coverPhotoUrl: '',
-    bio: '',
-    phone: '',
-    /** @type {UserLocation} */
-    location: { country: 'Colombia', department: '', city: '' },
-    /** @type {UserPrivacySettings} */
-    privacySettings: { profileVisibility: 'public', showEmail: 'private' },
-    followersCount: 0,
-    followingCount: 0,
-    /** @type {UserVerification} */
-    verification: {
-      type: 'none',
-      status: 'none',
-      lastApplicationDate: null,
-      // Los documentos ya no se guardan aquí, sino en la solicitud individual.
-    }
-  });
-  
-  module.exports = {
-    getNewUserProfile
-  };
+  name,
+  email,
+  createdAt: new Date().toISOString(),
+  userType: 'personal',
+  profilePictureUrl,
+  coverPhotoUrl: '',
+  bio: '',
+  phone: '',
+  /** @type {UserLocation} */
+  location: { country: 'Colombia', department: '', city: '' },
+  /** @type {UserPrivacySettings} */
+  privacySettings: { profileVisibility: 'public', showEmail: 'private' },
+  followersCount: 0,
+  followingCount: 0,
+  /** @type {UserVerification} */
+  verification: {
+    type: 'none',
+    status: 'none',
+    lastApplicationDate: null,
+  },
+  /** @type {VetSettings | null} */
+  vetSettings: null, // Se inicializa como nulo. Se poblará si el usuario se verifica como 'vet'.
+});
+
+module.exports = {
+  getNewUserProfile
+};

@@ -1,12 +1,39 @@
 // backend/controllers/vet.controller.js
-// Versión 2.1 - CORRECCIÓN: Devolver datos completos del paciente
+// Versión 3.0 - Lógica de Negocio para el Expediente Clínico Digital (ECD)
+// TAREA: Se añaden funciones para gestionar el ECD y se expande la funcionalidad existente.
 
 const { db } = require('../config/firebase');
 const { createNotification } = require('../services/notification.service');
 const admin = require('firebase-admin');
 
 /**
- * Busca un perfil de mascota por su EnlaPet ID (EPID).
+ * Middleware interno para verificar si un veterinario está activamente vinculado a una mascota.
+ * Reutiliza la lógica de autorización en múltiples funciones.
+ * @param {string} vetId - UID del veterinario.
+ * @param {string} petId - ID de la mascota.
+ * @returns {Promise<Object|null>} El documento de la mascota si está autorizado, sino null.
+ */
+const getPetIfAuthorized = async (vetId, petId) => {
+    const petRef = db.collection('pets').doc(petId);
+    const petDoc = await petRef.get();
+
+    if (!petDoc.exists) {
+        throw new Error('Mascota no encontrada.');
+    }
+
+    const petData = petDoc.data();
+    const isLinkedVet = petData.linkedVets && petData.linkedVets[vetId]?.status === 'active';
+
+    if (!isLinkedVet) {
+        throw new Error('No autorizado. Se requiere un vínculo activo con esta mascota.');
+    }
+    
+    return petData;
+};
+
+
+/**
+ * Busca un perfil de mascota por su EnlaPet ID (EPID). (Sin cambios)
  */
 const findPetByEPID = async (req, res) => {
     const { epid } = req.params;
@@ -36,10 +63,10 @@ const findPetByEPID = async (req, res) => {
 };
 
 /**
- * Permite a un veterinario enviar una solicitud para vincularse a una mascota como su paciente.
+ * Permite a un veterinario enviar una solicitud para vincularse a una mascota. (Sin cambios)
  */
 const requestPatientLink = async (req, res) => {
-    const { uid: vetId } = req.user;
+    const { uid: vetId, name: vetName } = req.user; // Se añade vetName del token
     const { petId } = req.params;
     const petRef = db.collection('pets').doc(petId);
     try {
@@ -55,7 +82,8 @@ const requestPatientLink = async (req, res) => {
         const updatePayload = {
             [`linkedVets.${vetId}`]: {
                 status: 'pending',
-                linkedAt: new Date().toISOString()
+                linkedAt: new Date().toISOString(),
+                vetName: vetName // Guardamos el nombre para mostrarlo al dueño
             }
         };
         await petRef.update(updatePayload);
@@ -68,20 +96,25 @@ const requestPatientLink = async (req, res) => {
 };
 
 /**
- * [CORREGIDO] Obtiene la lista COMPLETA de mascotas vinculadas a un veterinario.
+ * [MODIFICADO] Obtiene la lista de pacientes, con opción de filtrar por estado.
  */
 const getLinkedPatients = async (req, res) => {
     const { uid: vetId } = req.user;
+    const { status } = req.query; // Filtro opcional: active, observation, discharged
+
     try {
-        const snapshot = await db.collection('pets')
-            .where(`linkedVets.${vetId}.status`, '==', 'active')
-            .get();
+        let query = db.collection('pets').where(`linkedVets.${vetId}.status`, '==', 'active');
+        
+        if (status && ['active', 'observation', 'discharged'].includes(status)) {
+            query = query.where('patientStatus', '==', status);
+        }
+
+        const snapshot = await query.get();
 
         if (snapshot.empty) {
             return res.status(200).json([]);
         }
 
-        // Ahora devolvemos el documento completo de la mascota, no solo una vista previa.
         const patients = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
@@ -94,8 +127,75 @@ const getLinkedPatients = async (req, res) => {
     }
 };
 
+/**
+ * [NUEVO] Añade una nueva entrada al Expediente Clínico Digital (ECD) de un paciente.
+ */
+const addHealthRecordEntry = async (req, res) => {
+    const { uid: vetId, name: vetName } = req.user;
+    const { petId } = req.params;
+    const { recordType, data } = req.body;
+
+    const validRecordTypes = ['consultations', 'vaccines', 'deworming', 'exams'];
+    if (!recordType || !validRecordTypes.includes(recordType) || !data) {
+        return res.status(400).json({ message: 'Se requiere un tipo de registro y datos válidos.' });
+    }
+
+    try {
+        await getPetIfAuthorized(vetId, petId);
+
+        const newEntry = {
+            ...data,
+            id: admin.firestore.FieldValue.serverTimestamp().toMillis().toString(), // ID único basado en timestamp
+            author: {
+                authorId: vetId,
+                authorType: 'vet',
+                authorName: vetName,
+            }
+        };
+
+        const petRef = db.collection('pets').doc(petId);
+        await petRef.update({
+            [`healthRecord.${recordType}`]: admin.firestore.FieldValue.arrayUnion(newEntry)
+        });
+
+        res.status(201).json({ message: 'Registro añadido al historial clínico con éxito.', entry: newEntry });
+
+    } catch (error) {
+        console.error('Error en addHealthRecordEntry:', error);
+        res.status(500).json({ message: error.message || 'No se pudo añadir el registro.' });
+    }
+};
+
+/**
+ * [NUEVO] Actualiza el estado de un paciente (Activo, En Observación, De Alta).
+ */
+const updatePatientStatus = async (req, res) => {
+    const { uid: vetId } = req.user;
+    const { petId } = req.params;
+    const { status } = req.body;
+
+    if (!status || !['active', 'observation', 'discharged'].includes(status)) {
+        return res.status(400).json({ message: 'Se proporcionó un estado de paciente no válido.' });
+    }
+
+    try {
+        await getPetIfAuthorized(vetId, petId);
+
+        const petRef = db.collection('pets').doc(petId);
+        await petRef.update({ patientStatus: status });
+
+        res.status(200).json({ message: `El estado del paciente ha sido actualizado a: ${status}.` });
+
+    } catch (error) {
+        console.error('Error en updatePatientStatus:', error);
+        res.status(500).json({ message: error.message || 'No se pudo actualizar el estado del paciente.' });
+    }
+};
+
 module.exports = {
   findPetByEPID,
   requestPatientLink,
-  getLinkedPatients
+  getLinkedPatients,
+  addHealthRecordEntry,
+  updatePatientStatus
 };

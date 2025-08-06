@@ -1,6 +1,6 @@
 // frontend/src/ProfileLayout.jsx
-// Versión: 3.6 - Añadida la ruta para el Panel de Veterinario
-// TAREA: Se añade la nueva ruta y se importa el componente VetDashboardPage.
+// Versión: 3.7 - Añadida la ruta para el Expediente Clínico Digital
+// TAREA: Se añade la ruta anidada para la nueva vista PatientECDView.
 
 import { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
@@ -18,7 +18,8 @@ import PetsTab from './PetsTab.jsx';
 import PetSocialProfile from './PetSocialProfile.jsx';
 import UserProfilePage from './UserProfilePage.jsx';
 import NotificationsPage from './NotificationsPage.jsx';
-import VetDashboardPage from './VetDashboardPage.jsx'; // <-- 1. IMPORTAMOS la nueva página
+import VetDashboardPage from './VetDashboardPage.jsx';
+import PatientECDView from './PatientECDView.jsx'; // <-- 1. IMPORTAMOS la nueva página
 
 // Importación de Componentes
 import LoadingComponent from './LoadingComponent.jsx';
@@ -37,6 +38,7 @@ function ProfileLayout({ user }) {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const navigate = useNavigate();
 
+  // ... (toda la lógica de fetchCoreData, fetchUnreadCount, etc. permanece idéntica)
   const fetchCoreData = useCallback(async () => {
     if (!user) return;
     try {
@@ -105,6 +107,7 @@ function ProfileLayout({ user }) {
 
   if (loading) return <LoadingComponent text="Cargando tu universo EnlaPet..." />;
 
+
   return (
     <div className={styles.container}>
       {isCreateModalOpen && (
@@ -131,8 +134,9 @@ function ProfileLayout({ user }) {
           <Route path="user/:userId" element={<UserProfilePage />} />
           <Route path="notifications/post/:postId" element={<NotificationsPage onMarkAsRead={handleMarkAsRead} />} />
           
-          {/* --- 2. AÑADIMOS LA NUEVA RUTA PROTEGIDA --- */}
           <Route path="vet-panel" element={<VetDashboardPage />} />
+          {/* --- 2. AÑADIMOS LA NUEVA RUTA ANIDADA --- */}
+          <Route path="vet-panel/patient/:petId" element={<PatientECDView />} />
         </Routes>
       </main>
 
