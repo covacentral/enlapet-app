@@ -1,6 +1,6 @@
 // backend/controllers/pet.controller.js
-// Versión 2.2 - GESTIÓN DE PERMISOS DE EDICIÓN PARA VETERINARIOS
-// TAREA: Se actualiza la función updatePet para permitir a los veterinarios vinculados editar el carné de salud.
+// Versión 2.3 - CORRECCIÓN DE ARQUITECTURA PARA GESTIÓN DE VÍNCULOS
+// TAREA: Se actualiza managePatientLink para que funcione con la nueva estructura de mapa.
 
 const { db, bucket } = require('../config/firebase');
 const admin = require('firebase-admin');
@@ -83,8 +83,7 @@ const createPet = async (req, res) => {
 };
 
 /**
- * [MODIFICADO] Actualiza los datos de una mascota específica.
- * Permite la edición completa para el dueño y la edición del carné de salud para un veterinario vinculado.
+ * Actualiza los datos de una mascota específica.
  */
 const updatePet = async (req, res) => {
     const { uid } = req.user;
@@ -104,14 +103,12 @@ const updatePet = async (req, res) => {
 
         const petData = petDoc.data();
         const isOwner = petData.ownerId === uid;
-        const isLinkedVet = petData.linkedVets?.some(v => v.vetId === uid && v.status === 'active');
+        const isLinkedVet = petData.linkedVets && petData.linkedVets[uid]?.status === 'active';
 
-        // Regla de autorización: O eres el dueño, o eres un veterinario vinculado.
         if (!isOwner && !isLinkedVet) {
             return res.status(403).json({ message: 'No autorizado para modificar esta mascota.' });
         }
 
-        // Regla de permisos: Si es un veterinario, solo puede editar el 'healthRecord'.
         if (isLinkedVet && !isOwner) {
             const allowedKeys = ['healthRecord'];
             const receivedKeys = Object.keys(updateData);
@@ -122,7 +119,6 @@ const updatePet = async (req, res) => {
             }
         }
 
-        // Si el dueño actualiza la ubicación, la propagamos a su perfil si no la tiene.
         if (isOwner && updateData.location && updateData.location.city) {
             const userRef = db.collection('users').doc(uid);
             const userDoc = await userRef.get();
@@ -193,7 +189,7 @@ const uploadPetPicture = async (req, res) => {
 };
 
 /**
- * Permite al dueño de una mascota gestionar una solicitud de vínculo de un veterinario.
+ * [MODIFICADO] Permite al dueño gestionar una solicitud de vínculo usando la nueva estructura de mapa.
  */
 const managePatientLink = async (req, res) => {
     const { uid: ownerId } = req.user;
@@ -207,35 +203,34 @@ const managePatientLink = async (req, res) => {
     const petRef = db.collection('pets').doc(petId);
 
     try {
-        await db.runTransaction(async (transaction) => {
-            const petDoc = await transaction.get(petRef);
-            if (!petDoc.exists) throw new Error('Mascota no encontrada.');
+        const petDoc = await petRef.get();
+        if (!petDoc.exists) {
+            return res.status(404).json({ message: 'Mascota no encontrada.' });
+        }
 
-            const petData = petDoc.data();
-            if (petData.ownerId !== ownerId) {
-                throw new Error('No estás autorizado para gestionar esta mascota.');
-            }
+        const petData = petDoc.data();
+        if (petData.ownerId !== ownerId) {
+            return res.status(403).json({ message: 'No estás autorizado para gestionar esta mascota.' });
+        }
 
-            const linkedVets = petData.linkedVets || [];
-            const linkIndex = linkedVets.findIndex(link => link.vetId === vetId && link.status === 'pending');
+        const link = petData.linkedVets?.[vetId];
+        if (!link || link.status !== 'pending') {
+            return res.status(404).json({ message: 'No se encontró una solicitud de vínculo pendiente de este veterinario.' });
+        }
 
-            if (linkIndex === -1) {
-                throw new Error('No se encontró una solicitud de vínculo pendiente de este veterinario.');
-            }
-
-            if (action === 'approve') {
-                linkedVets[linkIndex].status = 'active';
-            } else {
-                linkedVets.splice(linkIndex, 1);
-            }
-
-            transaction.update(petRef, { linkedVets });
-        });
+        let updatePayload;
+        if (action === 'approve') {
+            updatePayload = { [`linkedVets.${vetId}.status`]: 'active' };
+        } else { // 'reject'
+            updatePayload = { [`linkedVets.${vetId}`]: admin.firestore.FieldValue.delete() };
+        }
+        
+        await petRef.update(updatePayload);
 
         res.status(200).json({ message: `Solicitud de vínculo ${action === 'approve' ? 'aprobada' : 'rechazada'} con éxito.` });
     } catch (error) {
         console.error('Error en managePatientLink:', error);
-        res.status(400).json({ message: error.message || 'No se pudo procesar la solicitud.' });
+        res.status(500).json({ message: error.message || 'No se pudo procesar la solicitud.' });
     }
 };
 

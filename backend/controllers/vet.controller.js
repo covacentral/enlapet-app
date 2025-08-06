@@ -1,5 +1,5 @@
 // backend/controllers/vet.controller.js
-// Lógica de negocio para las acciones exclusivas de los veterinarios verificados.
+// Lógica de negocio para las acciones exclusivas de los veterinarios verificados (Versión Corregida y Mejorada).
 
 const { db } = require('../config/firebase');
 const { createNotification } = require('../services/notification.service');
@@ -9,7 +9,6 @@ const admin = require('firebase-admin');
  * Busca un perfil de mascota por su EnlaPet ID (EPID).
  */
 const findPetByEPID = async (req, res) => {
-  // ... (sin cambios en esta función)
   const { epid } = req.params;
 
   if (!epid) {
@@ -43,59 +42,57 @@ const findPetByEPID = async (req, res) => {
 };
 
 /**
- * Permite a un veterinario enviar una solicitud para vincularse a una mascota como su paciente.
+ * [MODIFICADO] Permite a un veterinario enviar una solicitud de vínculo usando la nueva estructura de mapa.
  */
 const requestPatientLink = async (req, res) => {
-  // ... (sin cambios en esta función)
   const { uid: vetId } = req.user;
   const { petId } = req.params;
 
   const petRef = db.collection('pets').doc(petId);
 
   try {
-    await db.runTransaction(async (transaction) => {
-      const petDoc = await transaction.get(petRef);
-      if (!petDoc.exists) {
-        throw new Error('La mascota no fue encontrada.');
+    const petDoc = await petRef.get();
+    if (!petDoc.exists) {
+      return res.status(404).json({ message: 'La mascota no fue encontrada.' });
+    }
+
+    const petData = petDoc.data();
+    const linkedVets = petData.linkedVets || {};
+
+    // Comprobar si ya existe un vínculo (activo o pendiente) con este veterinario
+    if (linkedVets[vetId] && (linkedVets[vetId].status === 'active' || linkedVets[vetId].status === 'pending')) {
+      return res.status(409).json({ message: 'Ya tienes un vínculo activo o una solicitud pendiente con esta mascota.' });
+    }
+
+    // Añadir o actualizar la solicitud de vínculo pendiente usando notación de punto para campos de mapa
+    const updatePayload = {
+      [`linkedVets.${vetId}`]: {
+        status: 'pending',
+        linkedAt: new Date().toISOString()
       }
+    };
+    
+    await petRef.update(updatePayload);
 
-      const petData = petDoc.data();
-      const linkedVets = petData.linkedVets || [];
-
-      const existingLink = linkedVets.find(link => link.vetId === vetId);
-      if (existingLink && (existingLink.status === 'active' || existingLink.status === 'pending')) {
-        throw new Error('Ya tienes un vínculo activo o una solicitud pendiente con esta mascota.');
-      }
-      
-      const updatedLinks = linkedVets.filter(link => link.vetId !== vetId);
-
-      const newLinkRequest = {
-        vetId,
-        linkedAt: new Date().toISOString(),
-        status: 'pending'
-      };
-      updatedLinks.push(newLinkRequest);
-
-      transaction.update(petRef, { linkedVets: updatedLinks });
-      
-      await createNotification(petData.ownerId, vetId, 'vet_link_request', petId, 'pet');
-    });
+    // Enviar notificación al dueño
+    await createNotification(petData.ownerId, vetId, 'vet_link_request', petId, 'pet');
 
     res.status(200).json({ message: 'Solicitud de vínculo enviada al responsable de la mascota.' });
   } catch (error) {
     console.error('Error en requestPatientLink:', error);
-    res.status(400).json({ message: error.message || 'No se pudo enviar la solicitud de vínculo.' });
+    res.status(500).json({ message: error.message || 'No se pudo enviar la solicitud de vínculo.' });
   }
 };
 
 /**
- * [NUEVO] Obtiene la lista de mascotas vinculadas a un veterinario.
+ * [MODIFICADO] Obtiene la lista de mascotas vinculadas a un veterinario usando una consulta compatible con mapas.
  */
 const getLinkedPatients = async (req, res) => {
     const { uid: vetId } = req.user;
     try {
+        // La consulta ahora busca por la existencia y el estado del campo anidado en el mapa.
         const snapshot = await db.collection('pets')
-            .where('linkedVets', 'array-contains', { vetId, status: 'active' })
+            .where(`linkedVets.${vetId}.status`, '==', 'active')
             .get();
 
         if (snapshot.empty) {
@@ -120,5 +117,5 @@ const getLinkedPatients = async (req, res) => {
 module.exports = {
   findPetByEPID,
   requestPatientLink,
-  getLinkedPatients // <-- Exportamos la nueva función
+  getLinkedPatients
 };
