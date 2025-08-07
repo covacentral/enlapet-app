@@ -1,16 +1,14 @@
 // frontend/src/BottomNavBar.jsx
-// Versión 1.1 - Refactorización a CSS Modules
-// TAREA: Se implementa el módulo de estilos y se actualiza el manejo de la clase "active" de NavLink.
+// Versión 1.2 - Añadido el enlace a la página de Citas
+// TAREA: Se añade un nuevo NavLink para que los usuarios accedan a su gestión de citas.
 
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Map, PlusSquare, Calendar, Bell } from 'lucide-react';
+import { Home, Map, PlusSquare, Calendar, Bell, CalendarClock } from 'lucide-react'; // 1. Importamos el nuevo ícono
 
-// 1. IMPORTAMOS el nuevo módulo de estilos
 import styles from './BottomNavBar.module.css';
 
 function BottomNavBar({ unreadCount, onOpenCreatePost }) {
-  // 2. Definimos una función para manejar las clases dinámicas de NavLink
   const getNavLinkClass = ({ isActive }) => {
     return isActive ? `${styles.navItem} ${styles.active}` : styles.navItem;
   };
@@ -26,15 +24,16 @@ function BottomNavBar({ unreadCount, onOpenCreatePost }) {
         <span className={styles.navLabel}>Mapa</span>
       </NavLink>
       
-      {/* El botón central ahora usa su propia clase del módulo */}
       <button onClick={onOpenCreatePost} className={styles.createPostButton}>
         <PlusSquare className={styles.navIcon} size={28} />
       </button>
 
-      <NavLink to="/dashboard/events" className={getNavLinkClass}>
-        <Calendar className={styles.navIcon} />
-        <span className={styles.navLabel}>Eventos</span>
+      {/* --- 2. AÑADIMOS EL NUEVO ENLACE A CITAS --- */}
+      <NavLink to="/dashboard/appointments" className={getNavLinkClass}>
+        <CalendarClock className={styles.navIcon} />
+        <span className={styles.navLabel}>Citas</span>
       </NavLink>
+      
       <NavLink to="/dashboard/notifications" className={getNavLinkClass}>
         {unreadCount > 0 && <span className={styles.notificationBadge}>{unreadCount}</span>}
         <Bell className={styles.navIcon} />

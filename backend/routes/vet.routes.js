@@ -7,7 +7,7 @@ const {
     findPetByEPID, 
     requestPatientLink, 
     getLinkedPatients,
-    addHealthRecordEntry,   // <-- 1. Importamos las nuevas funciones
+    addHealthRecordEntry,
     updatePatientStatus 
 } = require('../controllers/vet.controller');
 const isVetVerified = require('../middleware/isVetVerified');
@@ -26,7 +26,7 @@ router.post('/vet/request-link/:petId', requestPatientLink);
 
 // Gestión de Pacientes y su ECD
 router.get('/vet/patients', getLinkedPatients);
-router.put('/vet/patients/:petId/status', updatePatientStatus); // <-- 2. Nueva ruta para actualizar estado
-router.post('/vet/patients/:petId/health-record', addHealthRecordEntry); // <-- 3. Nueva ruta para añadir registros al ECD
+router.put('/vet/patients/:petId/status', updatePatientStatus);
+router.post('/vet/patients/:petId/health-record', addHealthRecordEntry);
 
 module.exports = router;

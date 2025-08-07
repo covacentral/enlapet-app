@@ -1,6 +1,6 @@
 // backend/index.js
-// Versión Refactorizada y Corregida: Arquitectura Modular y Segura
-// Este archivo ahora actúa como el punto de entrada principal, orquestando correctamente las rutas públicas y privadas.
+// Versión 1.4 - Integración del Módulo de Citas
+// TAREA: Se registra el nuevo enrutador para gestionar las citas.
 
 // --- 1. CONFIGURACIÓN E IMPORTACIONES ---
 require('dotenv').config();
@@ -19,7 +19,8 @@ const locationRoutes = require('./routes/locations.routes');
 const notificationRoutes = require('./routes/notifications.routes');
 const reportRoutes = require('./routes/reports.routes');
 const verificationRoutes = require('./routes/verification.routes');
-const vetRoutes = require('./routes/vet.routes'); // <-- 1. IMPORTAMOS las nuevas rutas de veterinario
+const vetRoutes = require('./routes/vet.routes');
+const appointmentRoutes = require('./routes/appointments.routes'); // <-- 1. IMPORTAMOS las nuevas rutas de citas
 
 // --- 2. INICIALIZACIÓN DE LA APP ---
 const app = express();
@@ -44,15 +45,14 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// --- 4. DEFINICIÓN DE RUTAS (ORDEN CORREGIDO) ---
+// --- 4. DEFINICIÓN DE RUTAS ---
 
-// A. Rutas Públicas (No requieren autenticación)
-app.get('/', (req, res) => res.json({ message: "¡Bienvenido a la API de EnlaPet! v1.3 - Módulo Veterinario" }));
+// A. Rutas Públicas
+app.get('/', (req, res) => res.json({ message: "¡Bienvenido a la API de EnlaPet! v1.4 - Módulo de Citas" }));
 app.use('/api/auth', authRoutes);
 app.use('/api', publicRoutes);
 
 // B. Middleware de Autenticación
-// A partir de este punto, TODAS las rutas subsiguientes requerirán un token.
 app.use(authenticateUser);
 
 // C. Rutas Protegidas
@@ -64,7 +64,8 @@ app.use('/api', locationRoutes);
 app.use('/api', notificationRoutes);
 app.use('/api', reportRoutes);
 app.use('/api', verificationRoutes);
-app.use('/api', vetRoutes); // <-- 2. REGISTRAMOS el nuevo enrutador de veterinario
+app.use('/api', vetRoutes);
+app.use('/api', appointmentRoutes); // <-- 2. REGISTRAMOS el nuevo enrutador
 
 // --- 5. INICIAR SERVIDOR ---
-app.listen(PORT, () => console.log(`Servidor modularizado y corregido corriendo en el puerto ${PORT}`));
+app.listen(PORT, () => console.log(`Servidor con módulo de citas corriendo en el puerto ${PORT}`));

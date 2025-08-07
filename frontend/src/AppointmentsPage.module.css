@@ -1,0 +1,114 @@
+/* frontend/src/AppointmentsPage.module.css */
+/* Estilos para la página de gestión de citas. */
+
+.container {
+    background-color: var(--background-light);
+    padding: 25px;
+    border-radius: 15px;
+    border: 1px solid var(--border-color);
+    text-align: left;
+}
+
+.header {
+    margin-bottom: 1rem;
+}
+
+.content {
+    margin-top: 2rem;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+}
+
+.card {
+    background-color: var(--background-dark);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.cardHeader {
+    padding: 12px 16px;
+    background-color: var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.cardHeader h4 {
+    margin: 0;
+    font-size: 1.1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cardBody {
+    padding: 16px;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.cardBody p {
+    margin: 0;
+    color: var(--text-secondary);
+}
+
+.cardBody p strong {
+    color: var(--text-primary);
+}
+
+.cardActions {
+    display: flex;
+    gap: 10px;
+    padding: 0 16px 16px;
+    border-top: 1px solid var(--border-color);
+    padding-top: 16px;
+    margin-top: 10px;
+}
+
+.statusBadge {
+    font-size: 0.8rem;
+    font-weight: bold;
+    padding: 4px 10px;
+    border-radius: 20px;
+    text-transform: capitalize;
+}
+
+.pending {
+    background-color: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+}
+
+.confirmed {
+    background-color: rgba(34, 197, 94, 0.1);
+    color: #22c55e;
+}
+
+.cancelled_by_vet, .cancelled_by_user {
+    background-color: rgba(225, 29, 72, 0.1);
+    color: #e11d48;
+}
+
+.completed {
+    background-color: rgba(148, 163, 184, 0.1);
+    color: #94a3b8;
+}
+
+.sessionActive {
+    background-color: rgba(0, 187, 167, 0.15);
+    color: var(--primary-accent);
+    padding: 12px 16px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+}

@@ -1,6 +1,6 @@
 // frontend/src/ProfileLayout.jsx
-// Versión: 3.7 - Añadida la ruta para el Expediente Clínico Digital
-// TAREA: Se añade la ruta anidada para la nueva vista PatientECDView.
+// Versión: 3.8 - Integración de Rutas de Módulo Veterinario
+// TAREA: Se añaden las rutas para el ECD del Paciente y la página de Citas.
 
 import { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
@@ -8,7 +8,7 @@ import { auth } from './firebase';
 
 import styles from './ProfileLayout.module.css';
 
-// Importación de Páginas
+// --- 1. IMPORTAMOS LAS NUEVAS PÁGINAS ---
 import FeedPage from './FeedPage.jsx';
 import SavedPostsPage from './SavedPostsPage.jsx';
 import MapPage from './MapPage.jsx';
@@ -19,7 +19,8 @@ import PetSocialProfile from './PetSocialProfile.jsx';
 import UserProfilePage from './UserProfilePage.jsx';
 import NotificationsPage from './NotificationsPage.jsx';
 import VetDashboardPage from './VetDashboardPage.jsx';
-import PatientECDView from './PatientECDView.jsx'; // <-- 1. IMPORTAMOS la nueva página
+import PatientECDView from './PatientECDView.jsx';
+import AppointmentsPage from './AppointmentsPage.jsx'; // Nueva página de citas
 
 // Importación de Componentes
 import LoadingComponent from './LoadingComponent.jsx';
@@ -38,7 +39,6 @@ function ProfileLayout({ user }) {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const navigate = useNavigate();
 
-  // ... (toda la lógica de fetchCoreData, fetchUnreadCount, etc. permanece idéntica)
   const fetchCoreData = useCallback(async () => {
     if (!user) return;
     try {
@@ -107,7 +107,6 @@ function ProfileLayout({ user }) {
 
   if (loading) return <LoadingComponent text="Cargando tu universo EnlaPet..." />;
 
-
   return (
     <div className={styles.container}>
       {isCreateModalOpen && (
@@ -134,9 +133,10 @@ function ProfileLayout({ user }) {
           <Route path="user/:userId" element={<UserProfilePage />} />
           <Route path="notifications/post/:postId" element={<NotificationsPage onMarkAsRead={handleMarkAsRead} />} />
           
+          {/* --- 2. AÑADIMOS LAS NUEVAS RUTAS --- */}
           <Route path="vet-panel" element={<VetDashboardPage />} />
-          {/* --- 2. AÑADIMOS LA NUEVA RUTA ANIDADA --- */}
           <Route path="vet-panel/patient/:petId" element={<PatientECDView />} />
+          <Route path="appointments" element={<AppointmentsPage userProfile={userProfile} />} />
         </Routes>
       </main>
 

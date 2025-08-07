@@ -1,6 +1,6 @@
 // frontend/src/VetDashboardPage.jsx
-// Versión 3.1 - Integración con Vista ECD
-// TAREA: Se reemplaza el modal de edición por la navegación a la nueva página de ECD.
+// Versión 3.1 - Dashboard Avanzado con Navegación a ECD
+// TAREA: Se implementan los filtros por estado y se reemplaza el modal por la navegación a la vista de ECD.
 
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -10,11 +10,10 @@ import { Search, Send, CheckCircle, PawPrint, Activity, Eye, Check } from 'lucid
 import styles from './VetDashboardPage.module.css';
 import sharedStyles from './shared.module.css';
 import LoadingComponent from './LoadingComponent';
-// PetEditModal ya no es necesario aquí.
+// PetEditModal ya no se importa ni se usa en esta página.
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-// Componente PetSearchResult (sin cambios)
 const PetSearchResult = ({ pet }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [requestSent, setRequestSent] = useState(false);
@@ -61,7 +60,6 @@ const PatientStatusBadge = ({ status }) => {
     return <div className={`${styles.statusBadge} ${currentStatus.className}`}>{currentStatus.icon} {currentStatus.text}</div>;
 }
 
-// --- 1. PatientCard AHORA USA useNavigate ---
 const PatientCard = ({ patient }) => {
     const navigate = useNavigate();
     
@@ -86,7 +84,6 @@ function VetDashboardPage() {
   const [searchResult, setSearchResult] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
   const [searchMessage, setSearchMessage] = useState('');
-
   const [patients, setPatients] = useState([]);
   const [isLoadingPatients, setIsLoadingPatients] = useState(true);
   const [patientMessage, setPatientMessage] = useState('');
@@ -132,49 +129,41 @@ function VetDashboardPage() {
       setIsSearching(false);
     }
   };
-  
-  // --- 2. LÓGICA DEL MODAL ELIMINADA ---
-  // Los estados isModalOpen, selectedPet y los manejadores handlePatientCardClick, handleCloseModal
-  // han sido eliminados porque la navegación ahora se maneja directamente en PatientCard.
 
   return (
-    <>
-      {/* El renderizado del modal también se ha eliminado */}
-      <div className={styles.container}>
-        <div className={styles.header}>
-          <h2 className={sharedStyles.tabTitle} style={{ marginBottom: 0 }}>Panel de Veterinario</h2>
-        </div>
-        <div className={styles.searchSection}>
-          <h3>Buscar y Vincular Nuevo Paciente</h3>
-          <form onSubmit={handleSearch} className={styles.searchForm}>
-            <input type="text" value={epid} onChange={(e) => setEpid(e.target.value.toUpperCase())} placeholder="Introduce el EPID de la mascota" className={styles.searchInput} maxLength="6"/>
-            <button type="submit" className={`${sharedStyles.button} ${sharedStyles.primary}`} disabled={isSearching}><Search size={18}/> {isSearching ? 'Buscando...' : 'Buscar'}</button>
-          </form>
-          <div className={styles.resultsSection}>
-              {searchMessage && <p className={sharedStyles.responseMessageError}>{searchMessage}</p>}
-              {searchResult && <PetSearchResult pet={searchResult} />}
-          </div>
-        </div>
-        <div className={styles.patientsSection}>
-          <div className={styles.patientsHeader}>
-            <h3>Mis Pacientes</h3>
-            <div className={styles.filterGroup}>
-                <button onClick={() => setActiveFilter('active')} className={activeFilter === 'active' ? styles.activeFilter : ''}>Activos</button>
-                <button onClick={() => setActiveFilter('observation')} className={activeFilter === 'observation' ? styles.activeFilter : ''}>En Observación</button>
-                <button onClick={() => setActiveFilter('discharged')} className={activeFilter === 'discharged' ? styles.activeFilter : ''}>De Alta</button>
-            </div>
-          </div>
-          {isLoadingPatients ? <LoadingComponent text="Cargando pacientes..." /> : 
-           patientMessage ? <p className={sharedStyles.responseMessageError}>{patientMessage}</p> : 
-           patients.length > 0 ? (
-            <div className={styles.patientsGrid}>
-                {/* 3. PatientCard ahora no necesita el handler onClick */}
-                {patients.map(p => <PatientCard key={p.id} patient={p} />)}
-            </div>
-           ) : (<p className={sharedStyles.emptyStateMessage}>No tienes pacientes con el estado seleccionado.</p>)}
+    <div className={styles.container}>
+      <div className={styles.header}>
+        <h2 className={sharedStyles.tabTitle} style={{ marginBottom: 0 }}>Panel de Veterinario</h2>
+      </div>
+      <div className={styles.searchSection}>
+        <h3>Buscar y Vincular Nuevo Paciente</h3>
+        <form onSubmit={handleSearch} className={styles.searchForm}>
+          <input type="text" value={epid} onChange={(e) => setEpid(e.target.value.toUpperCase())} placeholder="Introduce el EPID de la mascota" className={styles.searchInput} maxLength="6"/>
+          <button type="submit" className={`${sharedStyles.button} ${sharedStyles.primary}`} disabled={isSearching}><Search size={18}/> {isSearching ? 'Buscando...' : 'Buscar'}</button>
+        </form>
+        <div className={styles.resultsSection}>
+            {searchMessage && <p className={sharedStyles.responseMessageError}>{searchMessage}</p>}
+            {searchResult && <PetSearchResult pet={searchResult} />}
         </div>
       </div>
-    </>
+      <div className={styles.patientsSection}>
+        <div className={styles.patientsHeader}>
+          <h3>Mis Pacientes</h3>
+          <div className={styles.filterGroup}>
+              <button onClick={() => setActiveFilter('active')} className={activeFilter === 'active' ? styles.activeFilter : ''}>Activos</button>
+              <button onClick={() => setActiveFilter('observation')} className={activeFilter === 'observation' ? styles.activeFilter : ''}>En Observación</button>
+              <button onClick={() => setActiveFilter('discharged')} className={activeFilter === 'discharged' ? styles.activeFilter : ''}>De Alta</button>
+          </div>
+        </div>
+        {isLoadingPatients ? <LoadingComponent text="Cargando pacientes..." /> : 
+         patientMessage ? <p className={sharedStyles.responseMessageError}>{patientMessage}</p> : 
+         patients.length > 0 ? (
+          <div className={styles.patientsGrid}>
+              {patients.map(p => <PatientCard key={p.id} patient={p} />)}
+          </div>
+         ) : (<p className={sharedStyles.emptyStateMessage}>No tienes pacientes con el estado seleccionado.</p>)}
+      </div>
+    </div>
   );
 }
 

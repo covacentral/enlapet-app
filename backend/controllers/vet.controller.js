@@ -11,7 +11,7 @@ const admin = require('firebase-admin');
  * Reutiliza la lógica de autorización en múltiples funciones.
  * @param {string} vetId - UID del veterinario.
  * @param {string} petId - ID de la mascota.
- * @returns {Promise<Object|null>} El documento de la mascota si está autorizado, sino null.
+ * @returns {Promise<Object>} El documento de la mascota si está autorizado. Lanza un error si no.
  */
 const getPetIfAuthorized = async (vetId, petId) => {
     const petRef = db.collection('pets').doc(petId);
@@ -31,9 +31,28 @@ const getPetIfAuthorized = async (vetId, petId) => {
     return petData;
 };
 
+/**
+ * Verifica si una sesión clínica está activa para una mascota y un veterinario.
+ * @param {string} vetId 
+ * @param {string} petId 
+ * @returns {Promise<boolean>}
+ */
+const isClinicalSessionActive = async (vetId, petId) => {
+    const now = new Date();
+    const query = await db.collection('appointments')
+        .where('vetId', '==', vetId)
+        .where('petId', '==', petId)
+        .where('session.isActive', '==', true)
+        .where('session.expiresAt', '>', now.toISOString())
+        .limit(1)
+        .get();
+
+    return !query.empty;
+};
+
 
 /**
- * Busca un perfil de mascota por su EnlaPet ID (EPID). (Sin cambios)
+ * Busca un perfil de mascota por su EnlaPet ID (EPID).
  */
 const findPetByEPID = async (req, res) => {
     const { epid } = req.params;
@@ -63,10 +82,10 @@ const findPetByEPID = async (req, res) => {
 };
 
 /**
- * Permite a un veterinario enviar una solicitud para vincularse a una mascota. (Sin cambios)
+ * Permite a un veterinario enviar una solicitud para vincularse a una mascota.
  */
 const requestPatientLink = async (req, res) => {
-    const { uid: vetId, name: vetName } = req.user; // Se añade vetName del token
+    const { uid: vetId, name: vetName } = req.user;
     const { petId } = req.params;
     const petRef = db.collection('pets').doc(petId);
     try {
@@ -83,7 +102,7 @@ const requestPatientLink = async (req, res) => {
             [`linkedVets.${vetId}`]: {
                 status: 'pending',
                 linkedAt: new Date().toISOString(),
-                vetName: vetName // Guardamos el nombre para mostrarlo al dueño
+                vetName: vetName
             }
         };
         await petRef.update(updatePayload);
@@ -96,11 +115,11 @@ const requestPatientLink = async (req, res) => {
 };
 
 /**
- * [MODIFICADO] Obtiene la lista de pacientes, con opción de filtrar por estado.
+ * Obtiene la lista de pacientes de un veterinario, con opción de filtrar por estado.
  */
 const getLinkedPatients = async (req, res) => {
     const { uid: vetId } = req.user;
-    const { status } = req.query; // Filtro opcional: active, observation, discharged
+    const { status } = req.query;
 
     try {
         let query = db.collection('pets').where(`linkedVets.${vetId}.status`, '==', 'active');
@@ -110,15 +129,7 @@ const getLinkedPatients = async (req, res) => {
         }
 
         const snapshot = await query.get();
-
-        if (snapshot.empty) {
-            return res.status(200).json([]);
-        }
-
-        const patients = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        }));
+        const patients = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
         res.status(200).json(patients);
     } catch (error) {
@@ -128,7 +139,8 @@ const getLinkedPatients = async (req, res) => {
 };
 
 /**
- * [NUEVO] Añade una nueva entrada al Expediente Clínico Digital (ECD) de un paciente.
+ * Añade una nueva entrada al Expediente Clínico Digital (ECD) de un paciente.
+ * Requiere una sesión clínica activa.
  */
 const addHealthRecordEntry = async (req, res) => {
     const { uid: vetId, name: vetName } = req.user;
@@ -143,14 +155,15 @@ const addHealthRecordEntry = async (req, res) => {
     try {
         await getPetIfAuthorized(vetId, petId);
 
+        const sessionActive = await isClinicalSessionActive(vetId, petId);
+        if (!sessionActive) {
+            return res.status(403).json({ message: 'No hay una sesión clínica activa para esta mascota. No se pueden añadir registros.' });
+        }
+
         const newEntry = {
             ...data,
-            id: admin.firestore.FieldValue.serverTimestamp().toMillis().toString(), // ID único basado en timestamp
-            author: {
-                authorId: vetId,
-                authorType: 'vet',
-                authorName: vetName,
-            }
+            id: admin.firestore.Timestamp.now().toMillis().toString(),
+            author: { authorId: vetId, authorType: 'vet', authorName: vetName }
         };
 
         const petRef = db.collection('pets').doc(petId);
@@ -167,7 +180,7 @@ const addHealthRecordEntry = async (req, res) => {
 };
 
 /**
- * [NUEVO] Actualiza el estado de un paciente (Activo, En Observación, De Alta).
+ * Actualiza el estado de un paciente (Activo, En Observación, De Alta).
  */
 const updatePatientStatus = async (req, res) => {
     const { uid: vetId } = req.user;

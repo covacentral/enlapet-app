@@ -1,6 +1,6 @@
 // frontend/src/SettingsTab.jsx
-// Versión: 2.9 - CORRECCIÓN LÓGICA FINAL
-// TAREA: Se corrige el subcomponente VerificationStatus para que se muestre correctamente en usuarios sin historial de verificación.
+// Versión: 3.0 - Añadida la pestaña de Configuración de Agenda para Veterinarios
+// TAREA: Se añade una nueva pestaña y formulario para que los vets gestionen su disponibilidad.
 
 import { useState, useEffect, useRef } from 'react';
 import { auth } from './firebase';
@@ -13,11 +13,7 @@ import sharedStyles from './shared.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-// --- SUBCOMPONENTES (CON LÍNEA CORREGIDA) ---
 const VerificationStatus = ({ verification, onOpenModal }) => {
-  // --- LÍNEA CORREGIDA ---
-  // Antes: if (!verification) return null;
-  // Ahora: Asignamos un valor por defecto si 'verification' no existe. Esto asegura que el componente SIEMPRE se renderice.
   const verif = verification || { status: 'none', type: 'none' };
   const { status, type, rejectionReason } = verif;
 
@@ -43,7 +39,7 @@ const VerificationStatus = ({ verification, onOpenModal }) => {
           <div><strong>Solicitud Rechazada</strong><span>{rejectionReason || 'No se cumplieron los requisitos.'}</span><button className={sharedStyles.linkButton} onClick={onOpenModal}>Reintentar solicitud</button></div>
         </div>
       );
-    default: // 'none'
+    default:
       return (
         <div className={styles.statusBox}>
           <div><strong>Tu cuenta no está verificada.</strong><span>Verifica tu perfil para acceder a herramientas profesionales y generar más confianza.</span><button className={`${sharedStyles.button} ${sharedStyles.secondary}`} style={{marginTop: '10px'}} onClick={onOpenModal}>Solicitar Verificación</button></div>
@@ -52,20 +48,27 @@ const VerificationStatus = ({ verification, onOpenModal }) => {
   }
 };
 
-// --- COMPONENTE PRINCIPAL (SIN CAMBIOS) ---
 function SettingsTab({ user, userProfile, onProfileUpdate }) {
   const [activeTab, setActiveTab] = useState('profile');
   const [isEditMode, setIsEditMode] = useState(false);
   const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
   const [formData, setFormData] = useState({ name: '', phone: '', bio: '' });
+  
+  const [vetSettingsData, setVetSettingsData] = useState({ consultationDurationMinutes: 30 });
+  
   const [message, setMessage] = useState({ text: '', isError: false });
   const [isUpdating, setIsUpdating] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
 
+  const isVerifiedVet = userProfile?.verification?.status === 'verified' && userProfile?.verification?.type === 'vet';
+
   const populateFields = () => {
     if (userProfile) {
       setFormData({ name: userProfile.name || '', phone: userProfile.phone || '', bio: userProfile.bio || '' });
+      if (userProfile.vetSettings) {
+        setVetSettingsData(userProfile.vetSettings);
+      }
     }
   };
 
@@ -78,14 +81,12 @@ function SettingsTab({ user, userProfile, onProfileUpdate }) {
     setFormData(prev => ({ ...prev, [id]: value }));
   };
 
-  const handleLogout = async () => {
-    if (window.confirm('¿Estás seguro de que quieres cerrar sesión?')) {
-      try { await signOut(auth); } catch (error) { setMessage({ text: 'Error al cerrar sesión.', isError: true }); }
-    }
+  const handleVetSettingsChange = (e) => {
+    const { id, value } = e.target;
+    setVetSettingsData(prev => ({ ...prev, [id]: Number(value) }));
   };
 
-  const handleUpdateProfile = async (e) => {
-    e.preventDefault();
+  const handleSaveChanges = async (payload) => {
     setIsUpdating(true);
     setMessage({ text: 'Guardando cambios...', isError: false });
     try {
@@ -93,17 +94,35 @@ function SettingsTab({ user, userProfile, onProfileUpdate }) {
       const response = await fetch(`${API_URL}/api/profile`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message);
-      setMessage({ text: 'Perfil guardado con éxito.', isError: false });
+      
+      setMessage({ text: 'Guardado con éxito.', isError: false });
       onProfileUpdate();
       setIsEditMode(false);
     } catch (error) {
       setMessage({ text: error.message, isError: true });
     } finally {
       setIsUpdating(false);
+      setTimeout(() => setMessage({ text: '', isError: false }), 3000);
+    }
+  };
+  
+  const handleUpdateProfile = (e) => {
+    e.preventDefault();
+    handleSaveChanges(formData);
+  };
+  
+  const handleUpdateVetSettings = (e) => {
+    e.preventDefault();
+    handleSaveChanges({ vetSettings: vetSettingsData });
+  };
+
+  const handleLogout = async () => {
+    if (window.confirm('¿Estás seguro de que quieres cerrar sesión?')) {
+      try { await signOut(auth); } catch (error) { setMessage({ text: 'Error al cerrar sesión.', isError: true }); }
     }
   };
 
@@ -154,8 +173,13 @@ function SettingsTab({ user, userProfile, onProfileUpdate }) {
                 Perfil Público
             </button>
             <button type="button" className={`${sharedStyles.modalTabButton} ${activeTab === 'verification' ? sharedStyles.active : ''}`} onClick={() => setActiveTab('verification')}>
-                Verificación de Cuenta
+                Verificación
             </button>
+            {isVerifiedVet && (
+              <button type="button" className={`${sharedStyles.modalTabButton} ${activeTab === 'agenda' ? sharedStyles.active : ''}`} onClick={() => setActiveTab('agenda')}>
+                Agenda
+              </button>
+            )}
         </div>
 
         {message.text && (
@@ -164,12 +188,6 @@ function SettingsTab({ user, userProfile, onProfileUpdate }) {
           </p>
         )}
 
-        {activeTab === 'verification' && (
-          <div className={styles.section}>
-            <VerificationStatus verification={userProfile?.verification} onOpenModal={() => setIsVerificationModalOpen(true)} />
-          </div>
-        )}
-        
         {activeTab === 'profile' && (
           <div className={styles.section}>
             <div className={styles.header} style={{paddingBottom: 0, borderBottom: 'none', marginBottom: 0}}>
@@ -192,6 +210,42 @@ function SettingsTab({ user, userProfile, onProfileUpdate }) {
               </div>
             )}
           </div>
+        )}
+        
+        {activeTab === 'verification' && (
+          <div className={styles.section}>
+            <VerificationStatus verification={userProfile?.verification} onOpenModal={() => setIsVerificationModalOpen(true)} />
+          </div>
+        )}
+
+        {activeTab === 'agenda' && isVerifiedVet && (
+            <div className={styles.section}>
+                <div className={styles.header} style={{paddingBottom: 0, borderBottom: 'none', marginBottom: 0}}>
+                    <h3>Configuración de Agenda</h3>
+                </div>
+                <p className={styles.sectionDescription}>
+                    Define los parámetros para que los dueños de mascotas puedan solicitar citas contigo.
+                </p>
+                <form onSubmit={handleUpdateVetSettings}>
+                    <div className={sharedStyles.formGroup}>
+                        <label htmlFor="consultationDurationMinutes">Duración de la Consulta (minutos)</label>
+                        <input 
+                            type="number" 
+                            id="consultationDurationMinutes" 
+                            value={vetSettingsData.consultationDurationMinutes} 
+                            onChange={handleVetSettingsChange} 
+                            min="15"
+                            step="5"
+                            required 
+                        />
+                    </div>
+                    <div className={styles.formActions}>
+                        <button type="submit" className={`${sharedStyles.button} ${sharedStyles.primary}`} disabled={isUpdating}>
+                            {isUpdating ? 'Guardando...' : 'Guardar Configuración'}
+                        </button>
+                    </div>
+                </form>
+            </div>
         )}
 
         <div className={styles.logoutSection}>

@@ -1,0 +1,49 @@
+/* frontend/src/components/SOAPForm.module.css */
+/* Estilos para el formulario de consulta SOAP. */
+
+.formContainer {
+    background-color: var(--background-dark);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-top: 1rem;
+}
+
+.formTitle {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    font-size: 1.3rem;
+}
+
+.fieldset {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.fieldset legend {
+    padding: 0 0.5rem;
+    font-weight: bold;
+    color: var(--text-secondary);
+}
+
+.formRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.formRow > .formGroup {
+    flex: 1;
+    min-width: 120px; /* Asegura que no se compriman demasiado en móvil */
+}
+
+.actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+    padding-top: 1.5rem;
+}
