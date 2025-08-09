@@ -6,9 +6,7 @@ const { getNewAppointment } = require('../models/appointment.model');
 const { createNotification } = require('../services/notification.service');
 const admin = require('firebase-admin');
 
-/**
- * Permite a un dueño de mascota solicitar una nueva cita con un veterinario.
- */
+// ... (las funciones requestAppointment, getAvailableSlots, y getMyAppointments no cambian)
 const requestAppointment = async (req, res) => {
     const { uid: ownerId } = req.user;
     const { vetId, petId, appointmentDate, duration, reason } = req.body;
@@ -52,10 +50,6 @@ const requestAppointment = async (req, res) => {
     }
 };
 
-
-/**
- * Calcula los horarios disponibles para un veterinario en una fecha específica.
- */
 const getAvailableSlots = async (req, res) => {
     const { vetId } = req.params;
     const { date } = req.query;
@@ -120,14 +114,10 @@ const getAvailableSlots = async (req, res) => {
     }
 };
 
-/**
- * [NUEVO] Obtiene todas las citas de un usuario, ya sea como dueño o como veterinario.
- */
 const getMyAppointments = async (req, res) => {
     const { uid } = req.user;
 
     try {
-        // Realizamos dos consultas en paralelo
         const ownerQuery = db.collection('appointments').where('ownerId', '==', uid).get();
         const vetQuery = db.collection('appointments').where('vetId', '==', uid).get();
         const [ownerSnapshot, vetSnapshot] = await Promise.all([ownerQuery, vetQuery]);
@@ -143,7 +133,6 @@ const getMyAppointments = async (req, res) => {
             relatedPetIds.add(data.petId);
         });
         vetSnapshot.forEach(doc => {
-            // Evitamos duplicados si un veterinario agenda una cita para su propia mascota
             if (!appointments.some(app => app.id === doc.id)) {
                 const data = doc.data();
                 appointments.push({ id: doc.id, ...data });
@@ -152,7 +141,6 @@ const getMyAppointments = async (req, res) => {
             }
         });
 
-        // Enriquecer los datos con nombres de usuarios y mascotas
         const usersData = {};
         const petsData = {};
 
@@ -172,7 +160,6 @@ const getMyAppointments = async (req, res) => {
             petName: petsData[app.petId] || 'No encontrada'
         }));
 
-        // Ordenar por fecha de la cita, más próxima primero
         enrichedAppointments.sort((a, b) => new Date(a.appointmentDate) - new Date(b.appointmentDate));
 
         res.status(200).json(enrichedAppointments);
@@ -183,8 +170,68 @@ const getMyAppointments = async (req, res) => {
     }
 };
 
+/**
+ * [NUEVO] Actualiza el estado de una cita (confirmar, cancelar, etc.).
+ */
+const updateAppointmentStatus = async (req, res) => {
+    const { uid } = req.user;
+    const { appointmentId } = req.params;
+    const { status, reason } = req.body; // 'reason' es opcional, para cancelaciones
+
+    const validStatus = ['confirmed', 'cancelled_by_user', 'cancelled_by_vet', 'completed', 'no_show'];
+    if (!status || !validStatus.includes(status)) {
+        return res.status(400).json({ message: 'Se proporcionó un estado no válido.' });
+    }
+
+    const appointmentRef = db.collection('appointments').doc(appointmentId);
+
+    try {
+        await db.runTransaction(async (transaction) => {
+            const appointmentDoc = await transaction.get(appointmentRef);
+            if (!appointmentDoc.exists) {
+                throw new Error('La cita no fue encontrada.');
+            }
+
+            const appointmentData = appointmentDoc.data();
+            const isOwner = appointmentData.ownerId === uid;
+            const isVet = appointmentData.vetId === uid;
+
+            if (!isOwner && !isVet) {
+                throw new Error('No estás autorizado para modificar esta cita.');
+            }
+            
+            // Lógica de permisos de estado
+            if (isOwner && status !== 'cancelled_by_user') {
+                throw new Error('No tienes permiso para realizar esta acción.');
+            }
+            if (isVet && status === 'cancelled_by_user') {
+                 throw new Error('Acción no válida para el veterinario.');
+            }
+            
+            const updatePayload = { status, updatedAt: new Date().toISOString() };
+            if (status === 'cancelled_by_vet' && reason) {
+                updatePayload.cancellationReason = reason;
+            }
+
+            transaction.update(appointmentRef, updatePayload);
+
+            // Notificar a la otra parte sobre el cambio de estado
+            const recipientId = isVet ? appointmentData.ownerId : appointmentData.vetId;
+            await createNotification(recipientId, uid, 'appointment_status_update', appointmentId, 'appointment');
+        });
+
+        res.status(200).json({ message: 'El estado de la cita ha sido actualizado.' });
+
+    } catch (error) {
+        console.error('Error en updateAppointmentStatus:', error);
+        res.status(400).json({ message: error.message || 'No se pudo actualizar la cita.' });
+    }
+};
+
+
 module.exports = {
     requestAppointment,
     getAvailableSlots,
-    getMyAppointments // Exportamos la nueva función
+    getMyAppointments,
+    updateAppointmentStatus, // Exportamos la nueva función
 };

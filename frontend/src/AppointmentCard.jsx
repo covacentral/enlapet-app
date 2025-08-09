@@ -1,16 +1,22 @@
 // frontend/src/AppointmentCard.jsx
-// (NUEVO) Componente para mostrar una tarjeta de cita individual.
+// Versión 1.1: Lógica de gestión de citas implementada.
 
-import React from 'react';
+import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { auth } from './firebase'; // Importamos auth para el token
 import styles from './AppointmentCard.module.css';
 import sharedStyles from './shared.module.css';
 
-function AppointmentCard({ appointment, userType }) {
-  const appointmentDate = new Date(appointment.appointmentDate);
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-  // Formateo de fechas con date-fns
+// El componente ahora recibe una función onUpdate para refrescar la lista
+function AppointmentCard({ appointment, userType, onUpdate }) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState('');
+
+  const appointmentDate = new Date(appointment.appointmentDate);
+  
   const month = format(appointmentDate, 'MMM', { locale: es });
   const day = format(appointmentDate, 'd');
   const time = format(appointmentDate, 'p', { locale: es });
@@ -21,7 +27,7 @@ function AppointmentCard({ appointment, userType }) {
     cancelled_by_user: styles.cancelled,
     cancelled_by_vet: styles.cancelled,
     completed: styles.completed,
-    no_show: styles.cancelled
+    no_show: styles.cancelled,
   };
 
   const statusText = {
@@ -30,7 +36,68 @@ function AppointmentCard({ appointment, userType }) {
     cancelled_by_user: 'Cancelada por Usuario',
     cancelled_by_vet: 'Cancelada por Veterinario',
     completed: 'Completada',
-    no_show: 'No Asistió'
+    no_show: 'No Asistió',
+  };
+
+  // NUEVA FUNCIÓN para manejar la actualización de estado
+  const handleStatusUpdate = async (newStatus) => {
+    setIsLoading(true);
+    setMessage('');
+
+    if (newStatus.startsWith('cancelled') && !window.confirm('¿Estás seguro de que quieres cancelar esta cita?')) {
+        setIsLoading(false);
+        return;
+    }
+
+    try {
+        const user = auth.currentUser;
+        if (!user) throw new Error("No autenticado.");
+        const idToken = await user.getIdToken();
+
+        const response = await fetch(`${API_URL}/api/appointments/${appointment.id}/status`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+            body: JSON.stringify({ status: newStatus })
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message);
+        
+        // Si la API responde con éxito, llamamos a onUpdate para refrescar la lista de citas
+        onUpdate();
+
+    } catch (error) {
+        setMessage(error.message);
+    } finally {
+        setIsLoading(false);
+    }
+  };
+  
+  // Lógica para renderizar los botones de acción correctos
+  const renderActions = () => {
+    if (appointment.status.startsWith('cancelled') || appointment.status === 'completed' || appointment.status === 'no_show') {
+      return null; // No hay acciones para citas finalizadas o canceladas
+    }
+
+    if (userType === 'vet' && appointment.status === 'pending') {
+      return (
+        <>
+          <button className={`${sharedStyles.button} ${sharedStyles.danger}`} onClick={() => handleStatusUpdate('cancelled_by_vet')} disabled={isLoading}>Rechazar</button>
+          <button className={`${sharedStyles.button} ${sharedStyles.primary}`} onClick={() => handleStatusUpdate('confirmed')} disabled={isLoading}>Confirmar</button>
+        </>
+      );
+    }
+
+    if (appointment.status === 'pending' || appointment.status === 'confirmed') {
+        const cancelStatus = userType === 'vet' ? 'cancelled_by_vet' : 'cancelled_by_user';
+        return (
+            <button className={`${sharedStyles.button} ${sharedStyles.secondary}`} onClick={() => handleStatusUpdate(cancelStatus)} disabled={isLoading}>
+                {isLoading ? '...' : 'Cancelar Cita'}
+            </button>
+        );
+    }
+    
+    return null;
   };
 
   return (
@@ -50,19 +117,11 @@ function AppointmentCard({ appointment, userType }) {
           }
         </p>
          <small>Estado: {statusText[appointment.status]}</small>
+         {message && <p className={sharedStyles.responseMessageError} style={{fontSize: '0.8rem', marginTop: '8px'}}>{message}</p>}
       </div>
 
       <div className={styles.actions}>
-        {/* Lógica de botones condicionales irá aquí */}
-        {userType === 'vet' && appointment.status === 'pending' && (
-            <>
-                <button className={`${sharedStyles.button} ${sharedStyles.danger}`}>Rechazar</button>
-                <button className={`${sharedStyles.button} ${sharedStyles.primary}`}>Confirmar</button>
-            </>
-        )}
-         {appointment.status === 'pending' || appointment.status === 'confirmed' ? (
-             <button className={`${sharedStyles.button} ${sharedStyles.secondary}`}>Cancelar Cita</button>
-         ) : null}
+        {renderActions()}
       </div>
     </div>
   );

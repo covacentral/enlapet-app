@@ -1,10 +1,10 @@
 // frontend/src/AppointmentsTab.jsx
-// Versión 1.1: Conectado a la API para mostrar citas reales.
+// Versión 1.2: Pasa la función de actualización a las tarjetas de cita.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { auth } from './firebase';
 import LoadingComponent from './LoadingComponent';
-import AppointmentCard from './AppointmentCard'; // 1. Importamos la tarjeta de cita
+import AppointmentCard from './AppointmentCard';
 
 import styles from './AppointmentsTab.module.css';
 import sharedStyles from './shared.module.css';
@@ -16,9 +16,8 @@ function AppointmentsTab({ userProfile }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // 2. Lógica real para buscar las citas del usuario desde la API
   const fetchAppointments = useCallback(async () => {
-    setIsLoading(true);
+    // No establecemos isLoading a true aquí para un refresco más suave
     setError(null);
     try {
         const user = auth.currentUser;
@@ -37,11 +36,12 @@ function AppointmentsTab({ userProfile }) {
     } catch (err) {
         setError(err.message);
     } finally {
-        setIsLoading(false);
+        setIsLoading(false); // Solo se quita la carga inicial una vez
     }
   }, []);
 
   useEffect(() => {
+    setIsLoading(true);
     fetchAppointments();
   }, [fetchAppointments]);
   
@@ -72,12 +72,13 @@ function AppointmentsTab({ userProfile }) {
             </div>
         )}
 
-        {/* 3. Renderizamos las tarjetas de citas reales */}
+        {/* --- LÍNEA MODIFICADA --- */}
         {!isLoading && appointments.length > 0 && appointments.map(app => (
             <AppointmentCard 
                 key={app.id} 
                 appointment={app} 
                 userType={userType} 
+                onUpdate={fetchAppointments}
             />
         ))}
       </div>
