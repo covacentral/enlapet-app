@@ -1,8 +1,8 @@
 // frontend/src/VetTabs/ManageScheduleTab.jsx
-// Versión 1.2: Corrige la ruta de importación de Firebase.
+// Versión 1.2: Conectado a la API para guardar y CARGAR horarios.
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { auth } from '../firebase'; // <-- RUTA CORREGIDA
+import { auth } from '../firebase';
 import styles from './ManageScheduleTab.module.css';
 import sharedStyles from '../shared.module.css';
 
@@ -30,10 +30,33 @@ function ManageScheduleTab() {
   const [message, setMessage] = useState('');
   const [isFetching, setIsFetching] = useState(true);
 
+  // --- LÓGICA ACTUALIZADA PARA CARGAR EL HORARIO ---
   const fetchSchedule = useCallback(async () => {
     setIsFetching(true);
-    console.log("Funcionalidad para cargar horario guardado pendiente.");
-    setIsFetching(false);
+    setMessage('');
+    try {
+        const user = auth.currentUser;
+        if (!user) throw new Error("Usuario no autenticado.");
+        const idToken = await user.getIdToken();
+
+        const response = await fetch(`${API_URL}/api/vet/availability`, {
+            headers: { 'Authorization': `Bearer ${idToken}` }
+        });
+        
+        if (!response.ok) throw new Error('No se pudo cargar el horario guardado.');
+
+        const savedSchedule = await response.json();
+        // Si el horario guardado no está vacío, lo fusionamos con el estado inicial
+        // para asegurar que todos los días de la semana estén presentes.
+        if (Object.keys(savedSchedule).length > 0) {
+            setSchedule(prev => ({...prev, ...savedSchedule}));
+        }
+
+    } catch (error) {
+        setMessage(`Error al cargar: ${error.message}`);
+    } finally {
+        setIsFetching(false);
+    }
   }, []);
 
   useEffect(() => {

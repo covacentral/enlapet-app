@@ -5,9 +5,7 @@ const { db } = require('../config/firebase');
 const { createNotification } = require('../services/notification.service');
 const admin = require('firebase-admin');
 
-/**
- * Busca un perfil de mascota por su EnlaPet ID (EPID).
- */
+// ... (findPetByEPID, requestPatientLink, getLinkedPatients no cambian)
 const findPetByEPID = async (req, res) => {
   const { epid } = req.params;
 
@@ -41,9 +39,6 @@ const findPetByEPID = async (req, res) => {
   }
 };
 
-/**
- * Permite a un veterinario enviar una solicitud para vincularse a una mascota como su paciente.
- */
 const requestPatientLink = async (req, res) => {
   const { uid: vetId } = req.user;
   const { petId } = req.params;
@@ -86,9 +81,6 @@ const requestPatientLink = async (req, res) => {
   }
 };
 
-/**
- * Obtiene la lista de pacientes (mascotas) activamente vinculados a un veterinario.
- */
 const getLinkedPatients = async (req, res) => {
     const { uid: vetId } = req.user;
     try {
@@ -130,14 +122,10 @@ const getLinkedPatients = async (req, res) => {
     }
 };
 
-/**
- * [NUEVO] Guarda o actualiza la plantilla de horario semanal de un veterinario.
- */
 const updateAvailability = async (req, res) => {
     const { uid: vetId } = req.user;
     const weeklySchedule = req.body;
 
-    // Validación básica del objeto de horario
     if (!weeklySchedule || typeof weeklySchedule !== 'object') {
         return res.status(400).json({ message: 'Se requiere un objeto de horario válido.' });
     }
@@ -146,8 +134,6 @@ const updateAvailability = async (req, res) => {
         const vetRef = db.collection('users').doc(vetId);
         const batch = db.batch();
 
-        // Guardamos cada día de la semana como un documento separado en una subcolección
-        // para facilitar las consultas futuras.
         for (const dayKey in weeklySchedule) {
             if (Object.hasOwnProperty.call(weeklySchedule, dayKey)) {
                 const dayData = weeklySchedule[dayKey];
@@ -165,10 +151,37 @@ const updateAvailability = async (req, res) => {
     }
 };
 
+/**
+ * [NUEVO] Obtiene la plantilla de horario guardada por un veterinario.
+ */
+const getAvailability = async (req, res) => {
+    const { uid: vetId } = req.user;
+    try {
+        const availabilitySnapshot = await db.collection('users').doc(vetId).collection('availability').get();
+
+        if (availabilitySnapshot.empty) {
+            // Si el veterinario nunca ha guardado un horario, devolvemos un objeto vacío
+            // para que el frontend pueda usar su estado inicial por defecto.
+            return res.status(200).json({});
+        }
+
+        const schedule = {};
+        availabilitySnapshot.forEach(doc => {
+            schedule[doc.id] = doc.data();
+        });
+
+        res.status(200).json(schedule);
+
+    } catch (error) {
+        console.error('Error en getAvailability:', error);
+        res.status(500).json({ message: 'Error interno al obtener el horario.' });
+    }
+};
 
 module.exports = {
   findPetByEPID,
   requestPatientLink,
   getLinkedPatients,
-  updateAvailability, // Exportamos la nueva función
+  updateAvailability,
+  getAvailability, // Exportamos la nueva función
 };
