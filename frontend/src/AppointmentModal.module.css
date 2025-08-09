@@ -1,0 +1,105 @@
+/* frontend/src/AppointmentModal.module.css */
+/* Estilos para el modal de agendamiento de citas. */
+
+.content {
+    background-color: var(--background-light);
+    border: 1px solid var(--border-color);
+    border-radius: 15px;
+    width: 90%;
+    max-width: 550px;
+    max-height: 90vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.form {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.petSelector {
+    display: flex;
+    gap: 15px;
+    overflow-x: auto;
+    padding-bottom: 10px;
+    scrollbar-width: none;
+}
+.petSelector::-webkit-scrollbar { display: none; }
+
+.petBubble {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.petBubble img {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--border-color);
+}
+
+.petBubble span {
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: var(--text-secondary);
+}
+
+.petBubble.selected {
+    opacity: 1;
+}
+
+.petBubble.selected img {
+    border-color: var(--primary-accent);
+}
+
+.petBubble.selected span {
+    color: var(--text-primary);
+}
+
+.timeSlotsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 10px;
+}
+
+.timeSlotButton {
+    background-color: var(--background-dark);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 10px;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.timeSlotButton:hover:not(:disabled) {
+    background-color: var(--border-color);
+    border-color: var(--primary-accent);
+}
+
+.timeSlotButton.selected {
+    background-color: var(--primary-accent);
+    border-color: var(--primary-accent);
+    color: var(--brand-cream);
+}
+
+.timeSlotButton:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.loadingSlots {
+    text-align: center;
+    color: var(--text-secondary);
+    font-style: italic;
+}

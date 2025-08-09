@@ -1,0 +1,50 @@
+/* frontend/src/VetTabs/MyPatientsTab.module.css */
+/* Estilos para la pestaña "Mis Pacientes". */
+
+.patientList {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.patientCard {
+    background-color: var(--background-dark);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    text-decoration: none;
+}
+
+.patientCard:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    border-color: var(--primary-accent);
+}
+
+.petImage {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.petInfo {
+    text-align: left;
+}
+
+.petInfo h4 {
+    margin: 0 0 4px 0;
+    font-size: 1.1rem;
+    color: var(--text-primary);
+}
+
+.petInfo p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}

@@ -1,6 +1,6 @@
 // frontend/src/ProfileLayout.jsx
-// Versión: 3.6 - Añadida la ruta para el Panel de Veterinario
-// TAREA: Se añade la nueva ruta y se importa el componente VetDashboardPage.
+// Versión: 3.8 - Ajuste final para pasar props de mascotas a UserProfilePage
+// TAREA: Se pasa la lista de mascotas del usuario a la página de perfiles.
 
 import { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
@@ -18,7 +18,8 @@ import PetsTab from './PetsTab.jsx';
 import PetSocialProfile from './PetSocialProfile.jsx';
 import UserProfilePage from './UserProfilePage.jsx';
 import NotificationsPage from './NotificationsPage.jsx';
-import VetDashboardPage from './VetDashboardPage.jsx'; // <-- 1. IMPORTAMOS la nueva página
+import VetDashboardPage from './VetDashboardPage.jsx';
+import AppointmentsTab from './AppointmentsTab.jsx';
 
 // Importación de Componentes
 import LoadingComponent from './LoadingComponent.jsx';
@@ -124,14 +125,16 @@ function ProfileLayout({ user }) {
           <Route path="map" element={<MapPage />} />
           <Route path="events" element={<EventsPage user={user} />} />
           <Route path="notifications" element={<NotificationsPage onMarkAsRead={handleMarkAsRead} />} />
+          <Route path="appointments" element={<AppointmentsTab userProfile={userProfile} />} />
           <Route path="saved" element={<SavedPostsPage />} />
           <Route path="pets" element={<PetsTab user={user} initialPets={pets} onPetsUpdate={fetchCoreData} />} />
           <Route path="settings" element={<SettingsTab user={user} userProfile={userProfile} onProfileUpdate={fetchCoreData} />} />
           <Route path="pet/:petId" element={<PetSocialProfile user={user} userProfile={userProfile} pets={pets} onUpdate={fetchCoreData} />} />
-          <Route path="user/:userId" element={<UserProfilePage />} />
-          <Route path="notifications/post/:postId" element={<NotificationsPage onMarkAsRead={handleMarkAsRead} />} />
           
-          {/* --- 2. AÑADIMOS LA NUEVA RUTA PROTEGIDA --- */}
+          {/* --- LÍNEA MODIFICADA --- */}
+          <Route path="user/:userId" element={<UserProfilePage pets={pets} />} />
+
+          <Route path="notifications/post/:postId" element={<NotificationsPage onMarkAsRead={handleMarkAsRead} />} />
           <Route path="vet-panel" element={<VetDashboardPage />} />
         </Routes>
       </main>

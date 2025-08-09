@@ -1,0 +1,25 @@
+/* frontend/src/AppointmentsTab.module.css */
+/* Estilos para la nueva pestaña de Citas. */
+
+.container {
+    background-color: var(--background-light);
+    padding: 25px;
+    border-radius: 15px;
+    border: 1px solid var(--border-color);
+    text-align: left;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.appointmentList {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}

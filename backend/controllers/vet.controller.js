@@ -2,12 +2,10 @@
 // Lógica de negocio para las acciones exclusivas de los veterinarios verificados.
 
 const { db } = require('../config/firebase');
-const { createNotification } = require('../services/notification.service'); // Asegúrate de que esta importación esté presente.
-const admin = require('firebase-admin');
+const { createNotification } = require('../services/notification.service');
 
 /**
  * Busca un perfil de mascota por su EnlaPet ID (EPID).
- * Devuelve un perfil público simplificado para la vinculación.
  */
 const findPetByEPID = async (req, res) => {
   const { epid } = req.params;
@@ -77,8 +75,6 @@ const requestPatientLink = async (req, res) => {
 
       transaction.update(petRef, { linkedVets: updatedLinks });
 
-      // --- LÍNEA ACTIVADA ---
-      // Ahora se enviará una notificación al dueño de la mascota.
       await createNotification(petData.ownerId, vetId, 'vet_link_request', petId, 'pet');
     });
 
@@ -89,8 +85,56 @@ const requestPatientLink = async (req, res) => {
   }
 };
 
+/**
+ * [NUEVO] Obtiene la lista de pacientes (mascotas) activamente vinculados a un veterinario.
+ */
+const getLinkedPatients = async (req, res) => {
+    const { uid: vetId } = req.user;
+    try {
+        const snapshot = await db.collection('pets')
+            .where('linkedVets', 'array-contains', { vetId, status: 'active' })
+            .get();
+
+        if (snapshot.empty) {
+            return res.status(200).json([]);
+        }
+        
+        // Mapeamos los datos de las mascotas y recolectamos los IDs de sus dueños.
+        const ownerIds = new Set();
+        const patients = snapshot.docs.map(doc => {
+            const petData = doc.data();
+            ownerIds.add(petData.ownerId);
+            return {
+                id: doc.id,
+                ...petData
+            };
+        });
+        
+        // Consultamos los datos de los dueños para enriquecer la respuesta.
+        const ownersData = {};
+        if (ownerIds.size > 0) {
+            const ownersSnapshot = await db.collection('users').where(admin.firestore.FieldPath.documentId(), 'in', Array.from(ownerIds)).get();
+            ownersSnapshot.forEach(doc => {
+                ownersData[doc.id] = { name: doc.data().name, phone: doc.data().phone || '' };
+            });
+        }
+
+        // Añadimos la información del dueño a cada paciente.
+        const enrichedPatients = patients.map(p => ({
+            ...p,
+            ownerInfo: ownersData[p.ownerId] || { name: 'Desconocido' }
+        }));
+
+        res.status(200).json(enrichedPatients);
+    } catch (error) {
+        console.error('Error en getLinkedPatients:', error);
+        res.status(500).json({ message: 'Error interno al obtener la lista de pacientes.' });
+    }
+};
+
 
 module.exports = {
   findPetByEPID,
   requestPatientLink,
+  getLinkedPatients, // Exportamos la nueva función
 };

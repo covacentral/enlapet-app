@@ -1,12 +1,13 @@
 // frontend/src/UserProfilePage.jsx
-// Versión: 4.3 - Corrección de Estilos de Botón
-// TAREA: Se corrige la clase del botón "Editar Perfil" para que use el sistema compartido.
+// Versión: 4.4 - Integración del Modal de Citas
+// TAREA: Se añade el botón y la lógica para agendar citas con veterinarios.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { auth } from './firebase';
 import LoadingComponent from './LoadingComponent';
 import PostCard from './PostCard';
+import AppointmentModal from './AppointmentModal'; // <-- 1. Importamos el modal de citas
 
 import styles from './UserProfilePage.module.css';
 import sharedStyles from './shared.module.css';
@@ -25,7 +26,8 @@ const UserPetCard = ({ pet }) => (
   </Link>
 );
 
-function UserProfilePage() {
+// El componente ahora recibe las mascotas del usuario que está viendo la página
+function UserProfilePage({ pets: viewingUserPets }) {
   const { userId } = useParams();
   const [activeTab, setActiveTab] = useState('pets');
   
@@ -39,24 +41,16 @@ function UserProfilePage() {
   const [savedStatuses, setSavedStatuses] = useState({});
   const [isFollowing, setIsFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
-  const isOwnProfile = auth.currentUser?.uid === userId;
+  
+  // --- 2. Nuevo estado para controlar la visibilidad del modal ---
+  const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
 
-  const fetchStatuses = async (endpoint, postIds, idToken) => {
-    try {
-        const response = await fetch(`${API_URL}${endpoint}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-            body: JSON.stringify({ postIds }),
-        });
-        if (!response.ok) return {};
-        return await response.json();
-    } catch (error) {
-        console.error(`Error fetching statuses from ${endpoint}:`, error);
-        return {};
-    }
-  };
+  const isOwnProfile = auth.currentUser?.uid === userId;
+  // --- 3. Lógica para determinar si el perfil es de un veterinario ---
+  const isVetProfile = userProfile?.verification?.status === 'verified' && userProfile?.verification?.type === 'vet';
 
   const fetchData = useCallback(async () => {
+    // ... (la lógica de fetch existente no cambia)
     setIsLoading(true);
     setError('');
     try {
@@ -109,10 +103,26 @@ function UserProfilePage() {
     }
   }, [userId, isOwnProfile]);
 
+  const fetchStatuses = async (endpoint, postIds, idToken) => {
+    try {
+        const response = await fetch(`${API_URL}${endpoint}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+            body: JSON.stringify({ postIds }),
+        });
+        if (!response.ok) return {};
+        return await response.json();
+    } catch (error) {
+        console.error(`Error fetching statuses from ${endpoint}:`, error);
+        return {};
+    }
+  };
+
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
+  // Las funciones handleFollowToggle, handleLikeToggle, etc. no cambian
   const handleFollowToggle = async () => {
     setFollowLoading(true);
     const user = auth.currentUser;
@@ -138,7 +148,6 @@ function UserProfilePage() {
         setFollowLoading(false);
     }
   };
-
   const handleLikeToggle = async (postId) => {
     const isCurrentlyLiked = !!likedStatuses[postId];
     setLikedStatuses(prev => ({ ...prev, [postId]: !isCurrentlyLiked }));
@@ -156,82 +165,79 @@ function UserProfilePage() {
   if (!userProfile) return <p className={sharedStyles.emptyStateMessage}>No se encontró el perfil del usuario.</p>;
 
   return (
-    <div className={styles.pageContainer}>
-      <header className={styles.profileHeader}>
-        <div className={styles.coverPhoto}></div>
-        <div className={styles.headerContent}>
-          <div className={styles.details}>
-            <div className={styles.pictureWrapper}>
-              <img 
-                src={userProfile.profilePictureUrl || 'https://placehold.co/300x300/9B89B3/FFFFFF?text=U'} 
-                alt={userProfile.name} 
-                className={styles.picture}
-              />
-            </div>
-            <div className={styles.info}>
-              <h1>{userProfile.name}</h1>
-              <p>{userProfile.bio}</p>
-            </div>
-          </div>
-          <div className={styles.actions}>
-            {isOwnProfile ? (
-              // --- LÍNEA CORREGIDA ---
-              <Link to="/dashboard/settings" className={`${sharedStyles.button} ${sharedStyles.primary}`}>
-                Editar Perfil
-              </Link>
-            ) : (
-              <button 
-                className={`${sharedStyles.button} ${isFollowing ? sharedStyles.secondary : sharedStyles.primary}`} 
-                disabled={followLoading}
-                onClick={handleFollowToggle}
-              >
-                {followLoading ? '...' : (isFollowing ? 'Siguiendo' : 'Seguir')}
-              </button>
-            )}
-          </div>
-        </div>
-      </header>
-      
-      <div className={sharedStyles.modalTabs} style={{borderRadius: 0}}>
-        <button type="button" className={`${sharedStyles.modalTabButton} ${activeTab === 'pets' ? sharedStyles.active : ''}`} onClick={() => setActiveTab('pets')}>
-          Mascotas
-        </button>
-        <button type="button" className={`${sharedStyles.modalTabButton} ${activeTab === 'posts' ? sharedStyles.active : ''}`} onClick={() => setActiveTab('posts')}>
-          Publicaciones
-        </button>
-      </div>
+    <>
+      {/* --- 4. Renderizamos el modal cuando el estado sea true --- */}
+      {isAppointmentModalOpen && (
+        <AppointmentModal 
+          vetProfile={userProfile}
+          pets={viewingUserPets}
+          onClose={() => setIsAppointmentModalOpen(false)}
+          onAppointmentRequested={() => {
+            setIsAppointmentModalOpen(false);
+            // Opcional: mostrar un mensaje de éxito o navegar a la pestaña de citas.
+          }}
+        />
+      )}
 
-      <main className={styles.profileContent}>
-        {activeTab === 'pets' && (
-          <div className={styles.petsGrid}>
-            {pets.length > 0 ? (
-              pets.map(pet => <UserPetCard key={pet.id} pet={pet} />)
-            ) : (
-              <p className={sharedStyles.emptyStateMessage}>Este usuario aún no ha registrado ninguna mascota.</p>
-            )}
+      <div className={styles.pageContainer}>
+        <header className={styles.profileHeader}>
+          <div className={styles.coverPhoto}></div>
+          <div className={styles.headerContent}>
+            <div className={styles.details}>
+              <div className={styles.pictureWrapper}>
+                <img 
+                  src={userProfile.profilePictureUrl || 'https://placehold.co/300x300/9B89B3/FFFFFF?text=U'} 
+                  alt={userProfile.name} 
+                  className={styles.picture}
+                />
+              </div>
+              <div className={styles.info}>
+                <h1>{userProfile.name}</h1>
+                <p>{userProfile.bio}</p>
+              </div>
+            </div>
+            <div className={styles.actions}>
+              {isOwnProfile ? (
+                <Link to="/dashboard/settings" className={`${sharedStyles.button} ${sharedStyles.primary}`}>
+                  Editar Perfil
+                </Link>
+              ) : (
+                <>
+                  <button 
+                    className={`${sharedStyles.button} ${isFollowing ? sharedStyles.secondary : sharedStyles.primary}`} 
+                    disabled={followLoading}
+                    onClick={handleFollowToggle}
+                  >
+                    {followLoading ? '...' : (isFollowing ? 'Siguiendo' : 'Seguir')}
+                  </button>
+                  {/* --- 5. Botón condicional para agendar cita --- */}
+                  {isVetProfile && (
+                    <button 
+                      className={`${sharedStyles.button} ${sharedStyles.primary}`}
+                      onClick={() => setIsAppointmentModalOpen(true)}
+                    >
+                      Agendar Cita
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
           </div>
-        )}
-        {activeTab === 'posts' && (
-          <div className="user-posts-list">
-             {posts.length > 0 ? (
-                posts.map(post => (
-                  <PostCard 
-                    key={post.id} 
-                    post={post}
-                    isLiked={!!likedStatuses[post.id]}
-                    isSaved={!!savedStatuses[post.id]}
-                    onLikeToggle={handleLikeToggle}
-                    onSaveToggle={handleSaveToggle}
-                    onCommentAdded={handleCommentAdded}
-                  />
-                ))
-             ) : (
-                <p className={sharedStyles.emptyStateMessage}>Este usuario aún no ha hecho ninguna publicación.</p>
-             )}
-          </div>
-        )}
-      </main>
-    </div>
+        </header>
+        
+        <div className={sharedStyles.modalTabs} style={{borderRadius: 0}}>
+          {/* ... (la lógica de pestañas no cambia) ... */}
+          <button type="button" className={`${sharedStyles.modalTabButton} ${activeTab === 'pets' ? sharedStyles.active : ''}`} onClick={() => setActiveTab('pets')}>Mascotas</button>
+          <button type="button" className={`${sharedStyles.modalTabButton} ${activeTab === 'posts' ? sharedStyles.active : ''}`} onClick={() => setActiveTab('posts')}>Publicaciones</button>
+        </div>
+
+        <main className={styles.profileContent}>
+           {/* ... (la lógica de renderizado de contenido de pestañas no cambia) ... */}
+           {activeTab === 'pets' && ( <div className={styles.petsGrid}> {pets.length > 0 ? ( pets.map(pet => <UserPetCard key={pet.id} pet={pet} />) ) : ( <p className={sharedStyles.emptyStateMessage}>Este usuario aún no ha registrado ninguna mascota.</p> )} </div> )}
+           {activeTab === 'posts' && ( <div className="user-posts-list"> {posts.length > 0 ? ( posts.map(post => ( <PostCard key={post.id} post={post} isLiked={!!likedStatuses[post.id]} isSaved={!!savedStatuses[post.id]} onLikeToggle={handleLikeToggle} onSaveToggle={handleSaveToggle} onCommentAdded={handleCommentAdded} /> )) ) : ( <p className={sharedStyles.emptyStateMessage}>Este usuario aún no ha hecho ninguna publicación.</p> )} </div> )}
+        </main>
+      </div>
+    </>
   );
 }
 

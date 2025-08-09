@@ -2,7 +2,8 @@
 // Define los endpoints PROTEGIDOS exclusivos para usuarios verificados como veterinarios.
 
 const { Router } = require('express');
-const { findPetByEPID, requestPatientLink } = require('../controllers/vet.controller');
+// 1. Importamos la nueva función del controlador
+const { findPetByEPID, requestPatientLink, getLinkedPatients } = require('../controllers/vet.controller');
 const isVetVerified = require('../middleware/isVetVerified');
 
 const router = Router();
@@ -23,5 +24,12 @@ router.get('/vet/find-pet/:epid', findPetByEPID);
 // Método: POST
 // Función: Permite a un veterinario enviar una solicitud de vínculo a una mascota.
 router.post('/vet/request-link/:petId', requestPatientLink);
+
+// --- 2. [NUEVO] Ruta para obtener los pacientes vinculados ---
+// URL: /api/vet/my-patients
+// Método: GET
+// Función: Devuelve una lista de todas las mascotas activamente vinculadas al veterinario.
+router.get('/vet/my-patients', getLinkedPatients);
+
 
 module.exports = router;

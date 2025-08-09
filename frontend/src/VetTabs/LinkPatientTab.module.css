@@ -1,0 +1,67 @@
+/* frontend/src/VetTabs/LinkPatientTab.module.css */
+/* Estilos para la pestaña de vinculación de pacientes. */
+
+.container {
+    width: 100%;
+    background-color: var(--background-dark);
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+}
+
+.container h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+}
+
+.searchForm {
+    display: flex;
+    gap: 10px;
+}
+
+.searchInput {
+    flex-grow: 1;
+    padding: 12px;
+    border-radius: 8px;
+    background-color: var(--background-light);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    font-size: 1rem;
+    text-transform: uppercase;
+}
+
+.searchInput::placeholder {
+    text-transform: none;
+}
+
+.resultsSection {
+    margin-top: 2rem;
+    min-height: 150px; /* Ajustado para el nuevo layout */
+}
+
+.petResultCard {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    background-color: var(--background-dark);
+    padding: 1rem;
+    border-radius: 12px;
+}
+
+.petImage {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--border-color);
+}
+
+.petInfo h4 {
+    margin: 0 0 4px 0;
+    font-size: 1.2rem;
+}
+
+.petInfo p {
+    margin: 0;
+    color: var(--text-secondary);
+}

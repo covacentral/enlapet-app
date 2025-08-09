@@ -1,0 +1,81 @@
+/* frontend/src/AppointmentCard.module.css */
+/* Estilos para la tarjeta individual de una cita. */
+
+.card {
+    background-color: var(--background-dark);
+    border: 1px solid var(--border-color);
+    border-left: 5px solid var(--primary-accent); /* Acento de color */
+    border-radius: 8px;
+    padding: 1.5rem;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 20px;
+    align-items: center;
+}
+
+.dateTime {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding-right: 20px;
+    border-right: 1px solid var(--border-color);
+}
+
+.month {
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: var(--primary-accent);
+    text-transform: uppercase;
+}
+
+.day {
+    font-size: 2.5rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--text-primary);
+}
+
+.time {
+    font-size: 1rem;
+    font-weight: bold;
+    color: var(--text-secondary);
+}
+
+.details {
+    text-align: left;
+}
+
+.reason {
+    font-size: 1.2rem;
+    font-weight: 800;
+    margin: 0 0 8px 0;
+}
+
+.attendees {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.attendees strong {
+    color: var(--text-primary);
+}
+
+.actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Estilos de Estado */
+.pending { border-left-color: var(--warning-yellow); }
+.pending .month { color: var(--warning-yellow); }
+
+.confirmed { border-left-color: var(--success-green); }
+.confirmed .month { color: var(--success-green); }
+
+.cancelled { border-left-color: var(--error-red); }
+.cancelled .month { color: var(--error-red); }
+.cancelled .reason { text-decoration: line-through; }
