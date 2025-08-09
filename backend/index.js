@@ -19,7 +19,8 @@ const locationRoutes = require('./routes/locations.routes');
 const notificationRoutes = require('./routes/notifications.routes');
 const reportRoutes = require('./routes/reports.routes');
 const verificationRoutes = require('./routes/verification.routes');
-const vetRoutes = require('./routes/vet.routes'); // <-- 1. IMPORTAMOS las nuevas rutas de veterinario
+const vetRoutes = require('./routes/vet.routes');
+const appointmentRoutes = require('./routes/appointment.routes'); // <-- 1. IMPORTAMOS las nuevas rutas de citas
 
 // --- 2. INICIALIZACIÓN DE LA APP ---
 const app = express();
@@ -47,7 +48,7 @@ app.use(express.json());
 // --- 4. DEFINICIÓN DE RUTAS (ORDEN CORREGIDO) ---
 
 // A. Rutas Públicas (No requieren autenticación)
-app.get('/', (req, res) => res.json({ message: "¡Bienvenido a la API de EnlaPet! v1.3 - Módulo Veterinario" }));
+app.get('/', (req, res) => res.json({ message: "¡Bienvenido a la API de EnlaPet! v1.4 - Módulo de Citas" }));
 app.use('/api/auth', authRoutes);
 app.use('/api', publicRoutes);
 
@@ -64,7 +65,8 @@ app.use('/api', locationRoutes);
 app.use('/api', notificationRoutes);
 app.use('/api', reportRoutes);
 app.use('/api', verificationRoutes);
-app.use('/api', vetRoutes); // <-- 2. REGISTRAMOS el nuevo enrutador de veterinario
+app.use('/api', vetRoutes);
+app.use('/api', appointmentRoutes); // <-- 2. REGISTRAMOS el nuevo enrutador de citas
 
 // --- 5. INICIAR SERVIDOR ---
 app.listen(PORT, () => console.log(`Servidor modularizado y corregido corriendo en el puerto ${PORT}`));
