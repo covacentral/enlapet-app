@@ -1,7 +1,8 @@
 // frontend/src/AppointmentModal.jsx
 // (NUEVO) Modal para que los usuarios agenden una nueva cita.
+// Versión 1.1: Conectado a la API para obtener slots y solicitar citas.
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { auth } from './firebase';
 import { X } from 'lucide-react';
 import styles from './AppointmentModal.module.css';
@@ -19,29 +20,86 @@ function AppointmentModal({ vetProfile, pets, onClose, onAppointmentRequested })
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState('');
 
-  // Lógica para buscar horarios disponibles (a conectar en un futuro paso)
-  useEffect(() => {
-    if (selectedDate && vetProfile) {
-      setIsLoadingSlots(true);
-      // Simulación de llamada a la API
-      console.log(`Buscando horarios para ${vetProfile.id} en la fecha ${selectedDate}`);
-      setTimeout(() => {
-        // Datos de ejemplo
-        setAvailableSlots(['09:00', '09:30', '11:00', '14:00', '14:30']);
+  // 1. Lógica ACTUALIZADA para buscar horarios disponibles desde la API
+  const fetchAvailableSlots = useCallback(async () => {
+    if (!selectedDate || !vetProfile) return;
+
+    setIsLoadingSlots(true);
+    setAvailableSlots([]);
+    setSelectedSlot(''); // Reseteamos el slot seleccionado al cambiar de día
+    setMessage('');
+
+    try {
+        const user = auth.currentUser;
+        if (!user) throw new Error("No autenticado.");
+        const idToken = await user.getIdToken();
+
+        const response = await fetch(`${API_URL}/api/appointments/slots/${vetProfile.id}?date=${selectedDate}`, {
+            headers: { 'Authorization': `Bearer ${idToken}` }
+        });
+
+        if (!response.ok) throw new Error('No se pudieron cargar los horarios.');
+        
+        const slots = await response.json();
+        setAvailableSlots(slots);
+
+    } catch (error) {
+        setMessage(error.message);
+    } finally {
         setIsLoadingSlots(false);
-      }, 1000);
     }
   }, [selectedDate, vetProfile]);
 
+  useEffect(() => {
+    fetchAvailableSlots();
+  }, [fetchAvailableSlots]);
+
+  // 2. Lógica ACTUALIZADA para enviar la solicitud de cita
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!selectedPetId || !selectedDate || !selectedSlot || !reason) {
       setMessage('Por favor, completa todos los campos.');
       return;
     }
-    // Lógica de envío a /api/appointments/request
-    console.log('Enviando solicitud de cita...');
-    onClose(); // Cerramos el modal por ahora
+    
+    setIsSubmitting(true);
+    setMessage('Enviando solicitud...');
+
+    try {
+        const user = auth.currentUser;
+        if (!user) throw new Error("No autenticado.");
+        const idToken = await user.getIdToken();
+
+        // Creamos la fecha completa en formato ISO
+        const appointmentDateTime = new Date(`${selectedDate}T${selectedSlot}:00.000Z`).toISOString();
+
+        const payload = {
+            vetId: vetProfile.id,
+            petId: selectedPetId,
+            appointmentDate: appointmentDateTime,
+            duration: 30, // Duración fija por ahora
+            reason: reason,
+        };
+
+        const response = await fetch(`${API_URL}/api/appointments/request`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message);
+
+        setMessage('¡Solicitud de cita enviada!');
+        // Llamamos a la función callback para notificar al componente padre
+        onAppointmentRequested();
+        setTimeout(() => onClose(), 2000);
+
+    } catch (error) {
+        setMessage(error.message);
+    } finally {
+        setIsSubmitting(false);
+    }
   };
 
   return (
@@ -78,7 +136,7 @@ function AppointmentModal({ vetProfile, pets, onClose, onAppointmentRequested })
               id="appointmentDate"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              min={new Date().toISOString().split('T')[0]} // No se pueden agendar citas en el pasado
+              min={new Date().toISOString().split('T')[0]}
             />
           </div>
 

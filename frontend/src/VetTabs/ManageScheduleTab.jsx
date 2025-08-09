@@ -1,9 +1,13 @@
 // frontend/src/VetTabs/ManageScheduleTab.jsx
 // (NUEVO) Componente de pestaña para que el veterinario gestione su horario.
+// Versión 1.1: Conectado a la API para guardar y cargar horarios.
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { auth } from '../../firebase'; // 1. Importamos auth para obtener el token
 import styles from './ManageScheduleTab.module.css';
 import sharedStyles from '../shared.module.css';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const DAYS_OF_WEEK = [
   { key: 'monday', label: 'Lunes' },
@@ -25,12 +29,19 @@ function ManageScheduleTab() {
   const [schedule, setSchedule] = useState(initialScheduleState);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [isFetching, setIsFetching] = useState(true);
 
-  // En el futuro, aquí se cargaría el horario guardado del veterinario.
-  useEffect(() => {
-    // const fetchSchedule = async () => { ... };
-    // fetchSchedule();
+  // 2. Función para cargar el horario guardado
+  const fetchSchedule = useCallback(async () => {
+    setIsFetching(true);
+    // Esta funcionalidad se completará cuando creemos el endpoint GET
+    console.log("Funcionalidad para cargar horario guardado pendiente.");
+    setIsFetching(false);
   }, []);
+
+  useEffect(() => {
+    fetchSchedule();
+  }, [fetchSchedule]);
 
   const handleToggleActive = (dayKey) => {
     setSchedule(prev => ({
@@ -46,21 +57,43 @@ function ManageScheduleTab() {
       }));
   };
 
+  // 3. Lógica actualizada para guardar los cambios en el backend
   const handleSaveChanges = async () => {
     setIsLoading(true);
     setMessage('Guardando horario...');
-    // Lógica para enviar el horario a `POST /api/vet/availability`
-    console.log("Guardando el siguiente horario:", schedule);
-    setTimeout(() => { // Simulación de guardado
-        setIsLoading(false);
+    try {
+        const user = auth.currentUser;
+        if (!user) throw new Error("Usuario no autenticado.");
+        const idToken = await user.getIdToken();
+
+        const response = await fetch(`${API_URL}/api/vet/availability`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}`},
+            body: JSON.stringify(schedule)
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Error al guardar el horario.');
+        
         setMessage('¡Horario guardado con éxito!');
-    }, 1500);
+
+    } catch (error) {
+        setMessage(`Error: ${error.message}`);
+    } finally {
+        setIsLoading(false);
+        setTimeout(() => setMessage(''), 3000);
+    }
   };
+
+  if (isFetching) {
+      return <p>Cargando configuración de horario...</p>
+  }
 
   return (
     <div className={styles.container}>
       <div className={styles.scheduleEditor}>
         <h3>Define tus horarios de atención</h3>
+        <p style={{color: 'var(--text-secondary)', marginTop: '-1rem', marginBottom: '1.5rem'}}>Este horario definirá las horas disponibles que tus pacientes podrán agendar.</p>
         {DAYS_OF_WEEK.map(({ key, label }) => (
           <div key={key} className={styles.dayRow}>
             <span className={styles.dayLabel}>{label}</span>
@@ -95,12 +128,12 @@ function ManageScheduleTab() {
             )}
           </div>
         ))}
-        <div style={{ marginTop: '1.5rem', textAlign: 'right' }}>
+        <div style={{ marginTop: '1.5rem', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '1rem' }}>
+            {message && <p className={sharedStyles.responseMessage}>{message}</p>}
             <button className={`${sharedStyles.button} ${sharedStyles.primary}`} onClick={handleSaveChanges} disabled={isLoading}>
                 {isLoading ? 'Guardando...' : 'Guardar Horario'}
             </button>
         </div>
-        {message && <p className={sharedStyles.responseMessage} style={{marginTop: '1rem', textAlign: 'right'}}>{message}</p>}
       </div>
     </div>
   );

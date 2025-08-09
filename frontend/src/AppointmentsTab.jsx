@@ -1,32 +1,52 @@
 // frontend/src/AppointmentsTab.jsx
-// (NUEVO) Página para que usuarios y veterinarios vean sus citas.
+// Versión 1.1: Conectado a la API para mostrar citas reales.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { auth } from './firebase';
 import LoadingComponent from './LoadingComponent';
+import AppointmentCard from './AppointmentCard'; // 1. Importamos la tarjeta de cita
 
 import styles from './AppointmentsTab.module.css';
 import sharedStyles from './shared.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-// Por ahora, este es un componente de marcador de posición (placeholder).
-// Más adelante lo llenaremos con la lógica real y las tarjetas de citas.
 function AppointmentsTab({ userProfile }) {
   const [appointments, setAppointments] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // La lógica para hacer fetch a las citas se añadirá en un paso posterior.
-  useEffect(() => {
-    // Simulamos una carga para ver el estado inicial.
-    setTimeout(() => {
+  // 2. Lógica real para buscar las citas del usuario desde la API
+  const fetchAppointments = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+        const user = auth.currentUser;
+        if (!user) throw new Error("Usuario no autenticado.");
+        const idToken = await user.getIdToken();
+        
+        const response = await fetch(`${API_URL}/api/appointments`, {
+            headers: { 'Authorization': `Bearer ${idToken}` }
+        });
+
+        if (!response.ok) throw new Error("No se pudieron cargar las citas.");
+
+        const data = await response.json();
+        setAppointments(data);
+
+    } catch (err) {
+        setError(err.message);
+    } finally {
         setIsLoading(false);
-        // Aquí iría la llamada a: GET /api/appointments
-    }, 1000);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchAppointments();
+  }, [fetchAppointments]);
   
-  const isVet = userProfile?.verification?.type === 'vet';
+  const isVet = userProfile?.verification?.status === 'verified' && userProfile?.verification?.type === 'vet';
+  const userType = isVet ? 'vet' : 'user';
 
   return (
     <div className={styles.container}>
@@ -52,9 +72,13 @@ function AppointmentsTab({ userProfile }) {
             </div>
         )}
 
-        {/* Aquí es donde se renderizarán las tarjetas de citas en el futuro */}
-        {appointments.map(app => (
-            <div key={app.id}>Cita para {app.petName}</div>
+        {/* 3. Renderizamos las tarjetas de citas reales */}
+        {!isLoading && appointments.length > 0 && appointments.map(app => (
+            <AppointmentCard 
+                key={app.id} 
+                appointment={app} 
+                userType={userType} 
+            />
         ))}
       </div>
     </div>

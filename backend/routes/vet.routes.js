@@ -3,7 +3,12 @@
 
 const { Router } = require('express');
 // 1. Importamos la nueva función del controlador
-const { findPetByEPID, requestPatientLink, getLinkedPatients } = require('../controllers/vet.controller');
+const { 
+    findPetByEPID, 
+    requestPatientLink, 
+    getLinkedPatients, 
+    updateAvailability 
+} = require('../controllers/vet.controller');
 const isVetVerified = require('../middleware/isVetVerified');
 
 const router = Router();
@@ -17,19 +22,21 @@ router.use(isVetVerified);
 
 // URL: /api/vet/find-pet/:epid
 // Método: GET
-// Función: Permite a un veterinario buscar el perfil de una mascota por su EnlaPet ID.
 router.get('/vet/find-pet/:epid', findPetByEPID);
 
 // URL: /api/vet/request-link/:petId
 // Método: POST
-// Función: Permite a un veterinario enviar una solicitud de vínculo a una mascota.
 router.post('/vet/request-link/:petId', requestPatientLink);
 
-// --- 2. [NUEVO] Ruta para obtener los pacientes vinculados ---
 // URL: /api/vet/my-patients
 // Método: GET
-// Función: Devuelve una lista de todas las mascotas activamente vinculadas al veterinario.
 router.get('/vet/my-patients', getLinkedPatients);
+
+// --- 2. [NUEVO] Ruta para la gestión de la agenda ---
+// URL: /api/vet/availability
+// Método: POST
+// Función: Guarda la plantilla de horario semanal del veterinario.
+router.post('/vet/availability', updateAvailability);
 
 
 module.exports = router;

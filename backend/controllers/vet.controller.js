@@ -3,6 +3,7 @@
 
 const { db } = require('../config/firebase');
 const { createNotification } = require('../services/notification.service');
+const admin = require('firebase-admin');
 
 /**
  * Busca un perfil de mascota por su EnlaPet ID (EPID).
@@ -86,7 +87,7 @@ const requestPatientLink = async (req, res) => {
 };
 
 /**
- * [NUEVO] Obtiene la lista de pacientes (mascotas) activamente vinculados a un veterinario.
+ * Obtiene la lista de pacientes (mascotas) activamente vinculados a un veterinario.
  */
 const getLinkedPatients = async (req, res) => {
     const { uid: vetId } = req.user;
@@ -99,7 +100,6 @@ const getLinkedPatients = async (req, res) => {
             return res.status(200).json([]);
         }
         
-        // Mapeamos los datos de las mascotas y recolectamos los IDs de sus dueños.
         const ownerIds = new Set();
         const patients = snapshot.docs.map(doc => {
             const petData = doc.data();
@@ -110,7 +110,6 @@ const getLinkedPatients = async (req, res) => {
             };
         });
         
-        // Consultamos los datos de los dueños para enriquecer la respuesta.
         const ownersData = {};
         if (ownerIds.size > 0) {
             const ownersSnapshot = await db.collection('users').where(admin.firestore.FieldPath.documentId(), 'in', Array.from(ownerIds)).get();
@@ -119,7 +118,6 @@ const getLinkedPatients = async (req, res) => {
             });
         }
 
-        // Añadimos la información del dueño a cada paciente.
         const enrichedPatients = patients.map(p => ({
             ...p,
             ownerInfo: ownersData[p.ownerId] || { name: 'Desconocido' }
@@ -132,9 +130,45 @@ const getLinkedPatients = async (req, res) => {
     }
 };
 
+/**
+ * [NUEVO] Guarda o actualiza la plantilla de horario semanal de un veterinario.
+ */
+const updateAvailability = async (req, res) => {
+    const { uid: vetId } = req.user;
+    const weeklySchedule = req.body;
+
+    // Validación básica del objeto de horario
+    if (!weeklySchedule || typeof weeklySchedule !== 'object') {
+        return res.status(400).json({ message: 'Se requiere un objeto de horario válido.' });
+    }
+
+    try {
+        const vetRef = db.collection('users').doc(vetId);
+        const batch = db.batch();
+
+        // Guardamos cada día de la semana como un documento separado en una subcolección
+        // para facilitar las consultas futuras.
+        for (const dayKey in weeklySchedule) {
+            if (Object.hasOwnProperty.call(weeklySchedule, dayKey)) {
+                const dayData = weeklySchedule[dayKey];
+                const dayRef = vetRef.collection('availability').doc(dayKey);
+                batch.set(dayRef, dayData);
+            }
+        }
+
+        await batch.commit();
+        res.status(200).json({ message: 'Horario actualizado con éxito.' });
+
+    } catch (error) {
+        console.error('Error en updateAvailability:', error);
+        res.status(500).json({ message: 'Error interno al guardar el horario.' });
+    }
+};
+
 
 module.exports = {
   findPetByEPID,
   requestPatientLink,
-  getLinkedPatients, // Exportamos la nueva función
+  getLinkedPatients,
+  updateAvailability, // Exportamos la nueva función
 };
