@@ -1,9 +1,8 @@
 // frontend/src/VetTabs/ManageScheduleTab.jsx
-// (NUEVO) Componente de pestaña para que el veterinario gestione su horario.
-// Versión 1.1: Conectado a la API para guardar y cargar horarios.
+// Versión 1.2: Corrige la ruta de importación de Firebase.
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { auth } from '../../firebase'; // 1. Importamos auth para obtener el token
+import { auth } from '../firebase'; // <-- RUTA CORREGIDA
 import styles from './ManageScheduleTab.module.css';
 import sharedStyles from '../shared.module.css';
 
@@ -31,10 +30,8 @@ function ManageScheduleTab() {
   const [message, setMessage] = useState('');
   const [isFetching, setIsFetching] = useState(true);
 
-  // 2. Función para cargar el horario guardado
   const fetchSchedule = useCallback(async () => {
     setIsFetching(true);
-    // Esta funcionalidad se completará cuando creemos el endpoint GET
     console.log("Funcionalidad para cargar horario guardado pendiente.");
     setIsFetching(false);
   }, []);
@@ -57,7 +54,6 @@ function ManageScheduleTab() {
       }));
   };
 
-  // 3. Lógica actualizada para guardar los cambios en el backend
   const handleSaveChanges = async () => {
     setIsLoading(true);
     setMessage('Guardando horario...');
