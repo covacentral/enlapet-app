@@ -1,8 +1,8 @@
 // backend/routes/vet.routes.js
 // Define los endpoints PROTEGIDOS exclusivos para usuarios verificados como veterinarios.
+// VERSIÓN CORREGIDA: Middleware aplicado a cada ruta para evitar conflictos.
 
 const { Router } = require('express');
-// 1. Importamos la nueva función del controlador
 const { 
     findPetByEPID, 
     requestPatientLink, 
@@ -14,20 +14,30 @@ const isVetVerified = require('../middleware/isVetVerified');
 
 const router = Router();
 
-// --- Middleware de Verificación de Veterinario ---
-router.use(isVetVerified);
+// --- ATENCIÓN: Ya no usamos router.use(isVetVerified) aquí arriba ---
 
-// --- Rutas del Módulo de Veterinarios ---
+// --- Rutas del Módulo de Veterinarios (cada una protegida individualmente) ---
 
-router.get('/vet/find-pet/:epid', findPetByEPID);
-router.post('/vet/request-link/:petId', requestPatientLink);
-router.get('/vet/my-patients', getLinkedPatients);
+// URL: /api/vet/find-pet/:epid
+// Método: GET
+router.get('/vet/find-pet/:epid', isVetVerified, findPetByEPID);
+
+// URL: /api/vet/request-link/:petId
+// Método: POST
+router.post('/vet/request-link/:petId', isVetVerified, requestPatientLink);
+
+// URL: /api/vet/my-patients
+// Método: GET
+router.get('/vet/my-patients', isVetVerified, getLinkedPatients);
 
 // --- Rutas para la gestión de la agenda ---
-router.post('/vet/availability', updateAvailability);
+// URL: /api/vet/availability
+// Método: POST
+router.post('/vet/availability', isVetVerified, updateAvailability);
 
-// --- 2. [NUEVO] Ruta para obtener el horario guardado ---
-router.get('/vet/availability', getAvailability);
+// URL: /api/vet/availability
+// Método: GET
+router.get('/vet/availability', isVetVerified, getAvailability);
 
 
 module.exports = router;
