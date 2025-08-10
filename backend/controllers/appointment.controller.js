@@ -6,7 +6,9 @@ const { getNewAppointment } = require('../models/appointment.model');
 const { createNotification } = require('../services/notification.service');
 const admin = require('firebase-admin');
 
-// ... (las funciones requestAppointment, getAvailableSlots, y getMyAppointments no cambian)
+// ... (requestAppointment, getAvailableSlots, getMyAppointments, updateAppointmentStatus)
+// La función requestAppointment es la única que necesita cambios.
+
 const requestAppointment = async (req, res) => {
     const { uid: ownerId } = req.user;
     const { vetId, petId, appointmentDate, duration, reason } = req.body;
@@ -29,7 +31,12 @@ const requestAppointment = async (req, res) => {
         
         const appointmentRef = await db.collection('appointments').add(newAppointmentData);
 
-        const linkedVets = petDoc.data().linkedVets || [];
+        // --- INICIO DE LA CORRECCIÓN ---
+        // Hacemos el código más robusto para manejar perfiles de mascotas sin el campo `linkedVets`
+        const existingLinks = petDoc.data().linkedVets;
+        const linkedVets = Array.isArray(existingLinks) ? existingLinks : [];
+        // --- FIN DE LA CORRECCIÓN ---
+        
         const existingLinkIndex = linkedVets.findIndex(v => v.vetId === vetId);
 
         if (existingLinkIndex === -1) {
@@ -170,13 +177,10 @@ const getMyAppointments = async (req, res) => {
     }
 };
 
-/**
- * [NUEVO] Actualiza el estado de una cita (confirmar, cancelar, etc.).
- */
 const updateAppointmentStatus = async (req, res) => {
     const { uid } = req.user;
     const { appointmentId } = req.params;
-    const { status, reason } = req.body; // 'reason' es opcional, para cancelaciones
+    const { status, reason } = req.body;
 
     const validStatus = ['confirmed', 'cancelled_by_user', 'cancelled_by_vet', 'completed', 'no_show'];
     if (!status || !validStatus.includes(status)) {
@@ -200,7 +204,6 @@ const updateAppointmentStatus = async (req, res) => {
                 throw new Error('No estás autorizado para modificar esta cita.');
             }
             
-            // Lógica de permisos de estado
             if (isOwner && status !== 'cancelled_by_user') {
                 throw new Error('No tienes permiso para realizar esta acción.');
             }
@@ -214,8 +217,7 @@ const updateAppointmentStatus = async (req, res) => {
             }
 
             transaction.update(appointmentRef, updatePayload);
-
-            // Notificar a la otra parte sobre el cambio de estado
+            
             const recipientId = isVet ? appointmentData.ownerId : appointmentData.vetId;
             await createNotification(recipientId, uid, 'appointment_status_update', appointmentId, 'appointment');
         });
@@ -233,5 +235,5 @@ module.exports = {
     requestAppointment,
     getAvailableSlots,
     getMyAppointments,
-    updateAppointmentStatus, // Exportamos la nueva función
+    updateAppointmentStatus,
 };
