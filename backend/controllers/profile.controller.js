@@ -3,7 +3,7 @@
 
 const { db, bucket } = require('../config/firebase');
 const { createNotification } = require('../services/notification.service');
-const admin = require('firebase-admin'); // <-- LÍNEA CORREGIDA
+const admin = require('firebase-admin');
 
 /**
  * Obtiene el perfil público de un usuario, incluyendo sus mascotas.
@@ -27,6 +27,9 @@ const getUserPublicProfile = async (req, res) => {
             bio: userData.bio || '',
             followersCount: userData.followersCount || 0,
             followingCount: userData.followingCount || 0,
+            // --- LÍNEA CORREGIDA ---
+            // Añadimos el objeto de verificación a la respuesta pública.
+            verification: userData.verification || { status: 'none', type: 'none' },
         };
 
         const petsSnapshot = await db.collection('pets').where('ownerId', '==', userId).get();
