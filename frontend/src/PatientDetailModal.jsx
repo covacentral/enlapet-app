@@ -1,21 +1,17 @@
 // frontend/src/PatientDetailModal.jsx
-// (NUEVO) Modal para que el veterinario vea los detalles de un paciente y gestione su carné.
+// Versión 1.1: Añade renderizado condicional para prevenir error en la carga.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { auth } from './firebase';
 import { X, Plus } from 'lucide-react';
 import LoadingComponent from './LoadingComponent';
-// Importaremos los formularios de PetEditModal en un paso posterior de refactorización
-// Por ahora, los definiremos localmente para avanzar.
 
 import styles from './PatientDetailModal.module.css';
 import sharedStyles from './shared.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-
-// --- Formularios (temporalmente definidos aquí, luego los extraeremos) ---
-
+// --- Formularios (temporalmente definidos aquí) ---
 const AddVaccineForm = ({ onSave, onCancel }) => {
   const [vaccine, setVaccine] = useState({ name: '', date: '', nextDate: '' });
   const handleChange = (e) => setVaccine({ ...vaccine, [e.target.name]: e.target.value });
@@ -66,7 +62,6 @@ const AddMedicalHistoryForm = ({ onSave, onCancel }) => {
 
 
 // --- Componente Principal del Modal ---
-
 function PatientDetailModal({ petSummary, onClose, onUpdate }) {
   const [petDetails, setPetDetails] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -112,11 +107,10 @@ function PatientDetailModal({ petSummary, onClose, onUpdate }) {
             body: JSON.stringify({ type, record })
         });
 
-        // Refrescamos los datos para mostrar el nuevo registro
         fetchPatientDetails();
         setShowAddVaccine(false);
         setShowAddHistory(false);
-        onUpdate(); // Notificamos a la lista de pacientes que se actualice
+        onUpdate();
       } catch (err) {
           setError(err.message);
       }
@@ -135,6 +129,8 @@ function PatientDetailModal({ petSummary, onClose, onUpdate }) {
         {isLoading && <LoadingComponent text="Cargando datos del paciente..." />}
         {error && <p className={sharedStyles.responseMessageError} style={{padding: '1rem'}}>{error}</p>}
 
+        {/* --- LÍNEA CORREGIDA --- */}
+        {/* Solo intentamos renderizar los detalles si petDetails NO es null */}
         {petDetails && (
           <>
             <div className={styles.headerInfo}>
@@ -142,7 +138,8 @@ function PatientDetailModal({ petSummary, onClose, onUpdate }) {
               <div className={styles.petDetails}>
                 <h3>{petDetails.name}</h3>
                 <p>{petDetails.breed}</p>
-                <p><strong>Responsable:</strong> {petDetails.ownerInfo.name}</p>
+                {/* Aseguramos que ownerInfo exista antes de leer 'name' */}
+                <p><strong>Responsable:</strong> {petDetails.ownerInfo?.name || 'No disponible'}</p>
               </div>
             </div>
 
