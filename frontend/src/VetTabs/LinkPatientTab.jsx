@@ -1,5 +1,5 @@
 // frontend/src/VetTabs/LinkPatientTab.jsx
-// (NUEVO) Componente de pestaña para la funcionalidad de buscar y vincular pacientes.
+// Versión 1.1: Adapta el botón de búsqueda para móviles.
 
 import { useState } from 'react';
 import { auth } from '../firebase';
@@ -9,7 +9,6 @@ import sharedStyles from '../shared.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-// Subcomponente para mostrar el resultado de la búsqueda
 const PetSearchResult = ({ pet }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -71,7 +70,6 @@ const PetSearchResult = ({ pet }) => {
   );
 };
 
-// Componente principal de la pestaña
 function LinkPatientTab() {
   const [epid, setEpid] = useState('');
   const [searchResult, setSearchResult] = useState(null);
@@ -119,8 +117,10 @@ function LinkPatientTab() {
           className={styles.searchInput}
           maxLength="6"
         />
-        <button type="submit" className={`${sharedStyles.button} ${sharedStyles.primary}`} disabled={isLoading}>
-          <Search size={18}/> {isLoading ? 'Buscando...' : 'Buscar'}
+        {/* --- LÍNEA MODIFICADA --- */}
+        <button type="submit" className={`${sharedStyles.button} ${sharedStyles.primary} ${styles.searchButton}`} disabled={isLoading}>
+          <Search size={18}/> 
+          <span className={styles.buttonText}>{isLoading ? '...' : 'Buscar'}</span>
         </button>
       </form>
       

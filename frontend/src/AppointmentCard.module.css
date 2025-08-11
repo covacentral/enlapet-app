@@ -1,16 +1,22 @@
 /* frontend/src/AppointmentCard.module.css */
-/* Estilos para la tarjeta individual de una cita. */
+/* Versión 1.1: Adaptado para layout vertical en móviles. */
 
 .card {
     background-color: var(--background-dark);
     border: 1px solid var(--border-color);
-    border-left: 5px solid var(--primary-accent); /* Acento de color */
+    border-left: 5px solid var(--primary-accent);
     border-radius: 8px;
-    padding: 1.5rem;
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    gap: 20px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column; /* Cambiamos a columna para el layout base */
+    gap: 1rem;
+}
+
+.mainContent {
+    display: flex;
+    gap: 1.25rem; /* 20px */
     align-items: center;
+    width: 100%;
 }
 
 .dateTime {
@@ -19,8 +25,9 @@
     align-items: center;
     justify-content: center;
     text-align: center;
-    padding-right: 20px;
+    padding-right: 1.25rem;
     border-right: 1px solid var(--border-color);
+    flex-shrink: 0;
 }
 
 .month {
@@ -45,6 +52,7 @@
 
 .details {
     text-align: left;
+    flex-grow: 1; /* Ocupa el espacio restante */
 }
 
 .reason {
@@ -65,8 +73,12 @@
 
 .actions {
     display: flex;
-    flex-direction: column;
     gap: 10px;
+    justify-content: flex-end; /* Alinea los botones a la derecha */
+    width: 100%;
+    border-top: 1px solid var(--border-color);
+    padding-top: 1rem;
+    margin-top: 0.5rem;
 }
 
 /* Estilos de Estado */
@@ -79,3 +91,24 @@
 .cancelled { border-left-color: var(--error-red); }
 .cancelled .month { color: var(--error-red); }
 .cancelled .reason { text-decoration: line-through; }
+
+/* Media Query para pantallas anchas (PC) */
+@media (min-width: 500px) {
+    .card {
+        flex-direction: row;
+        align-items: center;
+        padding: 1.5rem;
+    }
+    .mainContent {
+        flex-grow: 1;
+        gap: 20px;
+    }
+    .actions {
+        width: auto;
+        flex-shrink: 0;
+        border-top: none;
+        padding-top: 0;
+        margin-top: 0;
+        flex-direction: column;
+    }
+}

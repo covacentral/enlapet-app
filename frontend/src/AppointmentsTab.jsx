@@ -1,5 +1,5 @@
 // frontend/src/AppointmentsTab.jsx
-// Versión 1.2: Pasa la función de actualización a las tarjetas de cita.
+// Versión 1.3: Centraliza la lógica de actualización de estado.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { auth } from './firebase';
@@ -16,8 +16,8 @@ function AppointmentsTab({ userProfile }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchAppointments = useCallback(async () => {
-    // No establecemos isLoading a true aquí para un refresco más suave
+  const fetchAppointments = useCallback(async (showLoading = true) => {
+    if (showLoading) setIsLoading(true);
     setError(null);
     try {
         const user = auth.currentUser;
@@ -36,15 +36,39 @@ function AppointmentsTab({ userProfile }) {
     } catch (err) {
         setError(err.message);
     } finally {
-        setIsLoading(false); // Solo se quita la carga inicial una vez
+        if (showLoading) setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    setIsLoading(true);
-    fetchAppointments();
+    fetchAppointments(true);
   }, [fetchAppointments]);
   
+  // --- 1. [NUEVO] Función centralizada para actualizar el estado ---
+  const handleStatusUpdate = async (appointmentId, newStatus) => {
+    try {
+        const user = auth.currentUser;
+        if (!user) throw new Error("No autenticado.");
+        const idToken = await user.getIdToken();
+
+        const response = await fetch(`${API_URL}/api/appointments/${appointmentId}/status`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+            body: JSON.stringify({ status: newStatus })
+        });
+
+        if (!response.ok) throw new Error((await response.json()).message);
+        
+        // Si la API responde con éxito, refrescamos la lista de citas sin mostrar el spinner de carga
+        fetchAppointments(false);
+
+    } catch (err) {
+        // En un futuro, podríamos mostrar este error de forma más elegante
+        console.error("Error al actualizar la cita:", err);
+        alert(`Error: ${err.message}`);
+    }
+  };
+
   const isVet = userProfile?.verification?.status === 'verified' && userProfile?.verification?.type === 'vet';
   const userType = isVet ? 'vet' : 'user';
 
@@ -72,13 +96,13 @@ function AppointmentsTab({ userProfile }) {
             </div>
         )}
 
-        {/* --- LÍNEA MODIFICADA --- */}
         {!isLoading && appointments.length > 0 && appointments.map(app => (
             <AppointmentCard 
                 key={app.id} 
                 appointment={app} 
                 userType={userType} 
-                onUpdate={fetchAppointments}
+                // 2. Pasamos la nueva función como prop
+                onStatusUpdate={handleStatusUpdate}
             />
         ))}
       </div>

@@ -1,5 +1,5 @@
 /* frontend/src/VetTabs/LinkPatientTab.module.css */
-/* Estilos para la pestaña de vinculación de pacientes. */
+/* Versión 1.1: Adaptado para móviles. */
 
 .container {
     width: 100%;
@@ -34,9 +34,20 @@
     text-transform: none;
 }
 
+/* --- [NUEVO] Estilos para el botón de búsqueda --- */
+.searchButton {
+    /* Hereda los estilos base del botón compartido */
+}
+
+.buttonText {
+    display: none; /* Ocultamos el texto por defecto */
+}
+/* --- Fin de nuevos estilos --- */
+
+
 .resultsSection {
     margin-top: 2rem;
-    min-height: 150px; /* Ajustado para el nuevo layout */
+    min-height: 150px;
 }
 
 .petResultCard {
@@ -64,4 +75,11 @@
 .petInfo p {
     margin: 0;
     color: var(--text-secondary);
+}
+
+/* Media Query para pantallas anchas (PC) */
+@media (min-width: 500px) {
+    .buttonText {
+        display: inline; /* Mostramos el texto "Buscar" en pantallas anchas */
+    }
 }

@@ -6,9 +6,7 @@ const { getNewAppointment } = require('../models/appointment.model');
 const { createNotification } = require('../services/notification.service');
 const admin = require('firebase-admin');
 
-// ... (requestAppointment, getAvailableSlots, getMyAppointments, updateAppointmentStatus)
-// La función requestAppointment es la única que necesita cambios.
-
+// ... (requestAppointment se mantiene igual)
 const requestAppointment = async (req, res) => {
     const { uid: ownerId } = req.user;
     const { vetId, petId, appointmentDate, duration, reason } = req.body;
@@ -30,12 +28,9 @@ const requestAppointment = async (req, res) => {
         });
         
         const appointmentRef = await db.collection('appointments').add(newAppointmentData);
-
-        // --- INICIO DE LA CORRECCIÓN ---
-        // Hacemos el código más robusto para manejar perfiles de mascotas sin el campo `linkedVets`
+        
         const existingLinks = petDoc.data().linkedVets;
         const linkedVets = Array.isArray(existingLinks) ? existingLinks : [];
-        // --- FIN DE LA CORRECCIÓN ---
         
         const existingLinkIndex = linkedVets.findIndex(v => v.vetId === vetId);
 
@@ -57,6 +52,8 @@ const requestAppointment = async (req, res) => {
     }
 };
 
+
+// --- FUNCIÓN RECONSTRUIDA PARA SOPORTAR DOBLE JORNADA ---
 const getAvailableSlots = async (req, res) => {
     const { vetId } = req.params;
     const { date } = req.query;
@@ -75,8 +72,8 @@ const getAvailableSlots = async (req, res) => {
         if (!availabilityDoc.exists || !availabilityDoc.data().isActive) {
             return res.status(200).json([]);
         }
-        const { startTime, endTime } = availabilityDoc.data();
-
+        
+        const schedule = availabilityDoc.data();
         const startOfDay = new Date(`${date}T00:00:00.000Z`);
         const endOfDay = new Date(`${date}T23:59:59.999Z`);
 
@@ -97,23 +94,44 @@ const getAvailableSlots = async (req, res) => {
             }
         });
         
-        const availableSlots = [];
+        let allAvailableSlots = [];
         const slotDuration = 30;
-        let currentTime = new Date(`${date}T${startTime}:00.000Z`);
-        const endTimeDate = new Date(`${date}T${endTime}:00.000Z`);
 
-        while (currentTime < endTimeDate) {
+        // Procesamos el primer rango de horario (obligatorio)
+        const range1 = schedule.ranges[0];
+        let currentTime = new Date(`${date}T${range1.startTime}:00.000Z`);
+        const endTimeDate1 = new Date(`${date}T${range1.endTime}:00.000Z`);
+
+        while (currentTime < endTimeDate1) {
             const hours = currentTime.getUTCHours().toString().padStart(2, '0');
             const minutes = currentTime.getUTCMinutes().toString().padStart(2, '0');
             const slotTime = `${hours}:${minutes}`;
-
             if (!bookedSlots.has(slotTime)) {
-                availableSlots.push(slotTime);
+                allAvailableSlots.push(slotTime);
             }
             currentTime.setUTCMinutes(currentTime.getUTCMinutes() + slotDuration);
         }
 
-        res.status(200).json(availableSlots);
+        // Si la jornada es partida, procesamos el segundo rango
+        if (schedule.isSplit) {
+            const range2 = schedule.ranges[1];
+            currentTime = new Date(`${date}T${range2.startTime}:00.000Z`);
+            const endTimeDate2 = new Date(`${date}T${range2.endTime}:00.000Z`);
+            while (currentTime < endTimeDate2) {
+                const hours = currentTime.getUTCHours().toString().padStart(2, '0');
+                const minutes = currentTime.getUTCMinutes().toString().padStart(2, '0');
+                const slotTime = `${hours}:${minutes}`;
+                if (!bookedSlots.has(slotTime)) {
+                    allAvailableSlots.push(slotTime);
+                }
+                currentTime.setUTCMinutes(currentTime.getUTCMinutes() + slotDuration);
+            }
+        }
+        
+        // Ordenamos los slots por si hay doble jornada
+        allAvailableSlots.sort();
+        
+        res.status(200).json(allAvailableSlots);
 
     } catch (error) {
         console.error('Error en getAvailableSlots:', error);
@@ -121,6 +139,7 @@ const getAvailableSlots = async (req, res) => {
     }
 };
 
+// ... (getMyAppointments y updateAppointmentStatus se mantienen igual)
 const getMyAppointments = async (req, res) => {
     const { uid } = req.user;
 
@@ -229,7 +248,6 @@ const updateAppointmentStatus = async (req, res) => {
         res.status(400).json({ message: error.message || 'No se pudo actualizar la cita.' });
     }
 };
-
 
 module.exports = {
     requestAppointment,
