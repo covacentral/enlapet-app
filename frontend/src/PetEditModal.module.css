@@ -2,158 +2,211 @@
 /* Estilos específicos para el complejo modal de edición de mascotas. */
 
 .content {
-    background-color: var(--background-light);
-    border: 1px solid var(--border-color);
-    border-radius: 15px;
-    width: 90%;
-    max-width: 550px;
-    max-height: 90vh;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-  }
-  
-  .body {
-    padding: 0 24px 24px;
-  }
-  
-  .healthSection {
-    margin-top: 1.5rem;
-  }
-  
-  .healthSectionHeader {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--border-color);
-  }
-  
-  .healthSectionHeader h4 {
-    margin: 0;
-    font-size: 1.1rem;
-    font-weight: 700;
-  }
-  
-  .addRecordButton {
-    background-color: var(--primary-accent);
-    color: var(--brand-cream);
-    border: none;
-    border-radius: 6px;
-    padding: 6px 12px;
-    font-size: 0.9rem;
-    font-weight: bold;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    transition: background-color 0.2s;
-  }
-  
-  .addRecordButton:hover {
-    background-color: var(--primary-accent-hover);
-  }
-  
-  .recordList {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  
-  .recordCard {
-    background-color: var(--background-dark);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 12px 16px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
-  }
-  
-  .recordCardInfo {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    text-align: left;
-    flex-grow: 1;
-  }
-  
-  .recordCardInfo strong {
-    font-size: 1rem;
-    color: var(--text-primary);
-  }
-  
-  .recordCardInfo span {
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-  }
-  
-  .recordCardActions button {
-    background: none;
-    border: none;
-    color: var(--text-secondary);
-    cursor: pointer;
-    padding: 4px;
-    flex-shrink: 0;
-  }
-  
-  .recordCardActions button:hover {
-    color: var(--error-red);
-  }
-  
-  .emptyHealthSection {
-    text-align: center;
-    color: var(--text-secondary);
-    font-size: 0.9rem;
-    padding: 1rem;
-    border: 1px dashed var(--border-color);
-    border-radius: 8px;
-  }
-  
-  .addRecordForm {
-    background-color: var(--background-dark);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 16px;
-    margin-top: 1rem;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-  
-  .addRecordFormActions {
-    display: flex;
-    gap: 10px;
-    justify-content: flex-end;
-    margin-top: 8px;
-  }
-  
-  .formActionButton {
-    background: none;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 6px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: background-color 0.2s;
-  }
-  
-  .save {
-    composes: formActionButton;
-    background-color: var(--primary-accent);
-    color: var(--brand-cream);
-  }
-  .save:hover {
-    background-color: var(--primary-accent-hover);
-  }
-  
-  .cancel {
-    composes: formActionButton;
-    background-color: var(--border-color);
-    color: var(--text-secondary);
-  }
-  .cancel:hover {
-    background-color: #334155; /* Slate 700 */
-  }
+  background-color: var(--background-light);
+  border: 1px solid var(--border-color);
+  border-radius: 15px;
+  width: 90%;
+  max-width: 550px;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.body {
+  padding: 0 24px 24px;
+}
+
+/* --- [NUEVO] Estilos para el campo EPID --- */
+.epidContainer {
+margin-bottom: 20px;
+}
+
+.epidDisplay {
+display: flex;
+align-items: center;
+gap: 10px;
+background-color: var(--background-dark);
+border: 1px solid var(--border-color);
+border-radius: 8px;
+padding: 8px 12px;
+}
+
+.epidDisplay input {
+flex-grow: 1;
+background: none;
+border: none;
+color: var(--text-secondary);
+font-size: 1.2rem;
+font-weight: bold;
+letter-spacing: 2px;
+padding: 0;
+}
+
+.epidDisplay input:focus {
+outline: none;
+}
+
+.copyButton {
+background: none;
+border: 1px solid var(--border-color);
+color: var(--text-secondary);
+border-radius: 6px;
+padding: 6px;
+cursor: pointer;
+display: flex;
+align-items: center;
+transition: all 0.2s;
+}
+
+.copyButton:hover {
+border-color: var(--primary-accent);
+color: var(--primary-accent);
+}
+
+.copyButton.copied {
+border-color: var(--success-green);
+color: var(--success-green);
+}
+/* --- Fin de nuevos estilos --- */
+
+.healthSection {
+  margin-top: 1.5rem;
+}
+
+.healthSectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.healthSectionHeader h4 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.addRecordButton {
+  background-color: var(--primary-accent);
+  color: var(--brand-cream);
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background-color 0.2s;
+}
+
+.addRecordButton:hover {
+  background-color: var(--primary-accent-hover);
+}
+
+.recordList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.recordCard {
+  background-color: var(--background-dark);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.recordCardInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+  flex-grow: 1;
+}
+
+.recordCardInfo strong {
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.recordCardInfo span {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.recordCardActions button {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  flex-shrink: 0;
+}
+
+.recordCardActions button:hover {
+  color: var(--error-red);
+}
+
+.emptyHealthSection {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  padding: 1rem;
+  border: 1px dashed var(--border-color);
+  border-radius: 8px;
+}
+
+.addRecordForm {
+  background-color: var(--background-dark);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.addRecordFormActions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.formActionButton {
+  background: none;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.save {
+  composes: formActionButton;
+  background-color: var(--primary-accent);
+  color: var(--brand-cream);
+}
+.save:hover {
+  background-color: var(--primary-accent-hover);
+}
+
+.cancel {
+  composes: formActionButton;
+  background-color: var(--border-color);
+  color: var(--text-secondary);
+}
+.cancel:hover {
+  background-color: #334155;
+}

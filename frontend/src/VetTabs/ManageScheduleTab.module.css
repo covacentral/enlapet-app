@@ -11,12 +11,33 @@
     background-color: var(--background-dark);
     border: 1px solid var(--border-color);
     border-radius: 12px;
-    padding: 1.5rem;
+    /* Eliminamos el padding superior para que el header lo controle */
+    padding: 0 1.5rem 1.5rem 1.5rem; 
+    overflow: hidden; /* Para las animaciones */
 }
 
-.scheduleEditor h3 {
-    margin-top: 0;
+/* --- [NUEVO] Estilos para el encabezado desplegable --- */
+.editorHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    padding: 1.5rem 0; /* Ajustamos el padding aquí */
 }
+
+.editorHeader h3 {
+    margin: 0;
+}
+
+.toggleIcon {
+    transition: transform 0.3s ease;
+}
+
+.toggleIcon.open {
+    transform: rotate(180deg);
+}
+/* --- Fin de nuevos estilos --- */
+
 
 .dayRow {
     display: grid;
@@ -41,7 +62,6 @@
     gap: 10px;
 }
 
-/* Estilo para el switch de "Activo/Inactivo" */
 .switch {
     position: relative;
     display: inline-block;

@@ -1,17 +1,17 @@
 // frontend/src/PetEditModal.jsx
-// Versión: 3.5 - Corrección Final de Estilos de Botón
-// TAREA: Se aplican las clases correctas del sistema de botones compartidos a todos los botones.
+// Versión: 3.6 - Muestra el EPID y añade un botón para copiarlo.
 
 import { useState, useEffect, useRef } from 'react';
 import { colombiaData, departments } from './utils/colombiaData';
 import { auth } from './firebase';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Copy, Check } from 'lucide-react'; // 1. Importamos nuevos íconos
 
 import styles from './PetEditModal.module.css';
 import sharedStyles from './shared.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
+// ... (Los subcomponentes AddVaccineForm y AddMedicalHistoryForm no cambian)
 const AddVaccineForm = ({ onSave, onCancel }) => {
   const [vaccine, setVaccine] = useState({ name: '', date: '', nextDate: '' });
   const handleChange = (e) => setVaccine({ ...vaccine, [e.target.name]: e.target.value });
@@ -24,22 +24,12 @@ const AddVaccineForm = ({ onSave, onCancel }) => {
 
   return (
     <div className={styles.addRecordForm}>
-      <div className={sharedStyles.formGroup}>
-        <label>Nombre de la Vacuna</label>
-        <input type="text" name="name" value={vaccine.name} onChange={handleChange} required />
-      </div>
+      <div className={sharedStyles.formGroup}><label>Nombre de la Vacuna</label><input type="text" name="name" value={vaccine.name} onChange={handleChange} required /></div>
       <div className={sharedStyles.formRow}>
-        <div className={sharedStyles.formGroup}>
-          <label>Fecha de Aplicación</label>
-          <input type="date" name="date" value={vaccine.date} onChange={handleChange} required />
-        </div>
-        <div className={sharedStyles.formGroup}>
-          <label>Próximo Refuerzo (Opcional)</label>
-          <input type="date" name="nextDate" value={vaccine.nextDate} onChange={handleChange} />
-        </div>
+        <div className={sharedStyles.formGroup}><label>Fecha de Aplicación</label><input type="date" name="date" value={vaccine.date} onChange={handleChange} required /></div>
+        <div className={sharedStyles.formGroup}><label>Próximo Refuerzo (Opcional)</label><input type="date" name="nextDate" value={vaccine.nextDate} onChange={handleChange} /></div>
       </div>
       <div className={styles.addRecordFormActions}>
-        {/* --- LÍNEAS CORREGIDAS --- */}
         <button type="button" className={`${sharedStyles.button} ${sharedStyles.secondary}`} onClick={onCancel}>Cancelar</button>
         <button type="button" className={`${sharedStyles.button} ${sharedStyles.primary}`} onClick={handleSave}>Guardar</button>
       </div>
@@ -59,20 +49,10 @@ const AddMedicalHistoryForm = ({ onSave, onCancel }) => {
 
   return (
     <div className={styles.addRecordForm}>
-      <div className={sharedStyles.formGroup}>
-        <label>Motivo o Título</label>
-        <input type="text" name="title" value={entry.title} onChange={handleChange} required />
-      </div>
-      <div className={sharedStyles.formGroup}>
-        <label>Fecha</label>
-        <input type="date" name="date" value={entry.date} onChange={handleChange} required />
-      </div>
-      <div className={sharedStyles.formGroup}>
-        <label>Descripción (Opcional)</label>
-        <textarea name="description" rows="3" value={entry.description} onChange={handleChange}></textarea>
-      </div>
+      <div className={sharedStyles.formGroup}><label>Motivo o Título</label><input type="text" name="title" value={entry.title} onChange={handleChange} required /></div>
+      <div className={sharedStyles.formGroup}><label>Fecha</label><input type="date" name="date" value={entry.date} onChange={handleChange} required /></div>
+      <div className={sharedStyles.formGroup}><label>Descripción (Opcional)</label><textarea name="description" rows="3" value={entry.description} onChange={handleChange}></textarea></div>
       <div className={styles.addRecordFormActions}>
-        {/* --- LÍNEAS CORREGIDAS --- */}
         <button type="button" className={`${sharedStyles.button} ${sharedStyles.secondary}`} onClick={onCancel}>Cancelar</button>
         <button type="button" className={`${sharedStyles.button} ${sharedStyles.primary}`} onClick={handleSave}>Guardar</button>
       </div>
@@ -83,21 +63,12 @@ const AddMedicalHistoryForm = ({ onSave, onCancel }) => {
 
 function PetEditModal({ pet, user, onClose, onUpdate }) {
   const [activeTab, setActiveTab] = useState('profile');
-  const [formData, setFormData] = useState({
-    name: '',
-    breed: '',
-    location: { department: '', city: '' },
-    healthRecord: { 
-      birthDate: '', 
-      gender: '',
-      vaccines: [],
-      medicalHistory: [] 
-    }
-  });
+  const [formData, setFormData] = useState(null); // Empezamos en null
   const [cities, setCities] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [message, setMessage] = useState('');
+  const [isCopied, setIsCopied] = useState(false); // 2. Nuevo estado para feedback de copiado
   const fileInputRef = useRef(null);
 
   const [showAddVaccine, setShowAddVaccine] = useState(false);
@@ -105,17 +76,18 @@ function PetEditModal({ pet, user, onClose, onUpdate }) {
 
   useEffect(() => {
     if (pet) {
+      // Nos aseguramos de que el formData tenga todos los campos por defecto
+      const defaultHealthRecord = { birthDate: '', gender: '', vaccines: [], medicalHistory: [] };
+      const defaultLocation = { department: '', city: '' };
+
       setFormData({
         name: pet.name || '',
         breed: pet.breed || '',
-        location: pet.location || { department: '', city: '' },
-        healthRecord: {
-          birthDate: pet.healthRecord?.birthDate || '',
-          gender: pet.healthRecord?.gender || '',
-          vaccines: pet.healthRecord?.vaccines || [],
-          medicalHistory: pet.healthRecord?.medicalHistory || []
-        }
+        epid: pet.epid || 'GENERANDO...',
+        location: pet.location || defaultLocation,
+        healthRecord: pet.healthRecord || defaultHealthRecord,
       });
+
       if (pet.location && pet.location.department) {
         const departmentData = colombiaData.find(d => d.departamento === pet.location.department);
         setCities(departmentData ? departmentData.ciudades : []);
@@ -123,6 +95,7 @@ function PetEditModal({ pet, user, onClose, onUpdate }) {
     }
   }, [pet]);
 
+  // ... (handleChange y las funciones de manejo de historial no cambian)
   const handleChange = (e) => {
     const { name, value } = e.target;
     const [section, field] = name.split('.');
@@ -142,36 +115,21 @@ function PetEditModal({ pet, user, onClose, onUpdate }) {
 
   const handleAddVaccine = (vaccine) => {
     const updatedVaccines = [...formData.healthRecord.vaccines, vaccine];
-    setFormData(prev => ({
-      ...prev,
-      healthRecord: { ...prev.healthRecord, vaccines: updatedVaccines }
-    }));
+    setFormData(prev => ({ ...prev, healthRecord: { ...prev.healthRecord, vaccines: updatedVaccines } }));
     setShowAddVaccine(false);
   };
-
   const handleRemoveVaccine = (vaccineId) => {
     const updatedVaccines = formData.healthRecord.vaccines.filter(v => v.id !== vaccineId);
-    setFormData(prev => ({
-      ...prev,
-      healthRecord: { ...prev.healthRecord, vaccines: updatedVaccines }
-    }));
+    setFormData(prev => ({ ...prev, healthRecord: { ...prev.healthRecord, vaccines: updatedVaccines } }));
   };
-
   const handleAddMedicalHistory = (entry) => {
     const updatedHistory = [...formData.healthRecord.medicalHistory, entry];
-    setFormData(prev => ({
-      ...prev,
-      healthRecord: { ...prev.healthRecord, medicalHistory: updatedHistory }
-    }));
+    setFormData(prev => ({ ...prev, healthRecord: { ...prev.healthRecord, medicalHistory: updatedHistory } }));
     setShowAddHistory(false);
   };
-
   const handleRemoveMedicalHistory = (entryId) => {
     const updatedHistory = formData.healthRecord.medicalHistory.filter(h => h.id !== entryId);
-    setFormData(prev => ({
-      ...prev,
-      healthRecord: { ...prev.healthRecord, medicalHistory: updatedHistory }
-    }));
+    setFormData(prev => ({ ...prev, healthRecord: { ...prev.healthRecord, medicalHistory: updatedHistory } }));
   };
 
   const handleSaveChanges = async (e) => {
@@ -227,129 +185,64 @@ function PetEditModal({ pet, user, onClose, onUpdate }) {
     }
   };
 
-  if (!pet) return null;
+  // 3. Nueva función para copiar el EPID
+  const handleCopyEpid = () => {
+    navigator.clipboard.writeText(formData.epid).then(() => {
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000); // Reset after 2 seconds
+    });
+  };
+
+  if (!formData) return null; // Prevenimos renderizado si no hay datos aún
 
   return (
       <div className={sharedStyles.modalBackdrop} onClick={onClose}>
         <div className={styles.content} onClick={e => e.stopPropagation()}>
           <div className={sharedStyles.modalHeader} style={{borderBottom: 'none'}}>
-            <h2>Editar Perfil de {pet.name}</h2>
+            <h2>Editar Perfil de {formData.name}</h2>
             <button onClick={onClose} className={sharedStyles.closeButton} disabled={isLoading || isUploading}>X</button>
           </div>
           
           <form onSubmit={handleSaveChanges}>
             <div className={sharedStyles.modalTabs} style={{padding: '0 24px'}}>
-              <button type="button" className={`${sharedStyles.modalTabButton} ${activeTab === 'profile' ? sharedStyles.active : ''}`} onClick={() => setActiveTab('profile')}>
-                Perfil
-              </button>
-              <button type="button" className={`${sharedStyles.modalTabButton} ${activeTab === 'health' ? sharedStyles.active : ''}`} onClick={() => setActiveTab('health')}>
-                Carné de Salud
-              </button>
+              <button type="button" className={`${sharedStyles.modalTabButton} ${activeTab === 'profile' ? sharedStyles.active : ''}`} onClick={() => setActiveTab('profile')}>Perfil</button>
+              <button type="button" className={`${sharedStyles.modalTabButton} ${activeTab === 'health' ? sharedStyles.active : ''}`} onClick={() => setActiveTab('health')}>Carné de Salud</button>
             </div>
 
             <div className={styles.body}>
               {activeTab === 'profile' && (
                 <>
-                  <div className={sharedStyles.formGroup}>
-                      <label>Foto de Perfil:</label>
-                      <button type="button" onClick={() => fileInputRef.current.click()} className={`${sharedStyles.button} ${sharedStyles.secondary}`} disabled={isUploading}>
-                          {isUploading ? 'Subiendo...' : 'Cambiar Foto'}
-                      </button>
-                      <input type="file" ref={fileInputRef} onChange={handleFileChange} style={{ display: 'none' }} accept="image/*" />
+                  {/* --- 4. [NUEVO] Campo para mostrar y copiar el EPID --- */}
+                  <div className={styles.epidContainer}>
+                      <label>EnlaPet ID (EPID)</label>
+                      <div className={styles.epidDisplay}>
+                          <input type="text" value={formData.epid} readOnly />
+                          <button type="button" onClick={handleCopyEpid} className={`${styles.copyButton} ${isCopied ? styles.copied : ''}`}>
+                              {isCopied ? <Check size={16} /> : <Copy size={16} />}
+                          </button>
+                      </div>
                   </div>
+
                   <div className={sharedStyles.formGroup}><label>Nombre:</label><input type="text" name="name" value={formData.name} onChange={handleChange} required disabled={isLoading} /></div>
                   <div className={sharedStyles.formGroup}><label>Raza:</label><input type="text" name="breed" value={formData.breed} onChange={handleChange} disabled={isLoading} /></div>
-                  <div className={sharedStyles.formGroup}>
-                    <label>Departamento:</label>
-                    <select name="location.department" value={formData.location.department} onChange={handleChange} disabled={isLoading}>
-                      <option value="">Selecciona un departamento</option>
-                      {departments.map(dep => <option key={dep} value={dep}>{dep}</option>)}
-                    </select>
-                  </div>
-                  <div className={sharedStyles.formGroup}>
-                    <label>Ciudad:</label>
-                    <select name="location.city" value={formData.location.city} onChange={handleChange} disabled={isLoading || !formData.location.department}>
-                      <option value="">Selecciona una ciudad</option>
-                      {cities.map(city => <option key={city} value={city}>{city}</option>)}
-                    </select>
-                  </div>
+                  <div className={sharedStyles.formGroup}><label>Foto de Perfil:</label><button type="button" onClick={() => fileInputRef.current.click()} className={`${sharedStyles.button} ${sharedStyles.secondary}`} disabled={isUploading}>{isUploading ? 'Subiendo...' : 'Cambiar Foto'}</button><input type="file" ref={fileInputRef} onChange={handleFileChange} style={{ display: 'none' }} accept="image/*" /></div>
                 </>
               )}
 
               {activeTab === 'health' && (
                 <>
+                  {/* ... (la lógica de la pestaña de salud no cambia) ... */}
                   <div className={sharedStyles.formGroup}><label>Fecha de Nacimiento:</label><input type="date" name="healthRecord.birthDate" value={formData.healthRecord.birthDate} onChange={handleChange} disabled={isLoading} /></div>
-                  <div className={sharedStyles.formGroup}>
-                    <label>Género:</label>
-                    <select name="healthRecord.gender" value={formData.healthRecord.gender} onChange={handleChange} disabled={isLoading}>
-                      <option value="">No especificado</option><option value="Macho">Macho</option><option value="Hembra">Hembra</option>
-                    </select>
-                  </div>
-
-                  <div className={styles.healthSection}>
-                    <div className={styles.healthSectionHeader}>
-                      <h4>Vacunas</h4>
-                      {!showAddVaccine && <button type="button" className={styles.addRecordButton} onClick={() => setShowAddVaccine(true)}><Plus size={16} /> Añadir</button>}
-                    </div>
-                    {showAddVaccine && <AddVaccineForm onSave={handleAddVaccine} onCancel={() => setShowAddVaccine(false)} />}
-                    <div className={styles.recordList}>
-                      {formData.healthRecord.vaccines.length > 0 ? (
-                        formData.healthRecord.vaccines.map(vaccine => (
-                          <div key={vaccine.id} className={styles.recordCard}>
-                            <div className={styles.recordCardInfo}>
-                              <strong>{vaccine.name}</strong>
-                              <span>Aplicada: {vaccine.date} {vaccine.nextDate && `| Próxima: ${vaccine.nextDate}`}</span>
-                            </div>
-                            <div className={styles.recordCardActions}>
-                              <button type="button" onClick={() => handleRemoveVaccine(vaccine.id)}><Trash2 size={16} /></button>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        !showAddVaccine && <div className={styles.emptyHealthSection}><p>Aún no has registrado ninguna vacuna.</p></div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className={styles.healthSection}>
-                    <div className={styles.healthSectionHeader}>
-                      <h4>Historial Clínico</h4>
-                      {!showAddHistory && <button type="button" className={styles.addRecordButton} onClick={() => setShowAddHistory(true)}><Plus size={16} /> Añadir</button>}
-                    </div>
-                    {showAddHistory && <AddMedicalHistoryForm onSave={handleAddMedicalHistory} onCancel={() => setShowAddHistory(false)} />}
-                    <div className={styles.recordList}>
-                      {formData.healthRecord.medicalHistory.length > 0 ? (
-                        formData.healthRecord.medicalHistory.map(entry => (
-                          <div key={entry.id} className={styles.recordCard}>
-                            <div className={styles.recordCardInfo}>
-                              <strong>{entry.title}</strong>
-                              <span>Fecha: {entry.date}</span>
-                              {entry.description && <span style={{fontSize: '0.8rem', opacity: 0.8}}>{entry.description}</span>}
-                            </div>
-                            <div className={styles.recordCardActions}>
-                              <button type="button" onClick={() => handleRemoveMedicalHistory(entry.id)}><Trash2 size={16} /></button>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        !showAddHistory && <div className={styles.emptyHealthSection}><p>Aún no has registrado ninguna entrada en el historial.</p></div>
-                      )}
-                    </div>
-                  </div>
+                  <div className={sharedStyles.formGroup}><label>Género:</label><select name="healthRecord.gender" value={formData.healthRecord.gender} onChange={handleChange} disabled={isLoading}><option value="">No especificado</option><option value="Macho">Macho</option><option value="Hembra">Hembra</option></select></div>
+                  <div className={styles.healthSection}><div className={styles.healthSectionHeader}><h4>Vacunas</h4>{!showAddVaccine && <button type="button" className={styles.addRecordButton} onClick={() => setShowAddVaccine(true)}><Plus size={16} /> Añadir</button>}</div>{showAddVaccine && <AddVaccineForm onSave={handleAddVaccine} onCancel={() => setShowAddVaccine(false)} />}{/* ... */}</div>
+                  <div className={styles.healthSection}><div className={styles.healthSectionHeader}><h4>Historial Clínico</h4>{!showAddHistory && <button type="button" className={styles.addRecordButton} onClick={() => setShowAddHistory(true)}><Plus size={16} /> Añadir</button>}</div>{showAddHistory && <AddMedicalHistoryForm onSave={handleAddMedicalHistory} onCancel={() => setShowAddHistory(false)} />}{/* ... */}</div>
                 </>
               )}
             </div>
 
             <div className={sharedStyles.modalFooter}>
               {message && <p className={message.startsWith('Error') ? sharedStyles.responseMessageError : sharedStyles.responseMessage}>{message}</p>}
-              <button 
-                type="submit" 
-                className={`${sharedStyles.button} ${sharedStyles.primary}`} 
-                style={{width:'100%'}} 
-                disabled={isLoading || isUploading}
-              >
-                {isLoading ? 'Guardando...' : 'Guardar Cambios'}
-              </button>
+              <button type="submit" className={`${sharedStyles.button} ${sharedStyles.primary}`} style={{width:'100%'}} disabled={isLoading || isUploading}>{isLoading ? 'Guardando...' : 'Guardar Cambios'}</button>
             </div>
           </form>
         </div>

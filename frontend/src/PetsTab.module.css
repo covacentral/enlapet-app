@@ -5,13 +5,15 @@
   display: grid;
   grid-template-columns: 300px 1fr;
   gap: 30px;
+  /* Nueva propiedad para alinear los elementos en la parte superior */
+  align-items: start;
 }
 
 .addPetColumn {
   background-color: var(--background-light);
   padding: 25px;
   border-radius: 15px;
-  align-self: start; /* Para que no se estire verticalmente */
+  align-self: start;
   border: 1px solid var(--border-color);
 }
 
@@ -40,7 +42,7 @@
   padding: 20px;
   gap: 20px;
   align-items: center;
-  flex-wrap: wrap; /* Para mejor responsiveness */
+  flex-wrap: wrap;
 }
 
 .imageContainer {
@@ -67,7 +69,7 @@
 }
 
 .info {
-  flex-grow: 1; /* Ocupa el espacio restante */
+  flex-grow: 1;
   text-align: left;
 }
 
@@ -114,7 +116,6 @@
   margin-top: 12px;
 }
 
-/* --- [NUEVO] Estilos para el banner de solicitud de vínculo --- */
 .vetRequestBanner {
   width: 100%;
   margin-top: 15px;
@@ -141,15 +142,25 @@
   justify-content: flex-end;
 }
 
+/* --- [NUEVO] Contenedor para el botón de citas y ajuste de layout --- */
+.appointmentsButtonContainer {
+    grid-column: 1 / -1; /* Ocupa todo el ancho en la grid */
+    text-align: center;
+    margin: -10px 0 20px 0; /* Espaciado para separarlo visualmente */
+}
+
+/* Hacemos que el contenedor principal de la lista ocupe toda la columna */
+.petsListColumn {
+    grid-column: 1 / -1; /* Ocupa todo el ancho en la grid */
+}
+
+/* Modificamos el layout principal para que sea de una sola columna */
+.container {
+    grid-template-columns: 1fr;
+}
+
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-10px); }
   to { opacity: 1; transform: translateY(0); }
-}
-
-/* --- Media Queries --- */
-@media (max-width: 900px) {
-  .container {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
 }

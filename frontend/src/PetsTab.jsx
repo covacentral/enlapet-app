@@ -1,16 +1,17 @@
 // frontend/src/PetsTab.jsx
-// Versión: 2.3 - GESTIÓN DE VÍNCULOS DE VETERINARIO
-// TAREA: Se añade la lógica y la UI para que el dueño pueda aprobar o rechazar solicitudes.
+// Versión: 2.4 - Añadido el botón de acceso a "Mis Citas"
 
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import PetEditModal from './PetEditModal';
+import { ClipboardList } from 'lucide-react'; // 1. Importamos el ícono
 
 import styles from './PetsTab.module.css';
 import sharedStyles from './shared.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
+// ... (El subcomponente UpdatePrompt no cambia)
 const UpdatePrompt = () => (
     <div className={styles.updatePrompt}>
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
@@ -18,18 +19,14 @@ const UpdatePrompt = () => (
     </div>
 );
 
-// --- [NUEVO] Subcomponente para mostrar la solicitud de vínculo ---
+// ... (El subcomponente VetRequest no cambia)
 const VetRequest = ({ request, onManage }) => {
-    // Aquí, en una versión futura, buscaríamos los datos del veterinario por su vetId
-    // para mostrar su nombre. Por ahora, mostramos un texto genérico.
     const [isLoading, setIsLoading] = useState(false);
-
     const handleAction = async (action) => {
         setIsLoading(true);
         await onManage(request.vetId, action);
         setIsLoading(false);
     }
-
     return (
         <div className={styles.vetRequestBanner}>
             <p><strong>Tienes una nueva solicitud:</strong> un veterinario verificado desea vincularse como paciente a tu mascota.</p>
@@ -41,6 +38,7 @@ const VetRequest = ({ request, onManage }) => {
     )
 }
 
+// ... (El subcomponente PetCard no cambia)
 function PetCard({ pet, onEdit, onManageLink }) {
   const isProfileIncomplete = !pet.location?.city || !pet.healthRecord?.birthDate;
   const pendingRequests = pet.linkedVets?.filter(link => link.status === 'pending') || [];
@@ -48,11 +46,7 @@ function PetCard({ pet, onEdit, onManageLink }) {
   return (
     <div className={styles.petCard}>
       <div className={styles.imageContainer}>
-        {pet.petPictureUrl ? (
-          <img src={pet.petPictureUrl} alt={pet.name} className={styles.image} />
-        ) : (
-          <div className={styles.placeholder}>🐾</div>
-        )}
+        {pet.petPictureUrl ? ( <img src={pet.petPictureUrl} alt={pet.name} className={styles.image} /> ) : ( <div className={styles.placeholder}>🐾</div> )}
       </div>
       <div className={styles.info}>
         <button className={styles.nameButton} onClick={() => onEdit(pet)}>
@@ -63,16 +57,16 @@ function PetCard({ pet, onEdit, onManageLink }) {
             {isProfileIncomplete && <UpdatePrompt />}
         </button>
         <div className={styles.actions}>
-           <Link to={`/pet/${pet.id}`} className={`${sharedStyles.button} ${sharedStyles.primary}`} style={{width: '100%', textDecoration: 'none'}}>Ver Perfil Público</Link>
+           <Link to={`/dashboard/pet/${pet.id}`} className={`${sharedStyles.button} ${sharedStyles.primary}`} style={{width: '100%', textDecoration: 'none'}}>Ver Perfil Público</Link>
         </div>
       </div>
-      {/* --- Renderizado condicional de la solicitud --- */}
       {pendingRequests.length > 0 && (
           <VetRequest request={pendingRequests[0]} onManage={(vetId, action) => onManageLink(pet.id, vetId, action)} />
       )}
     </div>
   );
 }
+
 
 function PetsTab({ user, initialPets, onPetsUpdate }) {
   const [pets, setPets] = useState(initialPets);
@@ -110,11 +104,10 @@ function PetsTab({ user, initialPets, onPetsUpdate }) {
       setMessage(`Error: ${error.message}`);
     } finally {
       setIsAdding(false);
-      setTimeout(() => setMessage(''), 5000); // Más tiempo para ver el EPID
+      setTimeout(() => setMessage(''), 5000);
     }
   };
   
-  // --- [NUEVO] Función para manejar la aprobación/rechazo ---
   const handleManageLink = async (petId, vetId, action) => {
       setMessage('Procesando solicitud...');
       try {
@@ -127,7 +120,7 @@ function PetsTab({ user, initialPets, onPetsUpdate }) {
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
         setMessage(`¡Solicitud ${action === 'approve' ? 'aprobada' : 'rechazada'}!`);
-        onPetsUpdate(); // Refrescamos los datos para que la solicitud desaparezca
+        onPetsUpdate();
       } catch (error) {
           setMessage(`Error: ${error.message}`);
       } finally {
@@ -157,6 +150,15 @@ function PetsTab({ user, initialPets, onPetsUpdate }) {
           </form>
           {message && <p className={sharedStyles.responseMessage}>{message}</p>}
         </div>
+
+        {/* --- 2. [NUEVO] Botón de acceso a Mis Citas --- */}
+        <div className={styles.appointmentsButtonContainer}>
+            <Link to="/dashboard/appointments" className={`${sharedStyles.button} ${sharedStyles.secondary}`}>
+                <ClipboardList size={20} />
+                <span>Mis Citas Agendadas</span>
+            </Link>
+        </div>
+
         <div className={styles.petsListColumn}>
           <h2>Mis Mascotas</h2>
           <div className={styles.list}>

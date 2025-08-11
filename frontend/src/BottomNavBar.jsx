@@ -1,10 +1,10 @@
 // frontend/src/BottomNavBar.jsx
-// Versión 1.2 - Añadido enlace a la nueva página de Citas.
-// TAREA: Se integra el acceso a la nueva funcionalidad de agendamiento.
+// Versión 1.3 - Se elimina el enlace a Citas para reubicarlo.
 
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Map, PlusSquare, Calendar, Bell, ClipboardList } from 'lucide-react'; // 1. Importamos ClipboardList
+// 1. Se elimina ClipboardList de los imports
+import { Home, Map, PlusSquare, Calendar, Bell } from 'lucide-react';
 
 import styles from './BottomNavBar.module.css';
 
@@ -22,12 +22,6 @@ function BottomNavBar({ unreadCount, onOpenCreatePost }) {
       <NavLink to="/dashboard/map" className={getNavLinkClass}>
         <Map className={styles.navIcon} />
         <span className={styles.navLabel}>Mapa</span>
-      </NavLink>
-      
-      {/* --- 2. [NUEVO] Enlace a la página de citas --- */}
-      <NavLink to="/dashboard/appointments" className={getNavLinkClass}>
-        <ClipboardList className={styles.navIcon} />
-        <span className={styles.navLabel}>Citas</span>
       </NavLink>
       
       <button onClick={onOpenCreatePost} className={styles.createPostButton}>
