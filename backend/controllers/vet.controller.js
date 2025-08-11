@@ -5,7 +5,6 @@ const { db } = require('../config/firebase');
 const { createNotification } = require('../services/notification.service');
 const admin = require('firebase-admin');
 
-// ... (findPetByEPID, requestPatientLink, getLinkedPatients no cambian)
 const findPetByEPID = async (req, res) => {
   const { epid } = req.params;
 
@@ -151,17 +150,12 @@ const updateAvailability = async (req, res) => {
     }
 };
 
-/**
- * [NUEVO] Obtiene la plantilla de horario guardada por un veterinario.
- */
 const getAvailability = async (req, res) => {
     const { uid: vetId } = req.user;
     try {
         const availabilitySnapshot = await db.collection('users').doc(vetId).collection('availability').get();
 
         if (availabilitySnapshot.empty) {
-            // Si el veterinario nunca ha guardado un horario, devolvemos un objeto vacío
-            // para que el frontend pueda usar su estado inicial por defecto.
             return res.status(200).json({});
         }
 
@@ -178,10 +172,85 @@ const getAvailability = async (req, res) => {
     }
 };
 
+/**
+ * [NUEVO] Obtiene los detalles completos de un paciente específico para el veterinario.
+ */
+const getPatientDetails = async (req, res) => {
+    const { uid: vetId } = req.user;
+    const { petId } = req.params;
+
+    try {
+        const petRef = db.collection('pets').doc(petId);
+        const petDoc = await petRef.get();
+
+        if (!petDoc.exists) {
+            return res.status(404).json({ message: 'Paciente no encontrado.' });
+        }
+
+        const petData = petDoc.data();
+        const hasActiveLink = petData.linkedVets?.some(link => link.vetId === vetId && link.status === 'active');
+        
+        if (!hasActiveLink) {
+            return res.status(403).json({ message: 'No tienes un vínculo activo con este paciente.' });
+        }
+
+        res.status(200).json({ id: petDoc.id, ...petData });
+    } catch (error) {
+        console.error('Error en getPatientDetails:', error);
+        res.status(500).json({ message: 'Error interno al obtener los detalles del paciente.' });
+    }
+};
+
+/**
+ * [NUEVO] Añade un nuevo registro al carné de salud de un paciente.
+ */
+const addHealthRecordEntry = async (req, res) => {
+    const { uid: vetId } = req.user;
+    const { petId } = req.params;
+    const { type, record } = req.body; // type: 'vaccine' o 'medicalHistory'
+
+    if (!type || !record || (type !== 'vaccine' && type !== 'medicalHistory')) {
+        return res.status(400).json({ message: 'Se requiere un tipo de registro y datos válidos.' });
+    }
+
+    const petRef = db.collection('pets').doc(petId);
+
+    try {
+        const petDoc = await petRef.get();
+        if (!petDoc.exists) {
+            return res.status(404).json({ message: 'Paciente no encontrado.' });
+        }
+
+        const petData = petDoc.data();
+        const hasActiveLink = petData.linkedVets?.some(link => link.vetId === vetId && link.status === 'active');
+        
+        if (!hasActiveLink) {
+            return res.status(403).json({ message: 'No tienes permiso para modificar este carné de salud.' });
+        }
+        
+        const fieldToUpdate = type === 'vaccine' ? 'healthRecord.vaccines' : 'healthRecord.medicalHistory';
+        
+        await petRef.update({
+            [fieldToUpdate]: admin.firestore.FieldValue.arrayUnion(record)
+        });
+
+        // Notificar al dueño
+        await createNotification(petData.ownerId, vetId, 'health_record_updated', petId, 'pet');
+
+        res.status(200).json({ message: 'Carné de salud actualizado con éxito.' });
+    } catch (error) {
+        console.error('Error en addHealthRecordEntry:', error);
+        res.status(500).json({ message: 'Error interno al añadir el registro.' });
+    }
+};
+
+
 module.exports = {
   findPetByEPID,
   requestPatientLink,
   getLinkedPatients,
   updateAvailability,
-  getAvailability, // Exportamos la nueva función
+  getAvailability,
+  getPatientDetails,
+  addHealthRecordEntry
 };
