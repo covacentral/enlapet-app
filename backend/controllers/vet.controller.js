@@ -5,7 +5,7 @@ const { db } = require('../config/firebase');
 const { createNotification } = require('../services/notification.service');
 const admin = require('firebase-admin');
 
-// ... (findPetByEPID, requestPatientLink no cambian)
+// ... (findPetByEPID, requestPatientLink, updateAvailability, getAvailability, getPatientDetails, addHealthRecordEntry no cambian)
 const findPetByEPID = async (req, res) => {
   const { epid } = req.params;
 
@@ -81,20 +81,19 @@ const requestPatientLink = async (req, res) => {
   }
 };
 
-// --- FUNCIÓN CORREGIDA ---
 const getLinkedPatients = async (req, res) => {
     const { uid: vetId } = req.user;
     try {
-        // 1. Buscamos todas las mascotas que tengan el ID del veterinario en su lista.
-        const snapshot = await db.collection('pets')
-            .where('linkedVets', '!=', []) // Filtro inicial para optimizar
-            .get();
-
-        // 2. Filtramos los resultados en el servidor para encontrar los vínculos activos.
+        const snapshot = await db.collection('pets').get(); // Simplificamos la consulta inicial
+        
         const activePatients = [];
         snapshot.forEach(doc => {
             const petData = doc.data();
-            const hasActiveLink = petData.linkedVets?.some(link => link.vetId === vetId && link.status === 'active');
+            // --- LÍNEA CORREGIDA ---
+            // Nos aseguramos de que petData.linkedVets sea un array antes de usar .some()
+            const links = Array.isArray(petData.linkedVets) ? petData.linkedVets : [];
+            const hasActiveLink = links.some(link => link.vetId === vetId && link.status === 'active');
+            
             if (hasActiveLink) {
                 activePatients.push({ id: doc.id, ...petData });
             }
