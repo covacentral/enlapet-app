@@ -5,6 +5,7 @@ const { db } = require('../config/firebase');
 const { createNotification } = require('../services/notification.service');
 const admin = require('firebase-admin');
 
+// ... (findPetByEPID, requestPatientLink no cambian)
 const findPetByEPID = async (req, res) => {
   const { epid } = req.params;
 
@@ -80,26 +81,30 @@ const requestPatientLink = async (req, res) => {
   }
 };
 
+// --- FUNCIÓN CORREGIDA ---
 const getLinkedPatients = async (req, res) => {
     const { uid: vetId } = req.user;
     try {
+        // 1. Buscamos todas las mascotas que tengan el ID del veterinario en su lista.
         const snapshot = await db.collection('pets')
-            .where('linkedVets', 'array-contains', { vetId, status: 'active' })
+            .where('linkedVets', '!=', []) // Filtro inicial para optimizar
             .get();
 
-        if (snapshot.empty) {
+        // 2. Filtramos los resultados en el servidor para encontrar los vínculos activos.
+        const activePatients = [];
+        snapshot.forEach(doc => {
+            const petData = doc.data();
+            const hasActiveLink = petData.linkedVets?.some(link => link.vetId === vetId && link.status === 'active');
+            if (hasActiveLink) {
+                activePatients.push({ id: doc.id, ...petData });
+            }
+        });
+
+        if (activePatients.length === 0) {
             return res.status(200).json([]);
         }
         
-        const ownerIds = new Set();
-        const patients = snapshot.docs.map(doc => {
-            const petData = doc.data();
-            ownerIds.add(petData.ownerId);
-            return {
-                id: doc.id,
-                ...petData
-            };
-        });
+        const ownerIds = new Set(activePatients.map(p => p.ownerId));
         
         const ownersData = {};
         if (ownerIds.size > 0) {
@@ -109,7 +114,7 @@ const getLinkedPatients = async (req, res) => {
             });
         }
 
-        const enrichedPatients = patients.map(p => ({
+        const enrichedPatients = activePatients.map(p => ({
             ...p,
             ownerInfo: ownersData[p.ownerId] || { name: 'Desconocido' }
         }));
@@ -172,9 +177,6 @@ const getAvailability = async (req, res) => {
     }
 };
 
-/**
- * [NUEVO] Obtiene los detalles completos de un paciente específico para el veterinario.
- */
 const getPatientDetails = async (req, res) => {
     const { uid: vetId } = req.user;
     const { petId } = req.params;
@@ -201,13 +203,10 @@ const getPatientDetails = async (req, res) => {
     }
 };
 
-/**
- * [NUEVO] Añade un nuevo registro al carné de salud de un paciente.
- */
 const addHealthRecordEntry = async (req, res) => {
     const { uid: vetId } = req.user;
     const { petId } = req.params;
-    const { type, record } = req.body; // type: 'vaccine' o 'medicalHistory'
+    const { type, record } = req.body; 
 
     if (!type || !record || (type !== 'vaccine' && type !== 'medicalHistory')) {
         return res.status(400).json({ message: 'Se requiere un tipo de registro y datos válidos.' });
@@ -234,7 +233,6 @@ const addHealthRecordEntry = async (req, res) => {
             [fieldToUpdate]: admin.firestore.FieldValue.arrayUnion(record)
         });
 
-        // Notificar al dueño
         await createNotification(petData.ownerId, vetId, 'health_record_updated', petId, 'pet');
 
         res.status(200).json({ message: 'Carné de salud actualizado con éxito.' });
