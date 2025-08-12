@@ -1,22 +1,21 @@
 // frontend/src/components/ManagementHeaderView.jsx
-// Versión 1.0: Componente que encapsula la nueva vista de gestión del MainHeader.
+// Versión 1.1: Convierte el banner en un único elemento clickeable.
 
 import React from 'react';
-import PetManagementCard from './PetManagementCard'; // Importamos la tarjeta que ya creamos
-import styles from '../MainHeader.module.css'; // Reutilizamos algunos estilos
-import sharedStyles from '../shared.module.css';
+import PetManagementCard from './PetManagementCard';
+import styles from '../MainHeader.module.css';
 
-// Componente interno para el Banner, para mantener el código limpio.
+// --- Componente interno del Banner MODIFICADO ---
 const NfcBanner = () => (
-    <div className={styles.nfcBanner}>
+    // 1. El banner ahora es un ancla (<a>) para ser completamente clickeable.
+    //    En el futuro, el href apuntará a la página del producto.
+    <a href="#" className={styles.nfcBanner}>
         <div>
             <h3 className={styles.nfcBannerTitle}>Protección Inteligente EnlaPet</h3>
             <p className={styles.nfcBannerText}>Activa el collar NFC y mantén a tu mascota siempre segura.</p>
         </div>
-        <button className={`${sharedStyles.button} ${styles.nfcBannerButton}`}>
-            Conoce más
-        </button>
-    </div>
+        {/* 2. Se elimina el botón explícito de "Conoce más". */}
+    </a>
 );
 
 function ManagementHeaderView({ pets }) {

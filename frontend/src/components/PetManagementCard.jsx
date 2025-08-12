@@ -1,5 +1,5 @@
 // frontend/src/components/PetManagementCard.jsx
-// Versión 1.0: Componente de tarjeta para la vista de gestión de mascotas en el MainHeader.
+// Versión 1.1: Corrige el enlace del perfil de rescate y el estilo del botón.
 
 import React from 'react';
 import { Link } from 'react-router-dom';
@@ -8,7 +8,6 @@ import sharedStyles from '../shared.module.css';
 import { AlertCircle } from 'lucide-react';
 
 function PetManagementCard({ pet }) {
-  // La lógica para determinar si el perfil está incompleto reside aquí.
   const isProfileIncomplete = !pet.location?.city || !pet.healthRecord?.birthDate;
 
   return (
@@ -30,9 +29,12 @@ function PetManagementCard({ pet }) {
         )}
         
         <div className={styles.cardFooter}>
+          {/* --- LÍNEA CORREGIDA --- */}
+          {/* 1. El 'to' ahora apunta a la ruta pública correcta: /pet/:petId */}
+          {/* 2. El className del botón se ajusta para que no tenga múltiples líneas. */}
           <Link 
-            to={`/dashboard/pet/${pet.id}`} 
-            className={`${sharedStyles.button} ${sharedStyles.primary}`}
+            to={`/pet/${pet.id}`} 
+            className={`${sharedStyles.button} ${sharedStyles.primary} ${styles.rescueButton}`}
           >
             Ver perfil de rescate
           </Link>

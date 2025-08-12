@@ -1,12 +1,12 @@
 /* frontend/src/components/PetManagementCard.module.css */
-/* Estilos para la tarjeta de mascota en la vista de gestión del MainHeader. */
+/* Versión 1.1: Ajusta el botón para ser de una sola línea. */
 
 .card {
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
-    width: 180px; /* Ancho fijo para consistencia en el carrusel */
-    background-color: var(--background-dark); /* Un poco más oscuro que el fondo del header */
+    width: 180px;
+    background-color: var(--background-dark);
     border: 1px solid var(--border-color);
     border-radius: 12px;
     overflow: hidden;
@@ -20,7 +20,7 @@
 
 .petImage {
     width: 100%;
-    height: 180px; /* Formato 1:1 */
+    height: 180px;
     object-fit: cover;
 }
 
@@ -28,7 +28,7 @@
     padding: 12px;
     display: flex;
     flex-direction: column;
-    flex-grow: 1; /* Permite que el footer se alinee abajo */
+    flex-grow: 1;
     text-align: left;
 }
 
@@ -61,12 +61,15 @@
 }
 
 .cardFooter {
-    margin-top: auto; /* Empuja el botón hacia abajo */
+    margin-top: auto;
 }
 
-.cardFooter a {
+/* --- CLASE MODIFICADA --- */
+/* Se ajusta el botón para que ocupe menos espacio vertical y no divida el texto. */
+.rescueButton {
     width: 100%;
-    padding: 8px 12px;
-    font-size: 0.9rem;
+    padding: 8px 10px; /* Se reduce el padding vertical */
+    font-size: 0.85rem; /* Se reduce ligeramente la fuente */
     text-decoration: none;
+    white-space: nowrap; /* Evita que el texto se divida en dos líneas */
 }
