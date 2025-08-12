@@ -1,6 +1,6 @@
 // frontend/src/VetTabs/LinkPatientTab.jsx
-// Versión 1.2: Refactorización visual para eliminar contenedor.
-// TAREA: Se elimina la tarjeta y el título para que el componente sea modular.
+// Versión 1.3: Corrección de layout del buscador y tarjeta de resultado.
+// TAREA: Se ajusta el JSX para que el botón de solicitar vínculo ocupe una nueva fila.
 
 import { useState } from 'react';
 import { auth } from '../firebase';
@@ -43,18 +43,25 @@ const PetSearchResult = ({ pet }) => {
   return (
     <>
       <div className={styles.petResultCard}>
-        <img
-          src={pet.petPictureUrl || 'https://placehold.co/150x150/E2E8F0/4A5568?text=🐾'}
-          alt={pet.name}
-          className={styles.petImage}
-        />
-        <div className={styles.petInfo}>
-          <h4>{pet.name}</h4>
-          <p>{pet.breed || 'Raza no especificada'}</p>
+        {/* --- ESTRUCTURA MODIFICADA --- */}
+        {/* El contenido principal de la tarjeta ahora está en su propio div */}
+        <div className={styles.petResultContent}>
+            <img
+              src={pet.petPictureUrl || 'https://placehold.co/150x150/E2E8F0/4A5568?text=🐾'}
+              alt={pet.name}
+              className={styles.petImage}
+            />
+            <div className={styles.petInfo}>
+              <h4>{pet.name}</h4>
+              <p>{pet.breed || 'Raza no especificada'}</p>
+            </div>
         </div>
-        <div style={{ marginLeft: 'auto' }}>
+        {/* El botón de acción ahora está fuera del contenedor flex principal para ocupar su propia fila */}
+        <div className={styles.petResultActions}>
           {requestSent ? (
-            <p style={{display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--success-green)'}}><CheckCircle size={20}/> Solicitud Enviada</p>
+            <div className={styles.requestSentIndicator}>
+              <CheckCircle size={20}/> Solicitud Enviada
+            </div>
           ) : (
             <button 
               className={`${sharedStyles.button} ${sharedStyles.primary}`} 
@@ -106,8 +113,6 @@ function LinkPatientTab() {
     }
   };
   
-  // --- ESTRUCTURA MODIFICADA ---
-  // Se elimina el div contenedor principal y el h3.
   return (
     <div>
       <form onSubmit={handleSearch} className={styles.searchForm}>
