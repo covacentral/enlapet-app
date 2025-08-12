@@ -1,6 +1,5 @@
 // frontend/src/ProfileLayout.jsx
-// Versión: 3.8 - Ajuste final para pasar props de mascotas a UserProfilePage
-// TAREA: Se pasa la lista de mascotas del usuario a la página de perfiles.
+// Versión 3.9: Pasa userProfile al VetDashboardPage
 
 import { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
@@ -27,6 +26,7 @@ import BottomNavBar from './BottomNavBar.jsx';
 import CreatePostModal from './CreatePostModal.jsx';
 import MainHeader from './MainHeader.jsx';
 import PostDetailModal from './PostDetailModal.jsx';
+import PatientDetailModal from './PatientDetailModal.jsx';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -130,12 +130,11 @@ function ProfileLayout({ user }) {
           <Route path="pets" element={<PetsTab user={user} initialPets={pets} onPetsUpdate={fetchCoreData} />} />
           <Route path="settings" element={<SettingsTab user={user} userProfile={userProfile} onProfileUpdate={fetchCoreData} />} />
           <Route path="pet/:petId" element={<PetSocialProfile user={user} userProfile={userProfile} pets={pets} onUpdate={fetchCoreData} />} />
+          <Route path="user/:userId" element={<UserProfilePage pets={pets} />} />
+          <Route path="notifications/post/:postId" element={<NotificationsPage onMarkAsRead={handleMarkAsRead} />} />
           
           {/* --- LÍNEA MODIFICADA --- */}
-          <Route path="user/:userId" element={<UserProfilePage pets={pets} />} />
-
-          <Route path="notifications/post/:postId" element={<NotificationsPage onMarkAsRead={handleMarkAsRead} />} />
-          <Route path="vet-panel" element={<VetDashboardPage />} />
+          <Route path="vet-panel" element={<VetDashboardPage userProfile={userProfile} />} />
         </Routes>
       </main>
 
