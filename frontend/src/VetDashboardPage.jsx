@@ -1,6 +1,6 @@
 // frontend/src/VetDashboardPage.jsx
-// Versión 2.1: Refactorización visual de la pestaña "Agenda".
-// TAREA: Se eleva el componente de citas y se ajusta el título para optimizar el layout.
+// Versión 2.2: Refactorización visual de la pestaña "Pacientes".
+// TAREA: Se eleva el componente de búsqueda de pacientes para optimizar el layout.
 
 import React, { useState } from 'react';
 
@@ -14,7 +14,7 @@ import ManageScheduleTab from './VetTabs/ManageScheduleTab.jsx';
 import AppointmentsTab from './AppointmentsTab.jsx';
 
 function VetDashboardPage({ userProfile }) {
-  const [activeTab, setActiveTab] = useState('schedule'); // Cambiado para enfocar nuestro trabajo actual
+  const [activeTab, setActiveTab] = useState('patients'); // Cambiado para enfocar nuestro trabajo actual
 
   // El contenido de cada pestaña ahora se define aquí
   const renderActiveTab = () => {
@@ -22,7 +22,12 @@ function VetDashboardPage({ userProfile }) {
       case 'patients':
         return (
           <>
+            {/* --- LÍNEAS MODIFICADAS --- */}
+            {/* 1. El título del buscador ahora es responsabilidad de esta página. */}
+            {/* 2. El componente LinkPatientTab ya no está dentro de un div, permitiéndole usar el espacio. */}
+            <h3>Buscar Paciente por EnlaPet ID (EPID)</h3>
             <LinkPatientTab />
+
             <div style={{marginTop: '2rem'}}>
               <h3>Mis Pacientes Vinculados</h3>
               <MyPatientsTab />
@@ -33,9 +38,6 @@ function VetDashboardPage({ userProfile }) {
         return (
             <>
                 <ManageScheduleTab />
-                {/* --- LÍNEAS MODIFICADAS --- */}
-                {/* 1. El título ahora es responsabilidad de esta página. */}
-                {/* 2. Se elimina el div contenedor para que AppointmentsTab ocupe el ancho completo. */}
                 <div style={{marginTop: '2rem'}}>
                     <h3>Mi Agenda de Citas</h3>
                     <AppointmentsTab userProfile={userProfile} />

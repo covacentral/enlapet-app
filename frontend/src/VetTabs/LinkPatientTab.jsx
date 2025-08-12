@@ -1,5 +1,6 @@
 // frontend/src/VetTabs/LinkPatientTab.jsx
-// Versión 1.1: Adapta el botón de búsqueda para móviles.
+// Versión 1.2: Refactorización visual para eliminar contenedor.
+// TAREA: Se elimina la tarjeta y el título para que el componente sea modular.
 
 import { useState } from 'react';
 import { auth } from '../firebase';
@@ -104,10 +105,11 @@ function LinkPatientTab() {
       setIsLoading(false);
     }
   };
-
+  
+  // --- ESTRUCTURA MODIFICADA ---
+  // Se elimina el div contenedor principal y el h3.
   return (
-    <div className={styles.container}>
-      <h3>Buscar Paciente por EnlaPet ID (EPID)</h3>
+    <div>
       <form onSubmit={handleSearch} className={styles.searchForm}>
         <input
           type="text"
@@ -117,7 +119,6 @@ function LinkPatientTab() {
           className={styles.searchInput}
           maxLength="6"
         />
-        {/* --- LÍNEA MODIFICADA --- */}
         <button type="submit" className={`${sharedStyles.button} ${sharedStyles.primary} ${styles.searchButton}`} disabled={isLoading}>
           <Search size={18}/> 
           <span className={styles.buttonText}>{isLoading ? '...' : 'Buscar'}</span>
