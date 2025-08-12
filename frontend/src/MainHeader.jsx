@@ -1,71 +1,63 @@
 // frontend/src/MainHeader.jsx
-// Versión 1.3 - Añade enlace condicional al Panel de Veterinario
-// TAREA: Se muestra un botón de acceso al panel solo si el usuario es un veterinario verificado.
+// Versión 2.0: Refactorizado a un controlador de vistas dinámico.
+// TAREA: Implementa la lógica para alternar entre la vista por defecto y la de gestión.
 
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { auth } from './firebase';
-import { Plus, Stethoscope } from 'lucide-react'; // <-- 1. Importamos un nuevo ícono
-
+import React, { useState, useRef, useEffect } from 'react';
 import styles from './MainHeader.module.css';
-import sharedStyles from './shared.module.css'; // <-- 2. Importamos estilos compartidos para el botón
 
-const PetBubble = ({ pet }) => (
-  <Link to={`/dashboard/pet/${pet.id}`} className={styles.petBubble} title={pet.name}>
-    {pet.petPictureUrl ? <img src={pet.petPictureUrl} alt={pet.name} /> : <span>🐾</span>}
-  </Link>
-);
-
-const AddPetBubble = () => (
-    <Link to="/dashboard/pets" className={styles.addPetBubble} title="Añadir o gestionar mascotas">
-        <Plus size={32} color="var(--text-secondary)" />
-    </Link>
-);
+// 1. Importamos los nuevos componentes que hemos creado
+import CornerButton from './components/CornerButton';
+import DefaultHeaderView from './components/DefaultHeaderView';
+import ManagementHeaderView from './components/ManagementHeaderView';
 
 function MainHeader({ userProfile, pets }) {
+  // 2. Estado para controlar la vista activa ('default' o 'management')
+  const [viewMode, setViewMode] = useState('default');
+  
+  // Hooks para medir la altura de cada vista y animar el contenedor
+  const [minHeight, setMinHeight] = useState('auto');
+  const defaultRef = useRef(null);
+  const managementRef = useRef(null);
+
+  useEffect(() => {
+    const defaultHeight = defaultRef.current?.offsetHeight || 0;
+    const managementHeight = managementRef.current?.offsetHeight || 0;
+    
+    // Asigna la altura del contenedor basándose en la vista activa para una transición suave
+    if (viewMode === 'default') {
+        // Añadimos un poco de padding extra para que no se sienta apretado
+        if (defaultHeight > 0) setMinHeight(`${defaultHeight + 50}px`);
+    } else {
+        if (managementHeight > 0) setMinHeight(`${managementHeight + 50}px`);
+    }
+  }, [viewMode, userProfile, pets]); // Se recalcula si las props cambian
+
   if (!userProfile) {
     return null;
   }
-  
-  const currentUserId = auth.currentUser?.uid;
-
-  // --- 3. Lógica para determinar si mostrar el botón del panel ---
-  const isVerifiedVet = userProfile.verification?.status === 'verified' && userProfile.verification?.type === 'vet';
 
   return (
-    <header className={styles.header}>
-      <div className={styles.userProfileSection}>
-        <Link to={`/dashboard/user/${currentUserId}`} className={styles.userProfileLink}>
-            <h2 className={styles.userName}>{userProfile.name}</h2>
-            <div className={styles.profilePictureContainer}>
-              {userProfile.profilePictureUrl ? (
-                <img src={userProfile.profilePictureUrl} alt="Perfil" className={styles.profilePicture} />
-              ) : (
-                <div className={styles.profilePicturePlaceholder}>👤</div>
-              )}
-            </div>
-            <p className={styles.profileBio}>{userProfile.bio || 'Sin biografía.'}</p>
-        </Link>
-        
-        {/* --- 4. Renderizado condicional del botón --- */}
-        {isVerifiedVet && (
-            <Link to="/dashboard/vet-panel" className={`${sharedStyles.button} ${sharedStyles.primary}`} style={{marginTop: '15px', textDecoration: 'none'}}>
-                <Stethoscope size={18} />
-                Panel Veterinario
-            </Link>
-        )}
+    // 3. El header ahora es un contenedor relativo con una altura mínima dinámica
+    <header 
+        className={styles.header}
+        style={{ minHeight: minHeight, transition: 'min-height 0.4s ease-in-out' }}
+    >
+      {/* Contenedor para la Vista por Defecto */}
+      <div ref={defaultRef} className={`${styles.viewWrapper} ${viewMode !== 'default' ? styles.hidden : ''}`}>
+        <DefaultHeaderView userProfile={userProfile} pets={pets} />
       </div>
-      <div className={styles.userPetsSection}>
-        <h1 className={styles.brandTitle}>enlapet</h1>
-        <div className={styles.petBubblesContainer}>
-          {pets && pets.length > 0 ? (
-            pets.map(pet => <PetBubble key={pet.id} pet={pet} />)
-          ) : (
-            <p className={styles.noPetsHeader}>Añade tu primera mascota</p>
-          )}
-          <AddPetBubble />
-        </div>
+
+      {/* Contenedor para la Nueva Vista de Gestión */}
+      <div ref={managementRef} className={`${styles.viewWrapper} ${viewMode !== 'management' ? styles.hidden : ''}`}>
+        <ManagementHeaderView pets={pets} />
       </div>
+      
+      {/* 4. El Botón de Esquina controla el cambio de estado */}
+      <CornerButton 
+        position="bottomRight"
+        onClick={() => setViewMode(prev => prev === 'default' ? 'management' : 'default')}
+        iconName={viewMode === 'default' ? 'LayoutGrid' : 'X'}
+      />
     </header>
   );
 }
