@@ -1,6 +1,6 @@
 // frontend/src/PetsTab.jsx
 // Versión 2.5: Unifica la terminología del perfil público a "perfil de rescate".
-// TAREA: Se actualiza el texto del botón para mayor claridad del usuario.
+// TAREA: Se actualiza el texto del botón y se corrige el enlace al perfil público.
 
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
@@ -55,8 +55,9 @@ function PetCard({ pet, onEdit, onManageLink }) {
             {isProfileIncomplete && <UpdatePrompt />}
         </button>
         <div className={styles.actions}>
-           {/* --- LÍNEA MODIFICADA --- */}
-           <Link to={`/dashboard/pet/${pet.id}`} className={`${sharedStyles.button} ${sharedStyles.primary}`} style={{width: '100%', textDecoration: 'none'}}>Ver perfil de rescate</Link>
+           {/* --- LÍNEA CORREGIDA --- */}
+           {/* El 'to' ahora apunta a la ruta pública correcta: /pet/:petId */}
+           <Link to={`/pet/${pet.id}`} className={`${sharedStyles.button} ${sharedStyles.primary}`} style={{width: '100%', textDecoration: 'none'}}>Ver perfil de rescate</Link>
         </div>
       </div>
       {pendingRequests.length > 0 && (
