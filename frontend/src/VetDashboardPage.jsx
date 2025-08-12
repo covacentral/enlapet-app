@@ -1,5 +1,6 @@
 // frontend/src/VetDashboardPage.jsx
-// Versión 2.0: Reestructurado con pestañas consolidadas "Pacientes" y "Agenda".
+// Versión 2.1: Refactorización visual de la pestaña "Agenda".
+// TAREA: Se eleva el componente de citas y se ajusta el título para optimizar el layout.
 
 import React, { useState } from 'react';
 
@@ -10,10 +11,10 @@ import sharedStyles from './shared.module.css';
 import LinkPatientTab from './VetTabs/LinkPatientTab.jsx';
 import MyPatientsTab from './VetTabs/MyPatientsTab.jsx';
 import ManageScheduleTab from './VetTabs/ManageScheduleTab.jsx';
-import AppointmentsTab from './AppointmentsTab.jsx'; // Necesitamos este para la agenda
+import AppointmentsTab from './AppointmentsTab.jsx';
 
-function VetDashboardPage({ userProfile }) { // Pasamos userProfile para la AppointmentsTab
-  const [activeTab, setActiveTab] = useState('patients');
+function VetDashboardPage({ userProfile }) {
+  const [activeTab, setActiveTab] = useState('schedule'); // Cambiado para enfocar nuestro trabajo actual
 
   // El contenido de cada pestaña ahora se define aquí
   const renderActiveTab = () => {
@@ -21,11 +22,9 @@ function VetDashboardPage({ userProfile }) { // Pasamos userProfile para la Appo
       case 'patients':
         return (
           <>
-            {/* El buscador de pacientes va primero */}
             <LinkPatientTab />
             <div style={{marginTop: '2rem'}}>
               <h3>Mis Pacientes Vinculados</h3>
-              {/* La lista de pacientes va debajo */}
               <MyPatientsTab />
             </div>
           </>
@@ -33,11 +32,12 @@ function VetDashboardPage({ userProfile }) { // Pasamos userProfile para la Appo
       case 'schedule':
         return (
             <>
-                {/* El gestor de horario irá aquí, modificado para ser desplegable */}
                 <ManageScheduleTab />
+                {/* --- LÍNEAS MODIFICADAS --- */}
+                {/* 1. El título ahora es responsabilidad de esta página. */}
+                {/* 2. Se elimina el div contenedor para que AppointmentsTab ocupe el ancho completo. */}
                 <div style={{marginTop: '2rem'}}>
-                    <h3>Próximas Citas</h3>
-                    {/* La lista de citas va debajo */}
+                    <h3>Mi Agenda de Citas</h3>
                     <AppointmentsTab userProfile={userProfile} />
                 </div>
             </>
@@ -60,7 +60,6 @@ function VetDashboardPage({ userProfile }) { // Pasamos userProfile para la Appo
         <h2 className={sharedStyles.tabTitle} style={{ marginBottom: 0 }}>Panel de Veterinario</h2>
       </div>
 
-      {/* Navegación de Pestañas Actualizada */}
       <div className={sharedStyles.modalTabs}>
         <button 
           type="button" 

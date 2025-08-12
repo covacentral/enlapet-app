@@ -1,5 +1,6 @@
 // frontend/src/AppointmentsTab.jsx
-// Versión 1.3: Centraliza la lógica de actualización de estado.
+// Versión 1.4: Refactorización visual para eliminar contenedor propio.
+// TAREA: Se elimina el contenedor y el título para que el componente sea modular y se integre directamente en el layout del panel de veterinario.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { auth } from './firebase';
@@ -44,7 +45,6 @@ function AppointmentsTab({ userProfile }) {
     fetchAppointments(true);
   }, [fetchAppointments]);
   
-  // --- 1. [NUEVO] Función centralizada para actualizar el estado ---
   const handleStatusUpdate = async (appointmentId, newStatus) => {
     try {
         const user = auth.currentUser;
@@ -59,11 +59,9 @@ function AppointmentsTab({ userProfile }) {
 
         if (!response.ok) throw new Error((await response.json()).message);
         
-        // Si la API responde con éxito, refrescamos la lista de citas sin mostrar el spinner de carga
         fetchAppointments(false);
 
     } catch (err) {
-        // En un futuro, podríamos mostrar este error de forma más elegante
         console.error("Error al actualizar la cita:", err);
         alert(`Error: ${err.message}`);
     }
@@ -72,40 +70,33 @@ function AppointmentsTab({ userProfile }) {
   const isVet = userProfile?.verification?.status === 'verified' && userProfile?.verification?.type === 'vet';
   const userType = isVet ? 'vet' : 'user';
 
+  // --- ESTRUCTURA MODIFICADA ---
+  // Se elimina el div contenedor y el header. El componente ahora solo renderiza la lista.
   return (
-    <div className={styles.container}>
-      <div className={styles.header}>
-        <h2 className={sharedStyles.tabTitle} style={{ marginBottom: 0 }}>
-            {isVet ? 'Mi Agenda de Citas' : 'Mis Citas'}
-        </h2>
-      </div>
+    <div className={styles.appointmentList}>
+      {isLoading && <LoadingComponent text="Cargando citas..." />}
+      {error && <p className={sharedStyles.responseMessageError}>{error}</p>}
+      
+      {!isLoading && !error && appointments.length === 0 && (
+          <div className={sharedStyles.emptyStateMessage}>
+              <h3>No tienes próximas citas.</h3>
+              <p>
+                  {isVet 
+                      ? 'Las citas que te soliciten tus pacientes aparecerán aquí.' 
+                      : 'Agenda una nueva consulta desde el perfil de un veterinario verificado.'
+                  }
+              </p>
+          </div>
+      )}
 
-      <div className={styles.appointmentList}>
-        {isLoading && <LoadingComponent text="Cargando citas..." />}
-        {error && <p className={sharedStyles.responseMessageError}>{error}</p>}
-        
-        {!isLoading && !error && appointments.length === 0 && (
-            <div className={sharedStyles.emptyStateMessage}>
-                <h3>No tienes próximas citas.</h3>
-                <p>
-                    {isVet 
-                        ? 'Las citas que te soliciten tus pacientes aparecerán aquí.' 
-                        : 'Agenda una nueva consulta desde el perfil de un veterinario verificado.'
-                    }
-                </p>
-            </div>
-        )}
-
-        {!isLoading && appointments.length > 0 && appointments.map(app => (
-            <AppointmentCard 
-                key={app.id} 
-                appointment={app} 
-                userType={userType} 
-                // 2. Pasamos la nueva función como prop
-                onStatusUpdate={handleStatusUpdate}
-            />
-        ))}
-      </div>
+      {!isLoading && appointments.length > 0 && appointments.map(app => (
+          <AppointmentCard 
+              key={app.id} 
+              appointment={app} 
+              userType={userType} 
+              onStatusUpdate={handleStatusUpdate}
+          />
+      ))}
     </div>
   );
 }
