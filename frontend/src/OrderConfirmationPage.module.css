@@ -1,0 +1,57 @@
+/* frontend/src/OrderConfirmationPage.module.css */
+/* Estilos para la página de confirmación de la orden. */
+
+.container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 0;
+}
+
+.card {
+    background-color: var(--background-light);
+    border: 1px solid var(--border-color);
+    border-radius: 15px;
+    padding: 2.5rem;
+    max-width: 500px;
+    width: 100%;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.title {
+    font-size: 2rem;
+    font-weight: 800;
+    margin: 0.5rem 0 0 0;
+}
+
+.message {
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+}
+
+.orderId {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    background-color: var(--background-dark);
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-bottom: 1.5rem;
+}
+
+/* Estilos de los íconos por estado */
+.iconSuccess {
+    color: var(--success-green);
+}
+
+.iconRejected {
+    color: var(--error-red);
+}
+
+.iconPending {
+    color: var(--warning-yellow);
+}

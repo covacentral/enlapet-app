@@ -1,6 +1,5 @@
 // frontend/src/SettingsTab.jsx
-// Versión: 2.9 - CORRECCIÓN LÓGICA FINAL
-// TAREA: Se corrige el subcomponente VerificationStatus para que se muestre correctamente en usuarios sin historial de verificación.
+// Versión: 3.0 - Integra la pestaña de Historial de Órdenes.
 
 import { useState, useEffect, useRef } from 'react';
 import { auth } from './firebase';
@@ -8,16 +7,14 @@ import { signOut } from "firebase/auth";
 import { ShieldCheck, Clock, ShieldX } from 'lucide-react';
 
 import VerificationModal from './VerificationModal';
+import MyOrdersTab from './MyOrdersTab'; // <-- 1. IMPORTAMOS el nuevo componente
 import styles from './SettingsTab.module.css';
 import sharedStyles from './shared.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-// --- SUBCOMPONENTES (CON LÍNEA CORREGIDA) ---
+// --- SUBCOMPONENTES (sin cambios) ---
 const VerificationStatus = ({ verification, onOpenModal }) => {
-  // --- LÍNEA CORREGIDA ---
-  // Antes: if (!verification) return null;
-  // Ahora: Asignamos un valor por defecto si 'verification' no existe. Esto asegura que el componente SIEMPRE se renderice.
   const verif = verification || { status: 'none', type: 'none' };
   const { status, type, rejectionReason } = verif;
 
@@ -43,7 +40,7 @@ const VerificationStatus = ({ verification, onOpenModal }) => {
           <div><strong>Solicitud Rechazada</strong><span>{rejectionReason || 'No se cumplieron los requisitos.'}</span><button className={sharedStyles.linkButton} onClick={onOpenModal}>Reintentar solicitud</button></div>
         </div>
       );
-    default: // 'none'
+    default:
       return (
         <div className={styles.statusBox}>
           <div><strong>Tu cuenta no está verificada.</strong><span>Verifica tu perfil para acceder a herramientas profesionales y generar más confianza.</span><button className={`${sharedStyles.button} ${sharedStyles.secondary}`} style={{marginTop: '10px'}} onClick={onOpenModal}>Solicitar Verificación</button></div>
@@ -52,7 +49,7 @@ const VerificationStatus = ({ verification, onOpenModal }) => {
   }
 };
 
-// --- COMPONENTE PRINCIPAL (SIN CAMBIOS) ---
+// --- COMPONENTE PRINCIPAL (MODIFICADO) ---
 function SettingsTab({ user, userProfile, onProfileUpdate }) {
   const [activeTab, setActiveTab] = useState('profile');
   const [isEditMode, setIsEditMode] = useState(false);
@@ -73,6 +70,7 @@ function SettingsTab({ user, userProfile, onProfileUpdate }) {
     if (!isEditMode) populateFields();
   }, [userProfile, isEditMode]);
 
+  // (El resto de los handlers como handleChange, handleLogout, etc. no cambian)
   const handleChange = (e) => {
     const { id, value } = e.target;
     setFormData(prev => ({ ...prev, [id]: value }));
@@ -138,6 +136,7 @@ function SettingsTab({ user, userProfile, onProfileUpdate }) {
     setMessage({ text: '', isError: false });
   };
 
+
   return (
     <>
       {isVerificationModalOpen && (
@@ -149,12 +148,16 @@ function SettingsTab({ user, userProfile, onProfileUpdate }) {
             <h2>Ajustes de la Cuenta</h2>
         </div>
         
+        {/* --- 2. AÑADIMOS la nueva pestaña de "Mis Compras" --- */}
         <div className={sharedStyles.modalTabs}>
             <button type="button" className={`${sharedStyles.modalTabButton} ${activeTab === 'profile' ? sharedStyles.active : ''}`} onClick={() => setActiveTab('profile')}>
                 Perfil Público
             </button>
+            <button type="button" className={`${sharedStyles.modalTabButton} ${activeTab === 'orders' ? sharedStyles.active : ''}`} onClick={() => setActiveTab('orders')}>
+                Mis Compras
+            </button>
             <button type="button" className={`${sharedStyles.modalTabButton} ${activeTab === 'verification' ? sharedStyles.active : ''}`} onClick={() => setActiveTab('verification')}>
-                Verificación de Cuenta
+                Verificación
             </button>
         </div>
 
@@ -162,6 +165,13 @@ function SettingsTab({ user, userProfile, onProfileUpdate }) {
           <p className={message.isError ? sharedStyles.responseMessageError : sharedStyles.responseMessageSuccess} style={{textAlign: 'center', marginTop: '1rem'}}>
             {message.text}
           </p>
+        )}
+
+        {/* --- 3. AÑADIMOS la lógica para renderizar el nuevo componente --- */}
+        {activeTab === 'orders' && (
+            <div className={styles.section}>
+                <MyOrdersTab />
+            </div>
         )}
 
         {activeTab === 'verification' && (

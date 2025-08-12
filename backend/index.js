@@ -1,6 +1,6 @@
 // backend/index.js
 // Versión Refactorizada y Corregida: Arquitectura Modular y Segura
-// Este archivo ahora actúa como el punto de entrada principal, orquestando correctamente las rutas públicas y privadas.
+// ACTUALIZACIÓN: Se añaden las rutas para el módulo de E-commerce (Órdenes y Pagos).
 
 // --- 1. CONFIGURACIÓN E IMPORTACIONES ---
 require('dotenv').config();
@@ -20,7 +20,11 @@ const notificationRoutes = require('./routes/notifications.routes');
 const reportRoutes = require('./routes/reports.routes');
 const verificationRoutes = require('./routes/verification.routes');
 const vetRoutes = require('./routes/vet.routes');
-const appointmentRoutes = require('./routes/appointment.routes'); // <-- 1. IMPORTAMOS las nuevas rutas de citas
+const appointmentRoutes = require('./routes/appointment.routes');
+
+// --- NUEVO: Importaciones para el módulo de E-commerce ---
+const orderRoutes = require('./routes/order.routes');
+const paymentRoutes = require('./routes/payment.routes');
 
 // --- 2. INICIALIZACIÓN DE LA APP ---
 const app = express();
@@ -45,12 +49,15 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// --- 4. DEFINICIÓN DE RUTAS (ORDEN CORREGIDO) ---
+// --- 4. DEFINICIÓN DE RUTAS ---
 
 // A. Rutas Públicas (No requieren autenticación)
-app.get('/', (req, res) => res.json({ message: "¡Bienvenido a la API de EnlaPet! v1.4 - Módulo de Citas" }));
+app.get('/', (req, res) => res.json({ message: "¡Bienvenido a la API de EnlaPet! v1.5 - Módulo de E-commerce" }));
 app.use('/api/auth', authRoutes);
 app.use('/api', publicRoutes);
+// El webhook de ePayco se registra aquí para que sea público
+app.use('/api', paymentRoutes);
+
 
 // B. Middleware de Autenticación
 // A partir de este punto, TODAS las rutas subsiguientes requerirán un token.
@@ -66,7 +73,12 @@ app.use('/api', notificationRoutes);
 app.use('/api', reportRoutes);
 app.use('/api', verificationRoutes);
 app.use('/api', vetRoutes);
-app.use('/api', appointmentRoutes); // <-- 2. REGISTRAMOS el nuevo enrutador de citas
+app.use('/api', appointmentRoutes);
+// --- NUEVO: Rutas protegidas de E-commerce ---
+app.use('/api', orderRoutes);
+// La ruta para crear la transacción también se registra aquí para protegerla
+app.use('/api', paymentRoutes);
+
 
 // --- 5. INICIAR SERVIDOR ---
-app.listen(PORT, () => console.log(`Servidor modularizado y corregido corriendo en el puerto ${PORT}`));
+app.listen(PORT, () => console.log(`Servidor con módulo de e-commerce corriendo en el puerto ${PORT}`));
