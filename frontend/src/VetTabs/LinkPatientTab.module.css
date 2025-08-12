@@ -1,5 +1,5 @@
 /* frontend/src/VetTabs/LinkPatientTab.module.css */
-/* Versión 1.1: Adaptado para móviles. */
+/* Versión 1.2: Ajuste final de ancho para el input en móviles. */
 
 .container {
     width: 100%;
@@ -17,10 +17,13 @@
 .searchForm {
     display: flex;
     gap: 10px;
+    align-items: center; /* Alineamos verticalmente */
 }
 
 .searchInput {
     flex-grow: 1;
+    /* --- LÍNEA MODIFICADA --- */
+    max-width: 200px; /* Limitamos el ancho máximo del input */
     padding: 12px;
     border-radius: 8px;
     background-color: var(--background-light);
@@ -34,16 +37,13 @@
     text-transform: none;
 }
 
-/* --- [NUEVO] Estilos para el botón de búsqueda --- */
 .searchButton {
-    /* Hereda los estilos base del botón compartido */
+    flex-shrink: 0; /* Evita que el botón se encoja */
 }
 
 .buttonText {
-    display: none; /* Ocultamos el texto por defecto */
+    display: none;
 }
-/* --- Fin de nuevos estilos --- */
-
 
 .resultsSection {
     margin-top: 2rem;
@@ -77,9 +77,12 @@
     color: var(--text-secondary);
 }
 
-/* Media Query para pantallas anchas (PC) */
 @media (min-width: 500px) {
     .buttonText {
-        display: inline; /* Mostramos el texto "Buscar" en pantallas anchas */
+        display: inline;
+    }
+    /* En pantallas grandes, permitimos que el input crezca más */
+    .searchInput {
+        max-width: none;
     }
 }
