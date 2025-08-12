@@ -1,5 +1,6 @@
 // frontend/src/ProfileLayout.jsx
-// Versión 3.9: Pasa userProfile al VetDashboardPage
+// Versión 4.0: Añade blindaje contra datos nulos en la lista de mascotas.
+// TAREA: Se asegura que la prop 'pets' sea siempre un array para prevenir crashes.
 
 import { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
@@ -51,9 +52,15 @@ function ProfileLayout({ user }) {
       const profileData = await profileResponse.json();
       const petsData = await petsResponse.json();
       setUserProfile(profileData);
-      setPets(petsData);
+      
+      // --- LÍNEA CORREGIDA ---
+      // Nos aseguramos de que 'pets' sea siempre un array. Si la API devuelve null o undefined,
+      // lo convertimos en un array vacío para evitar errores en los componentes hijos.
+      setPets(Array.isArray(petsData) ? petsData : []);
+
     } catch (error) {
       console.error("Error fetching core data:", error);
+      setPets([]); // En caso de error, también aseguramos que sea un array vacío.
     }
   }, [user]);
 
@@ -133,7 +140,6 @@ function ProfileLayout({ user }) {
           <Route path="user/:userId" element={<UserProfilePage pets={pets} />} />
           <Route path="notifications/post/:postId" element={<NotificationsPage onMarkAsRead={handleMarkAsRead} />} />
           
-          {/* --- LÍNEA MODIFICADA --- */}
           <Route path="vet-panel" element={<VetDashboardPage userProfile={userProfile} />} />
         </Routes>
       </main>

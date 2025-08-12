@@ -1,6 +1,6 @@
 // frontend/src/PetsTab.jsx
-// Versión 2.5: Unifica la terminología del perfil público a "perfil de rescate".
-// TAREA: Se actualiza el texto del botón y se corrige el enlace al perfil público.
+// Versión 2.7: Añade blindaje contra props nulas o indefinidas.
+// TAREA: Se asegura que el estado local 'pets' sea siempre un array para máxima robustez.
 
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
@@ -39,7 +39,12 @@ const VetRequest = ({ request, onManage }) => {
 
 function PetCard({ pet, onEdit, onManageLink }) {
   const isProfileIncomplete = !pet.location?.city || !pet.healthRecord?.birthDate;
-  const pendingRequests = pet.linkedVets?.filter(link => link.status === 'pending') || [];
+  
+  // --- LÍNEA CORREGIDA (BLINDAJE) ---
+  // Nos aseguramos de que 'linkedVets' sea un array antes de intentar filtrarlo.
+  const pendingRequests = Array.isArray(pet.linkedVets) 
+    ? pet.linkedVets.filter(link => link.status === 'pending') 
+    : [];
 
   return (
     <div className={styles.petCard}>
@@ -55,8 +60,6 @@ function PetCard({ pet, onEdit, onManageLink }) {
             {isProfileIncomplete && <UpdatePrompt />}
         </button>
         <div className={styles.actions}>
-           {/* --- LÍNEA CORREGIDA --- */}
-           {/* El 'to' ahora apunta a la ruta pública correcta: /pet/:petId */}
            <Link to={`/pet/${pet.id}`} className={`${sharedStyles.button} ${sharedStyles.primary}`} style={{width: '100%', textDecoration: 'none'}}>Ver perfil de rescate</Link>
         </div>
       </div>
@@ -69,7 +72,9 @@ function PetCard({ pet, onEdit, onManageLink }) {
 
 
 function PetsTab({ user, initialPets, onPetsUpdate }) {
-  const [pets, setPets] = useState(initialPets);
+  // --- LÍNEA CORREGIDA (BLINDAJE) ---
+  // Garantizamos que el estado 'pets' se inicialice como un array, incluso si 'initialPets' no lo es.
+  const [pets, setPets] = useState(Array.isArray(initialPets) ? initialPets : []);
   const [message, setMessage] = useState('');
   const [petName, setPetName] = useState('');
   const [petBreed, setPetBreed] = useState('');
@@ -79,7 +84,8 @@ function PetsTab({ user, initialPets, onPetsUpdate }) {
   const [selectedPet, setSelectedPet] = useState(null);
 
   useEffect(() => {
-    setPets(initialPets);
+    // Se asegura de que cualquier actualización a las props también sea un array.
+    setPets(Array.isArray(initialPets) ? initialPets : []);
   }, [initialPets]);
 
   const handleAddPet = async (e) => {
