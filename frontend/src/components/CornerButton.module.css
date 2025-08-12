@@ -1,0 +1,61 @@
+/* frontend/src/components/CornerButton.module.css */
+/* Estilos para el botón de esquina dinámico del MainHeader. */
+
+.cornerButton {
+    position: absolute;
+    width: 80px;  /* Aumentamos el tamaño para mejor alcance en móviles */
+    height: 80px;
+    background-color: rgba(0, 187, 167, 0.2); /* Un fondo sutil para visibilidad */
+    color: var(--primary-accent);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.3s ease;
+    z-index: 10;
+}
+
+.cornerButton:hover {
+    background-color: var(--primary-accent);
+    color: var(--brand-cream);
+}
+
+/* --- Posiciones y Formas Triangulares con clip-path --- */
+
+.bottomRight {
+    bottom: 0;
+    right: 0;
+    clip-path: polygon(100% 0, 100% 100%, 0 100%);
+    /* Alineamos el ícono dentro del triángulo */
+    padding: 0 0 16px 16px; 
+    justify-content: flex-end;
+    align-items: flex-end;
+}
+
+.bottomLeft {
+    bottom: 0;
+    left: 0;
+    clip-path: polygon(0 0, 100% 100%, 0 100%);
+    padding: 0 16px 16px 0;
+    justify-content: flex-start;
+    align-items: flex-end;
+}
+
+.topRight {
+    top: 0;
+    right: 0;
+    clip-path: polygon(100% 100%, 0 0, 100% 0);
+    padding: 16px 0 0 16px;
+    justify-content: flex-end;
+    align-items: flex-start;
+}
+
+.topLeft {
+    top: 0;
+    left: 0;
+    clip-path: polygon(0 100%, 0 0, 100% 0);
+    padding: 16px 16px 0 0;
+    justify-content: flex-start;
+    align-items: flex-start;
+}

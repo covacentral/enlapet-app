@@ -1,0 +1,72 @@
+/* frontend/src/components/PetManagementCard.module.css */
+/* Estilos para la tarjeta de mascota en la vista de gestión del MainHeader. */
+
+.card {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    width: 180px; /* Ancho fijo para consistencia en el carrusel */
+    background-color: var(--background-dark); /* Un poco más oscuro que el fondo del header */
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+}
+
+.petImage {
+    width: 100%;
+    height: 180px; /* Formato 1:1 */
+    object-fit: cover;
+}
+
+.petInfo {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1; /* Permite que el footer se alinee abajo */
+    text-align: left;
+}
+
+.petName {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.petBreed {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin: 0 0 10px 0;
+}
+
+.incompleteProfileWarning {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem; 
+    color: var(--warning-yellow);
+    padding: 4px 8px; 
+    background-color: rgba(245, 158, 11, 0.1);
+    border-radius: 6px; 
+    margin-bottom: 10px;
+}
+
+.cardFooter {
+    margin-top: auto; /* Empuja el botón hacia abajo */
+}
+
+.cardFooter a {
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 0.9rem;
+    text-decoration: none;
+}

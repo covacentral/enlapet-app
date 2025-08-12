@@ -1,17 +1,17 @@
 // frontend/src/PetsTab.jsx
-// Versión: 2.4 - Añadido el botón de acceso a "Mis Citas"
+// Versión 2.5: Unifica la terminología del perfil público a "perfil de rescate".
+// TAREA: Se actualiza el texto del botón para mayor claridad del usuario.
 
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import PetEditModal from './PetEditModal';
-import { ClipboardList } from 'lucide-react'; // 1. Importamos el ícono
+import { ClipboardList } from 'lucide-react';
 
 import styles from './PetsTab.module.css';
 import sharedStyles from './shared.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-// ... (El subcomponente UpdatePrompt no cambia)
 const UpdatePrompt = () => (
     <div className={styles.updatePrompt}>
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
@@ -19,7 +19,6 @@ const UpdatePrompt = () => (
     </div>
 );
 
-// ... (El subcomponente VetRequest no cambia)
 const VetRequest = ({ request, onManage }) => {
     const [isLoading, setIsLoading] = useState(false);
     const handleAction = async (action) => {
@@ -38,7 +37,6 @@ const VetRequest = ({ request, onManage }) => {
     )
 }
 
-// ... (El subcomponente PetCard no cambia)
 function PetCard({ pet, onEdit, onManageLink }) {
   const isProfileIncomplete = !pet.location?.city || !pet.healthRecord?.birthDate;
   const pendingRequests = pet.linkedVets?.filter(link => link.status === 'pending') || [];
@@ -57,7 +55,8 @@ function PetCard({ pet, onEdit, onManageLink }) {
             {isProfileIncomplete && <UpdatePrompt />}
         </button>
         <div className={styles.actions}>
-           <Link to={`/dashboard/pet/${pet.id}`} className={`${sharedStyles.button} ${sharedStyles.primary}`} style={{width: '100%', textDecoration: 'none'}}>Ver Perfil Público</Link>
+           {/* --- LÍNEA MODIFICADA --- */}
+           <Link to={`/dashboard/pet/${pet.id}`} className={`${sharedStyles.button} ${sharedStyles.primary}`} style={{width: '100%', textDecoration: 'none'}}>Ver perfil de rescate</Link>
         </div>
       </div>
       {pendingRequests.length > 0 && (
@@ -151,7 +150,6 @@ function PetsTab({ user, initialPets, onPetsUpdate }) {
           {message && <p className={sharedStyles.responseMessage}>{message}</p>}
         </div>
 
-        {/* --- 2. [NUEVO] Botón de acceso a Mis Citas --- */}
         <div className={styles.appointmentsButtonContainer}>
             <Link to="/dashboard/appointments" className={`${sharedStyles.button} ${sharedStyles.secondary}`}>
                 <ClipboardList size={20} />
