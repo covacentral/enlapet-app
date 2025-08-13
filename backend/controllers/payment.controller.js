@@ -1,6 +1,6 @@
 // backend/controllers/payment.controller.js
 // Lógica de negocio para interactuar con la pasarela de pagos ePayco.
-// VERSIÓN CORREGIDA: Añade el campo 'extra1' al payload de la transacción.
+// VERSIÓN FINAL: Utiliza el método checkout.create para redirigir al usuario a la pasarela.
 
 const epayco = require('epayco-sdk-node');
 const { db } = require('../config/firebase');
@@ -22,7 +22,6 @@ if (epaycoPublicKey && epaycoPrivateKey) {
   console.error('¡ERROR CRÍTICO DE CONFIGURACIÓN! Las llaves de API de ePayco no están definidas en las variables de entorno. El módulo de pagos estará inactivo.');
   epaycoClient = null;
 }
-
 
 /**
  * Crea una transacción en ePayco y devuelve los datos para el checkout.
@@ -53,8 +52,10 @@ const createPaymentTransaction = async (req, res) => {
         return res.status(409).json({ message: 'Esta orden ya ha sido procesada.' });
     }
 
+    // --- PAYLOAD CORREGIDO PARA EL CHECKOUT ESTÁNDAR ---
     const paymentData = {
-      name: "Compra Collar EnlaPet",
+      // Obligatorios
+      name: "Compra Collar Inteligente EnlaPet",
       description: `Orden de compra #${orderId}`,
       invoice: orderId,
       currency: "cop",
@@ -63,33 +64,39 @@ const createPaymentTransaction = async (req, res) => {
       tax: "0",
       country: "co",
       lang: "es",
-      external: "false",
+
+      // URLs
+      external: "false", // Usaremos el checkout estándar de ePayco
       confirmation: `${process.env.API_URL}/api/payments/webhook`,
       response: `${process.env.FRONTEND_URL}/dashboard/order-confirmation`,
+
+      // Datos del comprador
       name_billing: orderData.shippingAddress.fullName || userName,
       email_billing: userEmail,
       mobilephone_billing: orderData.shippingAddress.phone,
       address_billing: orderData.shippingAddress.addressLine1,
       
-      // --- LÍNEA CORREGIDA ---
-      // Añadimos el ID de nuestra orden como dato extra para la confirmación.
+      // Dato extra para nuestra referencia en el webhook
       extra1: orderId,
     };
 
-    const charge = await epaycoClient.charge.create(paymentData);
+    // --- MÉTODO CORREGIDO: Usamos checkout.create en lugar de charge.create ---
+    const checkout = await epaycoClient.checkout.create(paymentData);
 
-    if (!charge.success || !charge.data || !charge.data.ref_payco) {
-      console.error('Respuesta de ePayco inválida:', charge);
-      throw new Error(charge.data?.description || 'Error validando datos con ePayco.');
+    if (!checkout.success || !checkout.data || !checkout.data.payco_id) {
+        console.error('Respuesta de ePayco (checkout) inválida:', checkout);
+        throw new Error(checkout.data?.description || 'Los datos son erroneos o son requeridos por favor compruebe.');
     }
     
+    // El ID de la transacción ahora es payco_id
     await orderRef.update({
-        'paymentDetails.transactionId': charge.data.ref_payco,
+        'paymentDetails.transactionId': checkout.data.payco_id,
         status: 'awaiting_payment',
         updatedAt: new Date().toISOString()
     });
 
-    res.status(200).json({ transactionData: charge.data });
+    // En lugar de devolver url_banco, el SDK de checkout nos da la URL en el objeto principal
+    res.status(200).json({ transactionData: { url_banco: checkout.url } });
 
   } catch (error) {
     console.error(`Error en createPaymentTransaction para la orden ${orderId}:`, error);
@@ -97,18 +104,15 @@ const createPaymentTransaction = async (req, res) => {
   }
 };
 
-
-/**
- * Maneja las confirmaciones de pago (webhook) enviadas por ePayco.
- */
+// (El webhook no necesita cambios)
 const handleEpaycoWebhook = async (req, res) => {
-    // ...(El resto de la función no necesita cambios)...
     if (!epaycoClient) {
         console.error('Webhook de ePayco recibido, pero el SDK no está inicializado. Descartando.');
         return res.status(503).send('Servicio no disponible.');
     }
 
     const validationData = req.body;
+    // Para webhooks, el ID de la transacción es ref_payco
     const transactionId = validationData.x_ref_payco;
 
     try {
