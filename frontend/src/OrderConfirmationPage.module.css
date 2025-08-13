@@ -55,3 +55,15 @@
 .iconPending {
     color: var(--warning-yellow);
 }
+
+/* ... (al final de OrderConfirmationPage.module.css) ... */
+.iconLoading {
+    color: var(--text-secondary);
+    animation: spin 1.5s linear infinite;
+}
+
+@keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+}

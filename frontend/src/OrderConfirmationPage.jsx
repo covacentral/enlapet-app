@@ -1,9 +1,9 @@
 // frontend/src/OrderConfirmationPage.jsx
-// (NUEVO) Página a la que el usuario es redirigido después de un intento de pago.
+// Versión 2.0: Lee el estado real de la transacción desde los parámetros de la URL.
 
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { CheckCircle, XCircle, AlertCircle, Loader } from 'lucide-react';
 
 import styles from './OrderConfirmationPage.module.css';
 import sharedStyles from './shared.module.css';
@@ -14,27 +14,32 @@ function OrderConfirmationPage() {
     const [transactionId, setTransactionId] = useState('');
 
     useEffect(() => {
-        // ePayco devuelve el estado de la transacción en el parámetro 'ref_payco' y otros.
-        // Aquí simulamos la lectura. En producción, consultaríamos el estado real de la transacción.
+        // 1. Leemos los parámetros que ePayco nos envía en la URL de respuesta.
         const refPayco = searchParams.get('ref_payco');
-        // Para pruebas, puedes añadir ?status=success a la URL
-        const mockStatus = searchParams.get('status'); 
+        // El código 'x_cod_response' nos dice el estado de la transacción:
+        // 1 = Aceptada, 2 = Rechazada, 3 = Pendiente, 4 = Fallida
+        const transactionState = searchParams.get('x_cod_response');
 
         setTransactionId(refPayco || 'N/A');
 
-        if (mockStatus === 'success') {
-            setStatus('success');
-        } else if (mockStatus === 'rejected') {
-            setStatus('rejected');
-        } else {
-            // Lógica real basada en la documentación de ePayco (generalmente consultando el backend)
-            // Por ahora, asumimos éxito si hay un ref_payco
-            if (refPayco) {
+        // 2. Determinamos el estado basado en el código de respuesta.
+        switch (transactionState) {
+            case '1':
                 setStatus('success');
-            } else {
+                break;
+            case '2':
+            case '4':
                 setStatus('rejected');
-            }
+                break;
+            case '3':
+                setStatus('pending');
+                break;
+            default:
+                // Si no hay un código claro, lo dejamos como pendiente para revisión.
+                setStatus('pending');
+                break;
         }
+
     }, [searchParams]);
 
     const renderContent = () => {
@@ -50,19 +55,19 @@ function OrderConfirmationPage() {
                 return {
                     icon: <XCircle size={64} className={styles.iconRejected} />,
                     title: 'Pago Rechazado',
-                    message: 'Hubo un problema procesando tu pago. Por favor, intenta de nuevo o contacta a tu banco.',
+                    message: 'La transacción fue rechazada. Por favor, intenta de nuevo o contacta a tu banco.',
                     showOrderId: false
                 };
             case 'pending':
                 return {
                     icon: <AlertCircle size={64} className={styles.iconPending} />,
                     title: 'Pago Pendiente',
-                    message: 'Tu pago está pendiente de confirmación. Te notificaremos una vez que sea aprobado.',
+                    message: 'Tu pago está pendiente de confirmación por parte de la entidad bancaria. Te notificaremos una vez que sea aprobado.',
                     showOrderId: true
                 };
-            default:
+            default: // 'loading'
                 return {
-                    icon: null,
+                    icon: <Loader size={64} className={styles.iconLoading} />,
                     title: 'Verificando estado del pago...',
                     message: 'Por favor, espera un momento.',
                     showOrderId: false
@@ -79,8 +84,8 @@ function OrderConfirmationPage() {
                 <h1 className={styles.title}>{title}</h1>
                 <p className={styles.message}>{message}</p>
                 {showOrderId && <p className={styles.orderId}>ID de Transacción: {transactionId}</p>}
-                <Link to="/dashboard" className={`${sharedStyles.button} ${sharedStyles.primary}`}>
-                    Volver al Inicio
+                <Link to="/dashboard/settings" className={`${sharedStyles.button} ${sharedStyles.primary}`}>
+                    Ver Mis Compras
                 </Link>
             </div>
         </div>
