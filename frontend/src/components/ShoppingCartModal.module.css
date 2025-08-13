@@ -1,0 +1,110 @@
+/* frontend/src/components/ShoppingCartModal.module.css */
+/* Estilos para el modal del carrito de compras. */
+
+.content {
+    background-color: var(--background-light);
+    border: 1px solid var(--border-color);
+    border-radius: 15px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.body {
+    padding: 1rem 1.5rem;
+    overflow-y: auto;
+    flex-grow: 1;
+}
+
+.cartItem {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--border-color);
+}
+.cartItem:last-child {
+    border-bottom: none;
+}
+
+.itemImage {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+
+.itemDetails {
+    flex-grow: 1;
+    text-align: left;
+}
+
+.itemName {
+    font-weight: bold;
+    margin: 0 0 4px 0;
+}
+
+.itemPrice {
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.itemActions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.quantityControl {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background-color: var(--background-dark);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 4px;
+}
+
+.quantityControl button {
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font-weight: bold;
+    cursor: pointer;
+    width: 24px;
+    height: 24px;
+}
+
+.removeButton {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 5px;
+}
+.removeButton:hover {
+    color: var(--error-red);
+}
+
+.emptyCartMessage {
+    text-align: center;
+    color: var(--text-secondary);
+    padding: 3rem 1rem;
+}
+
+.summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 1rem;
+}
+
+.totalAmount {
+    color: var(--primary-accent);
+}

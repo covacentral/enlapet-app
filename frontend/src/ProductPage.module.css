@@ -1,0 +1,126 @@
+/* frontend/src/ProductPage.module.css */
+/* Estilos para la página de detalle del producto. */
+
+.container {
+    background-color: var(--background-light);
+    border: 1px solid var(--border-color);
+    border-radius: 15px;
+    padding: 2rem;
+    display: grid;
+    grid-template-columns: 1fr 1.2fr; /* Columna de imagen más pequeña que la de detalles */
+    gap: 3rem;
+    max-width: 1000px;
+    margin: 2rem auto;
+}
+
+.imageColumn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mainImage {
+    width: 100%;
+    max-width: 400px;
+    height: auto;
+    border-radius: 12px;
+    background-color: var(--background-dark);
+}
+
+.detailsColumn {
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+}
+
+.productName {
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin: 0 0 0.5rem 0;
+}
+
+.productPrice {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--primary-accent);
+    margin-bottom: 1.5rem;
+}
+
+.productDescription {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 2rem;
+}
+
+.featureList {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 2rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.featureList li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Pseudo-elemento para el checkmark */
+.featureList li::before {
+    content: '✔';
+    color: var(--success-green);
+    font-weight: bold;
+}
+
+.actions {
+    margin-top: auto; /* Empuja el botón hacia abajo */
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.addToCartButton {
+    width: 100%;
+    padding: 15px;
+    font-size: 1.1rem;
+}
+
+.paymentMethods {
+    text-align: center;
+    margin-top: 1.5rem;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.paymentMethods p {
+    margin: 0 0 0.5rem 0;
+}
+
+.paymentMethods span {
+    font-weight: bold;
+    color: var(--text-primary);
+}
+
+
+/* --- Media Queries para Responsividad --- */
+@media (max-width: 768px) {
+    .container {
+        grid-template-columns: 1fr; /* Apila las columnas en pantallas pequeñas */
+        gap: 2rem;
+        padding: 1.5rem;
+    }
+
+    .productName {
+        font-size: 2rem;
+    }
+
+    .productPrice {
+        font-size: 1.8rem;
+    }
+
+    .actions {
+        margin-top: 1rem;
+    }
+}

@@ -1,13 +1,14 @@
 // frontend/src/App.jsx
-// Versión: 2.5 - Refactorización de CSS Completada
-// TAREA: Se elimina la importación del monolito App.css, ahora obsoleto.
+// Versión: 2.6 - Integración del Proveedor del Carrito de Compras
+// TAREA: Se envuelve el layout protegido con CartProvider para dar acceso global al estado del carrito.
 
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { auth } from './firebase';
 import { onAuthStateChanged } from "firebase/auth";
 
-// --- Se ha eliminado la línea "import './App.css';" ---
+// --- 1. IMPORTAMOS nuestro nuevo CartProvider ---
+import { CartProvider } from './context/CartContext';
 
 import AuthPage from './AuthPage.jsx';
 import ProfileLayout from './ProfileLayout.jsx';
@@ -49,7 +50,10 @@ function App() {
           path="/dashboard/*" 
           element={
             <ProtectedRoute user={user} isLoading={isAuthLoading}>
-              <ProfileLayout user={user} />
+              {/* --- 2. ENVOLVEMOS el ProfileLayout con el CartProvider --- */}
+              <CartProvider>
+                <ProfileLayout user={user} />
+              </CartProvider>
             </ProtectedRoute>
           } 
         />

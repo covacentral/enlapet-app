@@ -1,0 +1,74 @@
+/* frontend/src/MyOrdersTab.module.css */
+/* Estilos para la pestaña de historial de órdenes. */
+
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.orderCard {
+    background-color: var(--background-dark);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.orderHeader {
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: rgba(0,0,0,0.2);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.orderDate {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    display: block;
+}
+
+.orderTotal {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.statusBadge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: white;
+}
+
+/* Clases de estado */
+.pending { background-color: var(--warning-yellow); }
+.paid { background-color: var(--success-green); }
+.shipped { background-color: var(--primary-accent); }
+.delivered { background-color: #3b82f6; /* Blue 500 */ }
+.cancelled { background-color: var(--error-red); }
+
+
+.orderBody {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.orderItem {
+    display: flex;
+    justify-content: space-between;
+    font-size: 1rem;
+}
+
+.orderItem span:first-child {
+    color: var(--text-secondary);
+}
+
+.orderItem span:last-child {
+    font-weight: bold;
+}

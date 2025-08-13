@@ -1,0 +1,66 @@
+/* frontend/src/CheckoutPage.module.css */
+/* Estilos para la página de Checkout. */
+
+.container {
+    background-color: var(--background-light);
+    padding: 25px;
+    border-radius: 15px;
+    border: 1px solid var(--border-color);
+    text-align: left;
+}
+
+.checkoutLayout {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr; /* Columna de formulario más ancha */
+    gap: 2rem;
+    align-items: flex-start;
+}
+
+.formColumn h3, .summaryColumn h3 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    font-size: 1.3rem;
+}
+
+.summaryCard {
+    background-color: var(--background-dark);
+    border-radius: 12px;
+    padding: 1.5rem;
+    border: 1px solid var(--border-color);
+}
+
+.summaryItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    font-size: 0.95rem;
+}
+.summaryItem:last-child {
+    margin-bottom: 0;
+}
+
+.divider {
+    border: none;
+    height: 1px;
+    background-color: var(--border-color);
+    margin: 1rem 0;
+}
+
+.summaryTotal {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--text-primary);
+}
+
+
+/* --- Media Queries para Responsividad --- */
+@media (max-width: 850px) {
+    .checkoutLayout {
+        grid-template-columns: 1fr; /* Apila las columnas */
+    }
+
+    .summaryColumn {
+        margin-top: 2rem;
+    }
+}

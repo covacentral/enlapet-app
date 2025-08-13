@@ -1,6 +1,6 @@
 // frontend/src/ProfileLayout.jsx
-// Versión 4.0: Añade blindaje contra datos nulos en la lista de mascotas.
-// TAREA: Se asegura que la prop 'pets' sea siempre un array para prevenir crashes.
+// Versión 4.4: Añade la ruta para la página de confirmación de orden.
+// TAREA: Registra la ruta final del ciclo de compra para la experiencia post-pago.
 
 import { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
@@ -20,14 +20,17 @@ import UserProfilePage from './UserProfilePage.jsx';
 import NotificationsPage from './NotificationsPage.jsx';
 import VetDashboardPage from './VetDashboardPage.jsx';
 import AppointmentsTab from './AppointmentsTab.jsx';
+import ProductPage from './ProductPage.jsx';
+import CheckoutPage from './CheckoutPage.jsx';
+import OrderConfirmationPage from './OrderConfirmationPage.jsx'; // <-- 1. IMPORTAMOS la nueva página
 
 // Importación de Componentes
 import LoadingComponent from './LoadingComponent.jsx';
 import BottomNavBar from './BottomNavBar.jsx';
 import CreatePostModal from './CreatePostModal.jsx';
+import ShoppingCartModal from './components/ShoppingCartModal.jsx';
 import MainHeader from './MainHeader.jsx';
 import PostDetailModal from './PostDetailModal.jsx';
-import PatientDetailModal from './PatientDetailModal.jsx';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -37,8 +40,10 @@ function ProfileLayout({ user }) {
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false);
   const navigate = useNavigate();
 
+  // (Todas las funciones de fetching y handlers permanecen sin cambios)
   const fetchCoreData = useCallback(async () => {
     if (!user) return;
     try {
@@ -52,15 +57,11 @@ function ProfileLayout({ user }) {
       const profileData = await profileResponse.json();
       const petsData = await petsResponse.json();
       setUserProfile(profileData);
-      
-      // --- LÍNEA CORREGIDA ---
-      // Nos aseguramos de que 'pets' sea siempre un array. Si la API devuelve null o undefined,
-      // lo convertimos en un array vacío para evitar errores en los componentes hijos.
       setPets(Array.isArray(petsData) ? petsData : []);
 
     } catch (error) {
       console.error("Error fetching core data:", error);
-      setPets([]); // En caso de error, también aseguramos que sea un array vacío.
+      setPets([]);
     }
   }, [user]);
 
@@ -90,7 +91,7 @@ function ProfileLayout({ user }) {
     return () => clearInterval(interval);
   }, [fetchCoreData, fetchUnreadCount]);
 
-  const handleMarkAsRead = useCallback(async () => {
+    const handleMarkAsRead = useCallback(async () => {
     setUnreadCount(0);
     try {
       const idToken = await user.getIdToken();
@@ -115,14 +116,8 @@ function ProfileLayout({ user }) {
 
   return (
     <div className={styles.container}>
-      {isCreateModalOpen && (
-        <CreatePostModal 
-          userProfile={userProfile}
-          pets={pets}
-          onClose={() => setIsCreateModalOpen(false)}
-          onPostCreated={handlePostCreated}
-        />
-      )}
+      {isCreateModalOpen && ( <CreatePostModal userProfile={userProfile} pets={pets} onClose={() => setIsCreateModalOpen(false)} onPostCreated={handlePostCreated} /> )}
+      {isCartOpen && <ShoppingCartModal onClose={() => setIsCartOpen(false)} />}
 
       <MainHeader userProfile={userProfile} pets={pets} />
 
@@ -139,8 +134,12 @@ function ProfileLayout({ user }) {
           <Route path="pet/:petId" element={<PetSocialProfile user={user} userProfile={userProfile} pets={pets} onUpdate={fetchCoreData} />} />
           <Route path="user/:userId" element={<UserProfilePage pets={pets} />} />
           <Route path="notifications/post/:postId" element={<NotificationsPage onMarkAsRead={handleMarkAsRead} />} />
-          
           <Route path="vet-panel" element={<VetDashboardPage userProfile={userProfile} />} />
+          <Route path="store/product/:productId" element={<ProductPage />} />
+          <Route path="checkout" element={<CheckoutPage />} />
+          
+          {/* --- 2. AÑADIMOS LA NUEVA RUTA DE CONFIRMACIÓN --- */}
+          <Route path="order-confirmation" element={<OrderConfirmationPage />} />
         </Routes>
       </main>
 
@@ -149,8 +148,8 @@ function ProfileLayout({ user }) {
       </Routes>
 
       <BottomNavBar 
-        unreadCount={unreadCount}
         onOpenCreatePost={() => setIsCreateModalOpen(true)}
+        onOpenCart={() => setIsCartOpen(true)}
       />
     </div>
   );
