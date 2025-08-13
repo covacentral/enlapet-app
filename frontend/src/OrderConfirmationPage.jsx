@@ -1,7 +1,7 @@
 // frontend/src/OrderConfirmationPage.jsx
-// Versión 3.0: Implementa la doble verificación consultando el estado real de la orden al backend.
+// Versión 3.1: Corrige un error de sintaxis en la importación de hooks.
 
-import React, 'useState', useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react'; // <-- LÍNEA CORREGIDA
 import { useSearchParams, Link } from 'react-router-dom';
 import { auth } from './firebase';
 import { CheckCircle, XCircle, AlertCircle, Loader } from 'lucide-react';
@@ -23,20 +23,17 @@ function OrderConfirmationPage() {
             if (!user) throw new Error("Usuario no autenticado.");
             const idToken = await user.getIdToken();
 
-            // 1. Llamamos a nuestro nuevo endpoint en el backend para obtener el estado real
             const response = await fetch(`${API_URL}/api/orders/${orderIdToVerify}`, {
                 headers: { 'Authorization': `Bearer ${idToken}` }
             });
 
             if (!response.ok) {
-                // Si la orden no se encuentra o hay un error, lo marcamos como pendiente para revisión
                 setStatus('pending');
                 return;
             }
 
             const orderData = await response.json();
 
-            // 2. Mapeamos el estado de nuestra base de datos al estado de esta página
             switch (orderData.status) {
                 case 'paid':
                     setStatus('success');
@@ -53,12 +50,11 @@ function OrderConfirmationPage() {
             }
         } catch (error) {
             console.error("Error verificando el estado de la orden:", error);
-            setStatus('pending'); // En caso de error, mostramos pendiente
+            setStatus('pending');
         }
     }, []);
 
     useEffect(() => {
-        // ePayco nos devuelve nuestro ID de orden en el parámetro 'x_extra1'
         const orderIdFromUrl = searchParams.get('x_extra1');
         const refPayco = searchParams.get('ref_payco');
 
@@ -66,10 +62,8 @@ function OrderConfirmationPage() {
         
         if (orderIdFromUrl) {
             setOrderId(orderIdFromUrl);
-            // 3. Iniciamos la verificación con nuestro backend
             verifyOrderStatus(orderIdFromUrl);
         } else {
-            // Si por alguna razón no tenemos un ID de orden, mostramos pendiente
             setStatus('pending');
         }
     }, [searchParams, verifyOrderStatus]);
