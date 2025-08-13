@@ -1,23 +1,37 @@
 // backend/controllers/payment.controller.js
 // Lógica de negocio para interactuar con la pasarela de pagos ePayco.
+// VERSIÓN CORREGIDA: Añade el campo 'extra1' al payload de la transacción.
 
 const epayco = require('epayco-sdk-node');
 const { db } = require('../config/firebase');
 
-// 1. Inicializamos el SDK de ePayco con las credenciales del entorno
-// ASEGÚRATE DE AÑADIR ESTAS VARIABLES A TU ARCHIVO .env Y A RENDER
-const epaycoClient = epayco({
-  apiKey: process.env.EPAYCO_PUBLIC_KEY,
-  privateKey: process.env.EPAYCO_PRIVATE_KEY,
-  lang: 'ES',
-  test: true // ¡IMPORTANTE! Poner a 'false' para producción real.
-});
+const epaycoPublicKey = process.env.EPAYCO_PUBLIC_KEY;
+const epaycoPrivateKey = process.env.EPAYCO_PRIVATE_KEY;
+
+let epaycoClient;
+
+if (epaycoPublicKey && epaycoPrivateKey) {
+  epaycoClient = epayco({
+    apiKey: epaycoPublicKey,
+    privateKey: epaycoPrivateKey,
+    lang: 'ES',
+    test: true 
+  });
+  console.log('SDK de ePayco inicializado correctamente.');
+} else {
+  console.error('¡ERROR CRÍTICO DE CONFIGURACIÓN! Las llaves de API de ePayco no están definidas en las variables de entorno. El módulo de pagos estará inactivo.');
+  epaycoClient = null;
+}
 
 
 /**
  * Crea una transacción en ePayco y devuelve los datos para el checkout.
  */
 const createPaymentTransaction = async (req, res) => {
+  if (!epaycoClient) {
+    return res.status(503).json({ message: 'El servicio de pagos no está disponible en este momento. Por favor, contacta a soporte.' });
+  }
+
   const { uid: userId, name: userName, email: userEmail } = req.user;
   const { orderId } = req.body;
 
@@ -34,46 +48,41 @@ const createPaymentTransaction = async (req, res) => {
     }
 
     const orderData = orderDoc.data();
-
-    // No permitir pagar una orden que no esté 'pending'
+    
     if (orderData.status !== 'pending') {
         return res.status(409).json({ message: 'Esta orden ya ha sido procesada.' });
     }
 
-    // 2. Preparamos los datos para ePayco
     const paymentData = {
-      // Obligatorios
-      name: "Compra Collar EnlaPet", // Nombre genérico de la factura
+      name: "Compra Collar EnlaPet",
       description: `Orden de compra #${orderId}`,
       invoice: orderId,
       currency: "cop",
-      amount: (orderData.totalAmount / 100).toString(), // ePayco requiere el monto como string y en la unidad principal
+      amount: (orderData.totalAmount / 100).toString(),
       tax_base: "0",
       tax: "0",
       country: "co",
       lang: "es",
-
-      // URLs a las que ePayco redirigirá al usuario o notificará a nuestro sistema
-      // DEBES REEMPLAZAR 'https://tu-dominio.com' CON TU URL DE PRODUCCIÓN
       external: "false",
       confirmation: `${process.env.API_URL}/api/payments/webhook`,
-      response: `${process.env.FRONTEND_URL}/dashboard/order-confirmation`, // Página de agradecimiento en el frontend
-
-      // Datos del comprador
+      response: `${process.env.FRONTEND_URL}/dashboard/order-confirmation`,
       name_billing: orderData.shippingAddress.fullName || userName,
       email_billing: userEmail,
       mobilephone_billing: orderData.shippingAddress.phone,
-      address_billing: orderData.shippingAddress.addressLine1
+      address_billing: orderData.shippingAddress.addressLine1,
+      
+      // --- LÍNEA CORREGIDA ---
+      // Añadimos el ID de nuestra orden como dato extra para la confirmación.
+      extra1: orderId,
     };
 
-    // 3. Usamos el SDK para crear el objeto de la transacción
     const charge = await epaycoClient.charge.create(paymentData);
 
-    if (!charge.success) {
-      throw new Error(charge.message || 'Error al crear la transacción en ePayco.');
+    if (!charge.success || !charge.data || !charge.data.ref_payco) {
+      console.error('Respuesta de ePayco inválida:', charge);
+      throw new Error(charge.data?.description || 'Error validando datos con ePayco.');
     }
     
-    // 4. Actualizamos nuestra orden con el ID de la transacción y cambiamos su estado
     await orderRef.update({
         'paymentDetails.transactionId': charge.data.ref_payco,
         status: 'awaiting_payment',
@@ -93,8 +102,12 @@ const createPaymentTransaction = async (req, res) => {
  * Maneja las confirmaciones de pago (webhook) enviadas por ePayco.
  */
 const handleEpaycoWebhook = async (req, res) => {
-    // El SDK de ePayco no provee un método directo para validar webhooks,
-    // se hace a través de la consulta del estado de la transacción.
+    // ...(El resto de la función no necesita cambios)...
+    if (!epaycoClient) {
+        console.error('Webhook de ePayco recibido, pero el SDK no está inicializado. Descartando.');
+        return res.status(503).send('Servicio no disponible.');
+    }
+
     const validationData = req.body;
     const transactionId = validationData.x_ref_payco;
 
@@ -121,14 +134,12 @@ const handleEpaycoWebhook = async (req, res) => {
             newStatus = 'awaiting_payment';
         }
 
-        // Actualizamos el estado de la orden en nuestra base de datos
         await orderRef.update({
             status: newStatus,
             'paymentDetails.paymentMethod': charge.data.x_type_payment,
             updatedAt: new Date().toISOString()
         });
 
-        // Respondemos a ePayco con un 200 OK para que sepa que recibimos la notificación
         res.status(200).send('Webhook recibido y procesado.');
 
     } catch (error) {
