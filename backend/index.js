@@ -1,14 +1,12 @@
 // backend/index.js
-// Versión 1.6 - Corrección Crítica de Arquitectura de Rutas de Pago
+// Versión 1.7 - Corrección Crítica del Webhook de Pagos
 
 // --- 1. CONFIGURACIÓN E IMPORTACIONES ---
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 
-// --- Importación de Módulos Locales ---
 const authenticateUser = require('./middleware/authenticateUser');
-// 1. Importamos el controlador del webhook directamente
 const { handleEpaycoWebhook } = require('./controllers/payment.controller'); 
 
 // Importación de Rutas
@@ -25,6 +23,7 @@ const verificationRoutes = require('./routes/verification.routes');
 const vetRoutes = require('./routes/vet.routes');
 const appointmentRoutes = require('./routes/appointment.routes');
 const orderRoutes = require('./routes/order.routes');
+const paymentRoutes = require('./routes/payment.routes');
 
 // --- 2. INICIALIZACIÓN DE LA APP ---
 const app = express();
@@ -47,20 +46,20 @@ const corsOptions = {
   }
 };
 app.use(cors(corsOptions));
-app.use(express.json());
+app.use(express.json()); // Para parsear JSON
+// --- LÍNEA AÑADIDA ---
+// Para parsear el formato 'x-www-form-urlencoded' que envía el webhook de ePayco
+app.use(express.urlencoded({ extended: true }));
 
 // --- 4. DEFINICIÓN DE RUTAS ---
 
-// A. Rutas Públicas (No requieren autenticación)
-app.get('/', (req, res) => res.json({ message: "¡Bienvenido a la API de EnlaPet! v1.6 - Pasarela Corregida" }));
+// A. Rutas Públicas
+app.get('/', (req, res) => res.json({ message: "¡Bienvenido a la API de EnlaPet! v1.7 - Webhook Corregido" }));
 app.use('/api/auth', authRoutes);
 app.use('/api', publicRoutes);
-// 2. Registramos el webhook como un endpoint público individual y explícito
 app.post('/api/payments/webhook', handleEpaycoWebhook);
 
-
 // B. Middleware de Autenticación
-// A partir de este punto, TODAS las rutas subsiguientes requerirán un token.
 app.use(authenticateUser);
 
 // C. Rutas Protegidas
@@ -75,7 +74,8 @@ app.use('/api', verificationRoutes);
 app.use('/api', vetRoutes);
 app.use('/api', appointmentRoutes);
 app.use('/api', orderRoutes);
+app.use('/api', paymentRoutes);
 
 
 // --- 5. INICIAR SERVIDOR ---
-app.listen(PORT, () => console.log(`Servidor con arquitectura de pagos corregida corriendo en el puerto ${PORT}`));
+app.listen(PORT, () => console.log(`Servidor con webhook corregido corriendo en el puerto ${PORT}`));
