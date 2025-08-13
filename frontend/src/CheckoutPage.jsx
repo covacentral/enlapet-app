@@ -1,5 +1,5 @@
 // frontend/src/CheckoutPage.jsx
-// (NUEVO) Página para que el usuario ingrese sus datos de envío y proceda al pago.
+// Versión 2.0: Implementa la lógica de pago del lado del cliente con el SDK de ePayco.
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -11,16 +11,17 @@ import styles from './CheckoutPage.module.css';
 import sharedStyles from './shared.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+// 1. OBTENEMOS LA LLAVE PÚBLICA DE EPAYCO DESDE LAS VARIABLES DE ENTORNO DEL FRONTEND
+const EPAYCO_PUBLIC_KEY = import.meta.env.VITE_EPAYCO_PUBLIC_KEY;
 
 function CheckoutPage() {
     const { cartItems, cartTotal, clearCart } = useCart();
-    const [userProfile, setUserProfile] = useState(null);
     const [formData, setFormData] = useState({
         fullName: '',
         addressLine1: '',
         addressLine2: '',
-        department: 'Córdoba', // Valor por defecto
-        city: 'Montería', // Valor por defecto
+        department: 'Córdoba',
+        city: 'Montería',
         phone: ''
     });
     const [cities, setCities] = useState([]);
@@ -30,11 +31,9 @@ function CheckoutPage() {
 
     useEffect(() => {
         if (cartItems.length === 0) {
-            // Si el carrito está vacío, no tiene sentido estar aquí.
             navigate('/dashboard');
         }
         
-        // Precargamos los datos del perfil del usuario en el formulario
         const fetchProfile = async () => {
             const user = auth.currentUser;
             if (user) {
@@ -42,22 +41,14 @@ function CheckoutPage() {
                 const response = await fetch(`${API_URL}/api/profile`, { headers: { 'Authorization': `Bearer ${idToken}` } });
                 if (response.ok) {
                     const data = await response.json();
-                    setUserProfile(data);
-                    setFormData(prev => ({
-                        ...prev,
-                        fullName: data.name || '',
-                        phone: data.phone || ''
-                    }));
+                    setFormData(prev => ({ ...prev, fullName: data.name || '', phone: data.phone || '' }));
                 }
             }
         };
         fetchProfile();
 
-        // Inicializamos las ciudades para el departamento por defecto
         const initialDeptData = colombiaData.find(d => d.departamento === 'Córdoba');
-        if (initialDeptData) {
-            setCities(initialDeptData.ciudades);
-        }
+        if (initialDeptData) setCities(initialDeptData.ciudades);
 
     }, [cartItems, navigate]);
     
@@ -72,22 +63,28 @@ function CheckoutPage() {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
+    // --- 2. LÓGICA DE PAGO COMPLETAMENTE REESCRITA ---
     const handlePlaceOrder = async (e) => {
         e.preventDefault();
         setIsLoading(true);
-        setMessage('Procesando tu orden...');
+        setMessage('Preparando tu orden...');
+
+        if (!EPAYCO_PUBLIC_KEY) {
+            setMessage('Error de configuración: La llave pública de ePayco no está disponible.');
+            setIsLoading(false);
+            return;
+        }
 
         try {
             const user = auth.currentUser;
             if (!user) throw new Error("Debes iniciar sesión para completar la compra.");
             const idToken = await user.getIdToken();
             
-            // 1. Crear la orden en nuestro backend
+            // Paso 1: Crear la orden en nuestro backend para obtener un ID.
             const orderPayload = {
                 items: cartItems.map(item => ({ productId: item.id, quantity: item.quantity })),
                 shippingAddress: { ...formData, country: 'Colombia' }
             };
-
             const orderResponse = await fetch(`${API_URL}/api/orders`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
@@ -96,18 +93,37 @@ function CheckoutPage() {
             const orderData = await orderResponse.json();
             if (!orderResponse.ok) throw new Error(orderData.message || 'Error al crear la orden.');
 
-            // 2. Crear la transacción de pago en ePayco a través de nuestro backend
-            const paymentResponse = await fetch(`${API_URL}/api/payments/create-transaction`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-                body: JSON.stringify({ orderId: orderData.orderId }),
-            });
-            const paymentData = await paymentResponse.json();
-            if (!paymentResponse.ok) throw new Error(paymentData.message || 'Error al iniciar el pago.');
+            setMessage('Orden creada. Abriendo pasarela de pago...');
 
-            // 3. Si todo fue exitoso, limpiamos el carrito y redirigimos a ePayco
+            // Paso 2: Configurar y abrir el checkout de ePayco en el cliente.
+            const handler = window.ePayco.checkout.configure({
+                key: EPAYCO_PUBLIC_KEY,
+                test: true
+            });
+
+            const data = {
+                name: "Compra Collar Inteligente EnlaPet",
+                description: `Orden de compra #${orderData.orderId}`,
+                invoice: orderData.orderId,
+                currency: "cop",
+                amount: (cartTotal / 100).toString(),
+                tax_base: "0",
+                tax: "0",
+                country: "co",
+                lang: "es",
+                external: "false",
+                response: `${window.location.origin}/dashboard/order-confirmation`,
+                confirmation: `${API_URL}/api/payments/webhook`,
+                name_billing: formData.fullName,
+                address_billing: formData.addressLine1,
+                mobilephone_billing: formData.phone,
+                email_billing: user.email,
+                extra1: orderData.orderId, // Enviamos nuestro ID de orden para el webhook
+            };
+            
+            // Limpiamos el carrito ANTES de redirigir
             clearCart();
-            window.location.href = paymentData.transactionData.url_banco; // Redirección a la pasarela
+            handler.open(data);
 
         } catch (error) {
             setMessage(`Error: ${error.message}`);
