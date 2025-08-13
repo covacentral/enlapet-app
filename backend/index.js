@@ -25,7 +25,6 @@ const verificationRoutes = require('./routes/verification.routes');
 const vetRoutes = require('./routes/vet.routes');
 const appointmentRoutes = require('./routes/appointment.routes');
 const orderRoutes = require('./routes/order.routes');
-const paymentRoutes = require('./routes/payment.routes'); // Ahora solo contiene rutas protegidas
 
 // --- 2. INICIALIZACIÓN DE LA APP ---
 const app = express();
@@ -76,8 +75,6 @@ app.use('/api', verificationRoutes);
 app.use('/api', vetRoutes);
 app.use('/api', appointmentRoutes);
 app.use('/api', orderRoutes);
-// 3. Registramos las rutas de pago protegidas en la sección correcta
-app.use('/api', paymentRoutes);
 
 
 // --- 5. INICIAR SERVIDOR ---
