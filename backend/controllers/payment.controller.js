@@ -1,6 +1,6 @@
 // backend/controllers/payment.controller.js
 // Lógica de negocio para interactuar con la pasarela de pagos ePayco.
-// VERSIÓN SIMPLIFICADA: Solo contiene la lógica para el webhook de confirmación.
+// VERSIÓN ROBUSTA 2.0: Maneja casos donde el método de pago es indefinido.
 
 const epayco = require('epayco-sdk-node');
 const { db } = require('../config/firebase');
@@ -42,11 +42,10 @@ const handleEpaycoWebhook = async (req, res) => {
 
         const charge = await epaycoClient.charge.get(transactionId);
         
-        if (!charge.success) {
-            throw new Error(`ePayco no pudo obtener la transacción ${transactionId}`);
+        if (!charge.success || !charge.data) {
+            throw new Error(`ePayco no pudo obtener los datos de la transacción ${transactionId}`);
         }
         
-        // El orderId lo enviamos en el campo extra1 desde el frontend
         const { x_cod_transaction_state, x_extra1: orderId } = charge.data;
         if (!orderId) {
             throw new Error(`El webhook para la transacción ${transactionId} no contiene un orderId (extra1).`);
@@ -55,20 +54,35 @@ const handleEpaycoWebhook = async (req, res) => {
         const orderRef = db.collection('orders').doc(orderId);
 
         let newStatus;
-        if (x_cod_transaction_state === "1") { // 1 = Aceptada
-            newStatus = 'paid';
-        } else if (x_cod_transaction_state === "2" || x_cod_transaction_state === "4") { // 2 = Rechazada, 4 = Fallida
-            newStatus = 'cancelled';
-        } else { // 3 = Pendiente
-            newStatus = 'awaiting_payment';
+        // ePayco envía el código como un string
+        switch (String(x_cod_transaction_state)) {
+            case "1": // Aceptada
+                newStatus = 'paid';
+                break;
+            case "2": // Rechazada
+            case "4": // Fallida
+                newStatus = 'cancelled';
+                break;
+            case "3": // Pendiente
+                newStatus = 'awaiting_payment';
+                break;
+            default:
+                // Si llega un código desconocido, lo dejamos pendiente para revisión manual.
+                console.warn(`Webhook con código de estado desconocido: ${x_cod_transaction_state}`);
+                newStatus = 'awaiting_payment';
+                break;
         }
 
-        await orderRef.update({
+        // --- LÍNEA CORREGIDA ---
+        // Añadimos un valor por defecto para 'paymentMethod' si no viene en la respuesta.
+        const updatePayload = {
             status: newStatus,
-            'paymentDetails.paymentMethod': charge.data.x_type_payment,
-            'paymentDetails.transactionId': transactionId, // Guardamos la referencia de pago
+            'paymentDetails.paymentMethod': charge.data.x_type_payment || 'No especificado',
+            'paymentDetails.transactionId': transactionId,
             updatedAt: new Date().toISOString()
-        });
+        };
+
+        await orderRef.update(updatePayload);
 
         res.status(200).send('Webhook recibido y procesado.');
 
