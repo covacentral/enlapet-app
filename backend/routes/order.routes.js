@@ -1,25 +1,25 @@
 // backend/routes/order.routes.js
-// Define los endpoints PROTEGIDOS para la gestión de órdenes de compra.
-// VERSIÓN ACTUALIZADA: Añade la ruta para obtener el historial de órdenes.
+// VERSIÓN 2.0: Añade la ruta para obtener una orden específica por su ID.
 
 const { Router } = require('express');
-// 1. Importamos la nueva función getMyOrders
-const { createOrder, getMyOrders } = require('../controllers/order.controller');
+// 1. Importamos la nueva función getOrderById
+const { createOrder, getMyOrders, getOrderById } = require('../controllers/order.controller');
 
 const router = Router();
 
 // Todas las rutas en este archivo están protegidas y requieren autenticación.
 
-// URL: /api/orders
-// Método: POST
-// Función: Crea una nueva orden de compra para el usuario autenticado.
+// Crea una nueva orden de compra
 router.post('/orders', createOrder);
 
-// --- NUEVA RUTA ---
-// URL: /api/orders
-// Método: GET
-// Función: Obtiene el historial de órdenes del usuario autenticado.
+// Obtiene el historial de órdenes del usuario
 router.get('/orders', getMyOrders);
+
+// --- NUEVA RUTA ---
+// URL: /api/orders/:orderId
+// Método: GET
+// Función: Obtiene los detalles de una orden específica.
+router.get('/orders/:orderId', getOrderById);
 
 
 module.exports = router;
