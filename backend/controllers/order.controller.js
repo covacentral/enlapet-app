@@ -1,19 +1,14 @@
 // backend/controllers/order.controller.js
-// Lógica de negocio para la creación y gestión de órdenes de compra.
-// VERSIÓN ACTUALIZADA: Añade la función para obtener el historial de órdenes de un usuario.
+// VERSIÓN 2.0: Añade la función para obtener una orden específica por ID.
 
 const { db } = require('../config/firebase');
 const { getNewOrder } = require('../models/order.model');
 
-/**
- * Crea una nueva orden de compra.
- * Es un endpoint protegido que requiere autenticación.
- */
 const createOrder = async (req, res) => {
+    // ... (esta función no cambia)
     const { uid: userId } = req.user;
     const { items, shippingAddress } = req.body;
 
-    // Validación básica de la entrada
     if (!Array.isArray(items) || items.length === 0 || !shippingAddress) {
         return res.status(400).json({ message: 'Se requieren productos y una dirección de envío.' });
     }
@@ -21,7 +16,6 @@ const createOrder = async (req, res) => {
     try {
         const productIds = items.map(item => item.productId);
         const productsRef = db.collection('products');
-        // Usamos una consulta 'in' para obtener todos los productos del carrito en una sola llamada a DB
         const productsSnapshot = await productsRef.where('__name__', 'in', productIds).get();
 
         if (productsSnapshot.size !== productIds.length) {
@@ -38,21 +32,15 @@ const createOrder = async (req, res) => {
             if (!productData.isActive) {
                 throw new Error(`El producto "${productData.name}" ya no está disponible.`);
             }
-
-            // --- PASO DE SEGURIDAD CRÍTICO ---
-            // Recalculamos el total en el backend usando el precio de la base de datos,
-            // ignorando cualquier precio que pudiera haber sido enviado desde el frontend.
             totalAmount += productData.price.amount * cartItem.quantity;
-
             validatedItems.push({
                 productId: doc.id,
                 name: productData.name,
                 quantity: cartItem.quantity,
-                unitPrice: productData.price.amount, // Precio en centavos desde la DB
+                unitPrice: productData.price.amount,
             });
         });
 
-        // Creamos la nueva orden usando nuestro modelo
         const newOrderData = getNewOrder({
             userId,
             items: validatedItems,
@@ -65,7 +53,7 @@ const createOrder = async (req, res) => {
         res.status(201).json({ 
             message: 'Orden creada exitosamente. Procede al pago.',
             orderId: orderRef.id,
-            totalAmount: newOrderData.totalAmount // Devolvemos el total calculado para confirmación
+            totalAmount: newOrderData.totalAmount
         });
 
     } catch (error) {
@@ -74,34 +62,54 @@ const createOrder = async (req, res) => {
     }
 };
 
-/**
- * [NUEVO] Obtiene el historial de órdenes del usuario autenticado.
- */
 const getMyOrders = async (req, res) => {
+    // ... (esta función no cambia)
     const { uid: userId } = req.user;
-
     try {
         const ordersSnapshot = await db.collection('orders')
             .where('userId', '==', userId)
             .orderBy('createdAt', 'desc')
             .get();
-        
         if (ordersSnapshot.empty) {
             return res.status(200).json([]);
         }
-
         const ordersList = ordersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
         res.status(200).json(ordersList);
-
     } catch (error) {
         console.error('Error en getMyOrders:', error);
         res.status(500).json({ message: 'Error interno al obtener el historial de órdenes.' });
     }
 };
 
+/**
+ * [NUEVO] Obtiene una orden específica por su ID.
+ */
+const getOrderById = async (req, res) => {
+    const { uid: userId } = req.user;
+    const { orderId } = req.params;
+
+    try {
+        const orderDoc = await db.collection('orders').doc(orderId).get();
+
+        if (!orderDoc.exists) {
+            return res.status(404).json({ message: 'Orden no encontrada.' });
+        }
+
+        const orderData = orderDoc.data();
+        // Verificación de seguridad: el usuario solo puede ver sus propias órdenes
+        if (orderData.userId !== userId) {
+            return res.status(403).json({ message: 'No autorizado para ver esta orden.' });
+        }
+
+        res.status(200).json({ id: orderDoc.id, ...orderData });
+    } catch (error) {
+        console.error(`Error en getOrderById para la orden ${orderId}:`, error);
+        res.status(500).json({ message: 'Error interno al obtener la orden.' });
+    }
+};
 
 module.exports = {
     createOrder,
-    getMyOrders // Exportamos la nueva función
+    getMyOrders,
+    getOrderById // Exportamos la nueva función
 };
