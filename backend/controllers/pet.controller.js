@@ -1,6 +1,6 @@
 // backend/controllers/pet.controller.js
-// Versión 2.1 - CORRECCIÓN CRÍTICA Y MÓDULO VETERINARIO
-// Se restaura la lógica perdida y se integra el nuevo modelo y la gestión de vínculos.
+// Versión 2.2 - Optimización de Vínculos Veterinarios
+// TAREA: Se añade un campo 'activeVetIds' para consultas eficientes.
 
 const { db, bucket } = require('../config/firebase');
 const admin = require('firebase-admin');
@@ -204,13 +204,21 @@ const managePatientLink = async (req, res) => {
                 throw new Error('No se encontró una solicitud de vínculo pendiente de este veterinario.');
             }
 
+            // --- LÓGICA MODIFICADA ---
+            const updatePayload = {};
+
             if (action === 'approve') {
                 linkedVets[linkIndex].status = 'active';
-            } else {
+                // Añadimos el ID del veterinario al nuevo array para búsquedas rápidas
+                updatePayload.activeVetIds = admin.firestore.FieldValue.arrayUnion(vetId);
+            } else { // 'reject'
                 linkedVets.splice(linkIndex, 1);
+                 // Nos aseguramos de que no quede en el array de búsqueda si se rechaza
+                updatePayload.activeVetIds = admin.firestore.FieldValue.arrayRemove(vetId);
             }
 
-            transaction.update(petRef, { linkedVets });
+            updatePayload.linkedVets = linkedVets;
+            transaction.update(petRef, updatePayload);
         });
 
         res.status(200).json({ message: `Solicitud de vínculo ${action === 'approve' ? 'aprobada' : 'rechazada'} con éxito.` });

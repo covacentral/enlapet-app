@@ -1,11 +1,11 @@
 // backend/controllers/vet.controller.js
-// Lógica de negocio para las acciones exclusivas de los veterinarios verificados.
+// Versión 2.1 - Refactorización de Consulta de Pacientes
+// TAREA: Se reemplaza el escaneo de la colección completa por una consulta 'array-contains' optimizada.
 
 const { db } = require('../config/firebase');
 const { createNotification } = require('../services/notification.service');
 const admin = require('firebase-admin');
 
-// ... (findPetByEPID, requestPatientLink, updateAvailability, getAvailability, getPatientDetails, addHealthRecordEntry no cambian)
 const findPetByEPID = async (req, res) => {
   const { epid } = req.params;
 
@@ -81,38 +81,34 @@ const requestPatientLink = async (req, res) => {
   }
 };
 
+// --- FUNCIÓN REFACTORIZADA ---
 const getLinkedPatients = async (req, res) => {
     const { uid: vetId } = req.user;
     try {
-        const snapshot = await db.collection('pets').get(); // Simplificamos la consulta inicial
-        
-        const activePatients = [];
-        snapshot.forEach(doc => {
-            const petData = doc.data();
-            // --- LÍNEA CORREGIDA ---
-            // Nos aseguramos de que petData.linkedVets sea un array antes de usar .some()
-            const links = Array.isArray(petData.linkedVets) ? petData.linkedVets : [];
-            const hasActiveLink = links.some(link => link.vetId === vetId && link.status === 'active');
-            
-            if (hasActiveLink) {
-                activePatients.push({ id: doc.id, ...petData });
-            }
-        });
+        // 1. Consulta optimizada: Busca directamente las mascotas que tienen el ID del veterinario en 'activeVetIds'.
+        const snapshot = await db.collection('pets')
+            .where('activeVetIds', 'array-contains', vetId)
+            .get();
 
-        if (activePatients.length === 0) {
+        if (snapshot.empty) {
             return res.status(200).json([]);
         }
+
+        const activePatients = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
-        const ownerIds = new Set(activePatients.map(p => p.ownerId));
+        // 2. Obtenemos los IDs de los dueños (sin duplicados).
+        const ownerIds = [...new Set(activePatients.map(p => p.ownerId))];
         
+        // 3. Buscamos la información de los dueños en un solo viaje a la base de datos.
         const ownersData = {};
-        if (ownerIds.size > 0) {
-            const ownersSnapshot = await db.collection('users').where(admin.firestore.FieldPath.documentId(), 'in', Array.from(ownerIds)).get();
+        if (ownerIds.length > 0) {
+            const ownersSnapshot = await db.collection('users').where(admin.firestore.FieldPath.documentId(), 'in', ownerIds).get();
             ownersSnapshot.forEach(doc => {
                 ownersData[doc.id] = { name: doc.data().name, phone: doc.data().phone || '' };
             });
         }
 
+        // 4. Enriquecemos los datos del paciente con la información de su dueño.
         const enrichedPatients = activePatients.map(p => ({
             ...p,
             ownerInfo: ownersData[p.ownerId] || { name: 'Desconocido' }
@@ -124,6 +120,7 @@ const getLinkedPatients = async (req, res) => {
         res.status(500).json({ message: 'Error interno al obtener la lista de pacientes.' });
     }
 };
+
 
 const updateAvailability = async (req, res) => {
     const { uid: vetId } = req.user;
@@ -194,8 +191,22 @@ const getPatientDetails = async (req, res) => {
         if (!hasActiveLink) {
             return res.status(403).json({ message: 'No tienes un vínculo activo con este paciente.' });
         }
+        
+        // --- LÓGICA DE ENRIQUECIMIENTO AÑADIDA ---
+        // Para que el modal tenga toda la info que necesita.
+        const ownerDoc = await db.collection('users').doc(petData.ownerId).get();
+        let ownerInfo = { name: 'No disponible' };
+        if (ownerDoc.exists) {
+            ownerInfo.name = ownerDoc.data().name;
+        }
 
-        res.status(200).json({ id: petDoc.id, ...petData });
+        const finalPetData = {
+            id: petDoc.id,
+            ...petData,
+            ownerInfo
+        };
+
+        res.status(200).json(finalPetData);
     } catch (error) {
         console.error('Error en getPatientDetails:', error);
         res.status(500).json({ message: 'Error interno al obtener los detalles del paciente.' });
@@ -240,7 +251,6 @@ const addHealthRecordEntry = async (req, res) => {
         res.status(500).json({ message: 'Error interno al añadir el registro.' });
     }
 };
-
 
 module.exports = {
   findPetByEPID,
