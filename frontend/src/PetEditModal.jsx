@@ -1,17 +1,18 @@
 // frontend/src/PetEditModal.jsx
-// Versión: 3.6 - Muestra el EPID y añade un botón para copiarlo.
+// Versión: 3.7 - Restaura los campos de ubicación en el formulario.
+// TAREA: Se reintroducen los selectores de Departamento y Ciudad para permitir completar el perfil.
 
 import { useState, useEffect, useRef } from 'react';
 import { colombiaData, departments } from './utils/colombiaData';
 import { auth } from './firebase';
-import { Plus, Trash2, Copy, Check } from 'lucide-react'; // 1. Importamos nuevos íconos
+import { Plus, Trash2, Copy, Check } from 'lucide-react';
 
 import styles from './PetEditModal.module.css';
 import sharedStyles from './shared.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-// ... (Los subcomponentes AddVaccineForm y AddMedicalHistoryForm no cambian)
+// --- Subcomponentes (sin cambios) ---
 const AddVaccineForm = ({ onSave, onCancel }) => {
   const [vaccine, setVaccine] = useState({ name: '', date: '', nextDate: '' });
   const handleChange = (e) => setVaccine({ ...vaccine, [e.target.name]: e.target.value });
@@ -63,12 +64,12 @@ const AddMedicalHistoryForm = ({ onSave, onCancel }) => {
 
 function PetEditModal({ pet, user, onClose, onUpdate }) {
   const [activeTab, setActiveTab] = useState('profile');
-  const [formData, setFormData] = useState(null); // Empezamos en null
+  const [formData, setFormData] = useState(null);
   const [cities, setCities] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [message, setMessage] = useState('');
-  const [isCopied, setIsCopied] = useState(false); // 2. Nuevo estado para feedback de copiado
+  const [isCopied, setIsCopied] = useState(false);
   const fileInputRef = useRef(null);
 
   const [showAddVaccine, setShowAddVaccine] = useState(false);
@@ -76,7 +77,6 @@ function PetEditModal({ pet, user, onClose, onUpdate }) {
 
   useEffect(() => {
     if (pet) {
-      // Nos aseguramos de que el formData tenga todos los campos por defecto
       const defaultHealthRecord = { birthDate: '', gender: '', vaccines: [], medicalHistory: [] };
       const defaultLocation = { department: '', city: '' };
 
@@ -95,7 +95,6 @@ function PetEditModal({ pet, user, onClose, onUpdate }) {
     }
   }, [pet]);
 
-  // ... (handleChange y las funciones de manejo de historial no cambian)
   const handleChange = (e) => {
     const { name, value } = e.target;
     const [section, field] = name.split('.');
@@ -105,7 +104,7 @@ function PetEditModal({ pet, user, onClose, onUpdate }) {
       if (name === 'location.department') {
         newSectionData.city = '';
         const departmentData = colombiaData.find(d => d.departamento === value);
-        setCities(departmentData ? departmentData.ciudades : []);
+        setCities(departmentData ? departmentData.ciudades.sort() : []);
       }
       setFormData(prev => ({ ...prev, [section]: newSectionData }));
     } else {
@@ -184,16 +183,15 @@ function PetEditModal({ pet, user, onClose, onUpdate }) {
         if (fileInputRef.current) fileInputRef.current.value = null;
     }
   };
-
-  // 3. Nueva función para copiar el EPID
+  
   const handleCopyEpid = () => {
     navigator.clipboard.writeText(formData.epid).then(() => {
         setIsCopied(true);
-        setTimeout(() => setIsCopied(false), 2000); // Reset after 2 seconds
+        setTimeout(() => setIsCopied(false), 2000);
     });
   };
 
-  if (!formData) return null; // Prevenimos renderizado si no hay datos aún
+  if (!formData) return null;
 
   return (
       <div className={sharedStyles.modalBackdrop} onClick={onClose}>
@@ -212,7 +210,6 @@ function PetEditModal({ pet, user, onClose, onUpdate }) {
             <div className={styles.body}>
               {activeTab === 'profile' && (
                 <>
-                  {/* --- 4. [NUEVO] Campo para mostrar y copiar el EPID --- */}
                   <div className={styles.epidContainer}>
                       <label>EnlaPet ID (EPID)</label>
                       <div className={styles.epidDisplay}>
@@ -225,17 +222,36 @@ function PetEditModal({ pet, user, onClose, onUpdate }) {
 
                   <div className={sharedStyles.formGroup}><label>Nombre:</label><input type="text" name="name" value={formData.name} onChange={handleChange} required disabled={isLoading} /></div>
                   <div className={sharedStyles.formGroup}><label>Raza:</label><input type="text" name="breed" value={formData.breed} onChange={handleChange} disabled={isLoading} /></div>
+                  
+                  {/* --- CAMPOS DE UBICACIÓN RESTAURADOS --- */}
+                  <div className={sharedStyles.formRow}>
+                    <div className={sharedStyles.formGroup}>
+                      <label>Departamento:</label>
+                      <select name="location.department" value={formData.location.department} onChange={handleChange} disabled={isLoading}>
+                        <option value="">Selecciona...</option>
+                        {departments.map(dep => <option key={dep} value={dep}>{dep}</option>)}
+                      </select>
+                    </div>
+                    <div className={sharedStyles.formGroup}>
+                      <label>Ciudad:</label>
+                      <select name="location.city" value={formData.location.city} onChange={handleChange} disabled={!formData.location.department || isLoading}>
+                        <option value="">Selecciona...</option>
+                        {cities.map(city => <option key={city} value={city}>{city}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  {/* --- FIN DE CAMPOS RESTAURADOS --- */}
+
                   <div className={sharedStyles.formGroup}><label>Foto de Perfil:</label><button type="button" onClick={() => fileInputRef.current.click()} className={`${sharedStyles.button} ${sharedStyles.secondary}`} disabled={isUploading}>{isUploading ? 'Subiendo...' : 'Cambiar Foto'}</button><input type="file" ref={fileInputRef} onChange={handleFileChange} style={{ display: 'none' }} accept="image/*" /></div>
                 </>
               )}
 
               {activeTab === 'health' && (
                 <>
-                  {/* ... (la lógica de la pestaña de salud no cambia) ... */}
                   <div className={sharedStyles.formGroup}><label>Fecha de Nacimiento:</label><input type="date" name="healthRecord.birthDate" value={formData.healthRecord.birthDate} onChange={handleChange} disabled={isLoading} /></div>
                   <div className={sharedStyles.formGroup}><label>Género:</label><select name="healthRecord.gender" value={formData.healthRecord.gender} onChange={handleChange} disabled={isLoading}><option value="">No especificado</option><option value="Macho">Macho</option><option value="Hembra">Hembra</option></select></div>
-                  <div className={styles.healthSection}><div className={styles.healthSectionHeader}><h4>Vacunas</h4>{!showAddVaccine && <button type="button" className={styles.addRecordButton} onClick={() => setShowAddVaccine(true)}><Plus size={16} /> Añadir</button>}</div>{showAddVaccine && <AddVaccineForm onSave={handleAddVaccine} onCancel={() => setShowAddVaccine(false)} />}{/* ... */}</div>
-                  <div className={styles.healthSection}><div className={styles.healthSectionHeader}><h4>Historial Clínico</h4>{!showAddHistory && <button type="button" className={styles.addRecordButton} onClick={() => setShowAddHistory(true)}><Plus size={16} /> Añadir</button>}</div>{showAddHistory && <AddMedicalHistoryForm onSave={handleAddMedicalHistory} onCancel={() => setShowAddHistory(false)} />}{/* ... */}</div>
+                  <div className={styles.healthSection}><div className={styles.healthSectionHeader}><h4>Vacunas</h4>{!showAddVaccine && <button type="button" className={styles.addRecordButton} onClick={() => {setShowAddVaccine(true); setShowAddHistory(false);}}><Plus size={16}/> Añadir</button>}</div>{showAddVaccine && <AddVaccineForm onSave={handleAddVaccine} onCancel={() => setShowAddVaccine(false)} />}{formData.healthRecord.vaccines?.length > 0 ? (<div className={styles.recordList}>{formData.healthRecord.vaccines.map(v => <div key={v.id} className={styles.recordCard}><div className={styles.recordCardInfo}><strong>{v.name}</strong><span>Aplicada: {v.date}</span></div><div className={styles.recordCardActions}><button onClick={() => handleRemoveVaccine(v.id)}><Trash2 size={16}/></button></div></div>)}</div>) : (<div className={styles.emptyHealthSection}><p>Sin vacunas registradas.</p></div>)}</div>
+                  <div className={styles.healthSection}><div className={styles.healthSectionHeader}><h4>Historial Clínico</h4>{!showAddHistory && <button type="button" className={styles.addRecordButton} onClick={() => {setShowAddHistory(true); setShowAddVaccine(false)}}><Plus size={16}/> Añadir</button>}</div>{showAddHistory && <AddMedicalHistoryForm onSave={handleAddMedicalHistory} onCancel={() => setShowAddHistory(false)} />}{formData.healthRecord.medicalHistory?.length > 0 ? (<div className={styles.recordList}>{formData.healthRecord.medicalHistory.map(h => <div key={h.id} className={styles.recordCard}><div className={styles.recordCardInfo}><strong>{h.title}</strong><span>Fecha: {h.date}</span></div><div className={styles.recordCardActions}><button onClick={() => handleRemoveMedicalHistory(h.id)}><Trash2 size={16}/></button></div></div>)}</div>) : (<div className={styles.emptyHealthSection}><p>Sin historial clínico.</p></div>)}</div>
                 </>
               )}
             </div>
