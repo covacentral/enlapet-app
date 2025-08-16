@@ -1,28 +1,28 @@
 // frontend/vite.config.js
-// Versión 4.0: Implementación de @vitejs/plugin-legacy
-// TAREA: Se reintroduce el plugin legacy para garantizar la máxima compatibilidad
-// con navegadores más antiguos, especialmente Safari en iOS, solucionando el
-// problema de la "pantalla negra".
+// Versión 5.0: Integración con Sentry
+// TAREA: Se añade el plugin de Sentry para la subida automática de source maps
+// y se activa la generación de los mismos en el build.
 
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import legacy from '@vitejs/plugin-legacy'; // 1. Importamos el plugin legacy
+import legacy from '@vitejs/plugin-legacy';
+import { sentryVitePlugin } from "@sentry/vite-plugin"; // 1. Importamos el plugin de Sentry
 
 export default defineConfig({
   plugins: [
     react(),
-    // 2. Invocamos el plugin legacy.
-    // Esto generará un "chunk" de polyfills y transpilará el código
-    // usando Babel para asegurar que funcione en navegadores más antiguos.
     legacy({
-      // El target se define aquí para que el plugin sepa qué navegadores soportar.
-      // Dejándolo en blanco o usando 'defaults' es una buena práctica.
       targets: ['defaults', 'not IE 11'],
+    }),
+    // 2. Añadimos el plugin de Sentry al final de la lista.
+    // Este se encargará de subir los sourcemaps durante el build.
+    sentryVitePlugin({
+      org: "cova-central-sas", // Reemplaza esto con el 'slug' de tu organización en Sentry
+      project: "enlapet-frontend"
     })
   ],
   build: {
-    // Ya no es necesario forzar el target aquí, el plugin legacy se encarga
-    // de una transpilación más robusta. Lo eliminamos para evitar conflictos.
-    // target: 'es2020' <-- ELIMINADO
+    // 3. Habilitamos la generación de sourcemaps.
+    sourcemap: true,
   }
 });
