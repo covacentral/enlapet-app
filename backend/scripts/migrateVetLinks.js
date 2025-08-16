@@ -1,7 +1,6 @@
 // backend/scripts/migrateVetLinks.js
-// Script de migración único para poblar el campo 'activeVetIds'.
-// TAREA: Lee todos los perfiles de mascotas, y para aquellas con vínculos activos,
-//        añade los IDs de los veterinarios al nuevo campo de búsqueda optimizado.
+// Script de migración único para poblar el campo 'activeVetIds'. (Versión Corregida)
+// TAREA: Se elimina la validación de la variable de entorno para permitir la ejecución en Google Cloud Shell.
 
 require('dotenv').config({ path: '../.env' });
 const { db } = require('../config/firebase');
@@ -10,10 +9,8 @@ const admin = require('firebase-admin');
 const migrateVetLinks = async () => {
   console.log('--- Iniciando migración de Vínculos de Veterinarios a activeVetIds ---');
 
-  if (!process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
-    console.error('ERROR: La variable de entorno FIREBASE_SERVICE_ACCOUNT_BASE64 no está definida.');
-    return;
-  }
+  // La validación de la variable de entorno ha sido eliminada.
+  // El archivo config/firebase.js ahora maneja la autenticación de forma inteligente.
 
   try {
     const petsRef = db.collection('pets');
@@ -34,13 +31,10 @@ const migrateVetLinks = async () => {
       const petRef = doc.ref;
       let needsUpdate = false;
       
-      // Asegurarnos de que el array 'activeVetIds' exista para evitar errores.
       const activeVetIds = petData.activeVetIds || [];
 
-      // Revisamos el array de 'linkedVets' si existe
       if (Array.isArray(petData.linkedVets) && petData.linkedVets.length > 0) {
         petData.linkedVets.forEach(link => {
-          // Si el vínculo está activo pero el ID del vet no está en el nuevo array
           if (link.status === 'active' && !activeVetIds.includes(link.vetId)) {
             activeVetIds.push(link.vetId);
             needsUpdate = true;
@@ -67,6 +61,8 @@ const migrateVetLinks = async () => {
     console.error('¡ERROR FATAL DURANTE LA MIGRACIÓN!', error);
   } finally {
     console.log('--- Proceso de migración finalizado ---');
+    // Cerramos la conexión para que el script finalice correctamente en Cloud Shell
+    // Nota: Firebase Admin SDK maneja las conexiones automáticamente, no es necesario un cierre explícito.
   }
 };
 
