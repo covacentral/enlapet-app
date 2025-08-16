@@ -1,6 +1,7 @@
 // frontend/src/AddLocationModal.jsx
 // Versión: 1.8 - Corrección de Estilos de Botón
 // TAREA: Se aplican las clases correctas del sistema de botones compartidos.
+// TAREA: Se aplican las clases correctas del sistema de botones compartidos.
 
 import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
@@ -172,3 +173,4 @@ function AddLocationModal({ categories, onClose, onLocationAdded }) {
 }
 
 export default AddLocationModal;
+
