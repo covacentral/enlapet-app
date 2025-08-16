@@ -1,22 +1,28 @@
 // frontend/vite.config.js
-// Versión 3.0: Solución de compatibilidad con iOS/Safari.
-// TAREA: Se elimina el plugin legacy y se establece un build.target explícito a 'es2020'
-// para garantizar la máxima compatibilidad con navegadores modernos, especialmente Webkit.
+// Versión 4.0: Implementación de @vitejs/plugin-legacy
+// TAREA: Se reintroduce el plugin legacy para garantizar la máxima compatibilidad
+// con navegadores más antiguos, especialmente Safari en iOS, solucionando el
+// problema de la "pantalla negra".
 
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import legacy from '@vitejs/plugin-legacy'; // 1. Importamos el plugin legacy
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [
-    react()
-    // El plugin legacy() ha sido eliminado. No es la solución correcta para este problema.
+    react(),
+    // 2. Invocamos el plugin legacy.
+    // Esto generará un "chunk" de polyfills y transpilará el código
+    // usando Babel para asegurar que funcione en navegadores más antiguos.
+    legacy({
+      // El target se define aquí para que el plugin sepa qué navegadores soportar.
+      // Dejándolo en blanco o usando 'defaults' es una buena práctica.
+      targets: ['defaults', 'not IE 11'],
+    })
   ],
   build: {
-    // Esta es la línea clave. Forzamos a Vite/ESBuild a transpilar
-    // cualquier sintaxis de JS muy moderna a un estándar con soporte universal (ES2020).
-    // Esto resuelve los errores de "pantalla negra" en iOS sin un impacto
-    // perceptible en el rendimiento para otros navegadores.
-    target: 'es2020'
+    // Ya no es necesario forzar el target aquí, el plugin legacy se encarga
+    // de una transpilación más robusta. Lo eliminamos para evitar conflictos.
+    // target: 'es2020' <-- ELIMINADO
   }
-})
+});
