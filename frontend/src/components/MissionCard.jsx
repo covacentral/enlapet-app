@@ -1,5 +1,5 @@
 // frontend/src/components/MissionCard.jsx
-// Componente para mostrar una única misión en la interfaz.
+// Versión 1.1: Adapta su estructura JSX para el nuevo diseño mobile-first.
 
 import React from 'react';
 import { Trophy, CheckCircle } from 'lucide-react';
@@ -12,18 +12,23 @@ function MissionCard({ mission, onAccept }) {
 
   return (
     <div className={`${styles.card} ${status === 'completed' ? styles.completed : ''}`}>
-      <div className={styles.iconWrapper}>
-        <Trophy size={32} className={styles.icon} />
-      </div>
-      <div className={styles.content}>
-        <span className={styles.category}>{category}</span>
-        <h4 className={styles.title}>{title}</h4>
-        <p className={styles.description}>{description}</p>
-        <div className={styles.reward}>
-          <small>Recompensa:</small>
-          <span>{reward.badgeName} + {reward.points} Puntos</span>
+      {/* Contenedor principal para alinear ícono y texto */}
+      <div className={styles.mainContent}>
+        <div className={styles.iconWrapper}>
+          <Trophy size={32} className={styles.icon} />
+        </div>
+        <div className={styles.content}>
+          <span className={styles.category}>{category}</span>
+          <h4 className={styles.title}>{title}</h4>
+          <p className={styles.description}>{description}</p>
+          <div className={styles.reward}>
+            <small>Recompensa:</small>
+            <span>{reward.badgeName} + {reward.points} Puntos</span>
+          </div>
         </div>
       </div>
+      
+      {/* El contenedor de acción ahora está fuera del mainContent para el layout mobile */}
       <div className={styles.action}>
         {status === 'completed' ? (
           <div className={styles.completedBadge}>

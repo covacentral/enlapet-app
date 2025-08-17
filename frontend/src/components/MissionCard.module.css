@@ -1,5 +1,5 @@
 /* frontend/src/components/MissionCard.module.css */
-/* Estilos para el componente MissionCard. */
+/* Versión 1.1: Refactorizado a un diseño "mobile-first". */
 
 .card {
     background-color: var(--background-dark);
@@ -7,14 +7,23 @@
     border-left: 4px solid var(--primary-accent);
     border-radius: 12px;
     padding: 1rem 1.5rem;
+    /* --- DISEÑO BASE (MOBILE) --- */
     display: flex;
-    align-items: center;
-    gap: 1.5rem;
+    flex-direction: column; /* Apilado vertical por defecto */
+    gap: 1rem; /* Espacio entre secciones */
     transition: background-color 0.2s;
 }
 
 .card:hover {
     background-color: var(--background-light);
+}
+
+/* --- [NUEVO] Contenedor para la parte superior (ícono y texto) --- */
+.mainContent {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    width: 100%;
 }
 
 .iconWrapper {
@@ -61,7 +70,14 @@
 }
 
 .action {
-    flex-shrink: 0;
+    /* El botón ahora ocupa todo el ancho en móviles */
+    width: 100%;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.action button {
+    width: 100%; /* El botón interno se expande */
 }
 
 /* Estilos para misiones completadas */
@@ -72,13 +88,38 @@
 .completed .iconWrapper {
     color: var(--success-green);
 }
+.completed .action {
+    border-top: 1px solid var(--border-color);
+}
 
 .completedBadge {
     display: flex;
-    flex-direction: column;
     align-items: center;
+    justify-content: center; /* Centra el badge */
     gap: 8px;
     color: var(--success-green);
     font-weight: bold;
-    font-size: 0.9rem;
+    font-size: 1rem;
+}
+
+
+/* --- [NUEVO] Media Query para pantallas más grandes --- */
+@media (min-width: 500px) {
+    .card {
+        flex-direction: row; /* Vuelve a ser horizontal */
+        align-items: center;
+    }
+    .action {
+        width: auto; /* El contenedor del botón se encoge */
+        flex-shrink: 0;
+        padding-top: 0;
+        border-top: none;
+    }
+    .action button {
+        width: auto;
+    }
+    .completedBadge {
+        flex-direction: column;
+        font-size: 0.9rem;
+    }
 }
