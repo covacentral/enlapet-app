@@ -1,0 +1,84 @@
+/* frontend/src/components/MissionCard.module.css */
+/* Estilos para el componente MissionCard. */
+
+.card {
+    background-color: var(--background-dark);
+    border: 1px solid var(--border-color);
+    border-left: 4px solid var(--primary-accent);
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    transition: background-color 0.2s;
+}
+
+.card:hover {
+    background-color: var(--background-light);
+}
+
+.iconWrapper {
+    flex-shrink: 0;
+    color: var(--primary-accent);
+}
+
+.content {
+    flex-grow: 1;
+    text-align: left;
+}
+
+.category {
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+}
+
+.title {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 4px 0;
+}
+
+.description {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    margin: 0 0 12px 0;
+    line-height: 1.5;
+}
+
+.reward {
+    font-size: 0.9rem;
+    color: var(--primary-accent);
+}
+.reward small {
+    opacity: 0.7;
+}
+.reward span {
+    font-weight: bold;
+    margin-left: 8px;
+}
+
+.action {
+    flex-shrink: 0;
+}
+
+/* Estilos para misiones completadas */
+.completed {
+    border-left-color: var(--success-green);
+    opacity: 0.7;
+}
+.completed .iconWrapper {
+    color: var(--success-green);
+}
+
+.completedBadge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: var(--success-green);
+    font-weight: bold;
+    font-size: 0.9rem;
+}

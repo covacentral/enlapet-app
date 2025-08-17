@@ -1,9 +1,8 @@
 // frontend/src/CreatePostModal.jsx
-// Versión: 2.5 - Corrección de Estilos de Botón
-// TAREA: Se aplican las clases correctas del sistema de botones compartidos.
+// Versión 2.6: Integra el contexto de Misiones.
 
 import { useState, useRef } from 'react';
-import { X, UploadCloud } from 'lucide-react';
+import { X, UploadCloud, Hash } from 'lucide-react'; // Importamos el ícono de Hash
 import { auth } from './firebase';
 
 import styles from './CreatePostModal.module.css';
@@ -11,6 +10,7 @@ import sharedStyles from './shared.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
+// --- (El componente AuthorSelector no sufre cambios) ---
 const AuthorSelector = ({ userProfile, pets, selectedAuthor, onSelectAuthor }) => {
   const userProfileWithId = { ...userProfile, id: auth.currentUser.uid };
   const allProfiles = [userProfileWithId, ...pets];
@@ -41,7 +41,8 @@ const AuthorSelector = ({ userProfile, pets, selectedAuthor, onSelectAuthor }) =
   );
 };
 
-function CreatePostModal({ userProfile, pets, initialAuthor, onClose, onPostCreated }) {
+// --- 1. El componente principal ahora acepta 'missionContext' ---
+function CreatePostModal({ userProfile, pets, initialAuthor, onClose, onPostCreated, missionContext = null }) {
     const userProfileWithId = { ...userProfile, id: auth.currentUser.uid };
     const [selectedAuthor, setSelectedAuthor] = useState(initialAuthor || userProfileWithId);
     const [caption, setCaption] = useState('');
@@ -74,6 +75,12 @@ function CreatePostModal({ userProfile, pets, initialAuthor, onClose, onPostCrea
         formData.append('caption', caption);
         formData.append('authorId', selectedAuthor.id);
         formData.append('authorType', authorType);
+        
+        // --- 2. Si hay un contexto de misión, lo añadimos al payload ---
+        if (missionContext) {
+            formData.append('missionId', missionContext.missionId);
+            formData.append('petId', missionContext.petId);
+        }
 
         try {
             const user = auth.currentUser;
@@ -98,7 +105,6 @@ function CreatePostModal({ userProfile, pets, initialAuthor, onClose, onPostCrea
 
         } catch (error) {
             setMessage(error.message);
-            onPostCreated(null);
         } finally {
             setIsLoading(false);
         }
@@ -112,7 +118,8 @@ function CreatePostModal({ userProfile, pets, initialAuthor, onClose, onPostCrea
         <div className={sharedStyles.modalBackdrop} onClick={onClose}>
             <div className={styles.content} onClick={e => e.stopPropagation()}>
                 <div className={sharedStyles.modalHeader}>
-                    <h2>Crear un nuevo Momento</h2>
+                    {/* El título cambia si es una misión */}
+                    <h2>{missionContext ? 'Completar Misión' : 'Crear un nuevo Momento'}</h2>
                     <button onClick={onClose} className={sharedStyles.closeButton} disabled={isLoading}>
                         <X size={24} />
                     </button>
@@ -137,6 +144,7 @@ function CreatePostModal({ userProfile, pets, initialAuthor, onClose, onPostCrea
                                 <div className={styles.uploadPromptContent}>
                                     <UploadCloud size={48} />
                                     <p>Haz clic aquí para seleccionar una foto</p>
+                                    {missionContext && <small>Esta será tu prueba para la misión.</small>}
                                 </div>
                             )}
                         </div>
@@ -159,17 +167,24 @@ function CreatePostModal({ userProfile, pets, initialAuthor, onClose, onPostCrea
                                 disabled={isLoading}
                             ></textarea>
                         </div>
+                        
+                        {/* --- 3. Mostramos el banner informativo del hashtag --- */}
+                        {missionContext && (
+                            <div className={styles.missionTagInfo}>
+                                <Hash size={14} />
+                                <span>Se añadirá <strong>{missionContext.missionHashtag}</strong> a tu publicación.</span>
+                            </div>
+                        )}
                     </div>
                     <div className={sharedStyles.modalFooter}>
                         {message && <p className={sharedStyles.responseMessage}>{message}</p>}
-                        {/* --- LÍNEA CORREGIDA --- */}
                         <button 
                           type="submit" 
                           className={`${sharedStyles.button} ${sharedStyles.primary}`} 
                           style={{width: '100%'}} 
                           disabled={isLoading}
                         >
-                            {isLoading ? 'Publicando...' : 'Publicar Momento'}
+                            {isLoading ? 'Publicando...' : (missionContext ? 'Completar Misión' : 'Publicar Momento')}
                         </button>
                     </div>
                 </form>

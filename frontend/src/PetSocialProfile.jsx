@@ -1,22 +1,23 @@
 // frontend/src/PetSocialProfile.jsx
-// Versión: 3.3 - Refactorización a CSS Modules
-// TAREA: Se implementa el módulo de estilos local para la página de perfil social de la mascota.
+// Versión 3.4: Integra el diario de hitos (misiones completadas).
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { auth } from './firebase';
 import LoadingComponent from './LoadingComponent';
-import CreatePostModal from './CreatePostModal';
 import PetEditModal from './PetEditModal';
 import PostCard from './PostCard';
+import PetMissionLog from './components/PetMissionLog'; // Importamos el nuevo componente
 
-// 1. IMPORTAMOS el nuevo módulo de estilos
 import styles from './PetSocialProfile.module.css';
+import sharedStyles from './shared.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-function PetSocialProfile({ user, userProfile, pets, onUpdate }) {
+function PetSocialProfile({ user, onUpdate }) {
     const { petId } = useParams();
+    const [activeTab, setActiveTab] = useState('posts');
+    
     const [petProfile, setPetProfile] = useState(null);
     const [posts, setPosts] = useState([]);
     const [likedStatuses, setLikedStatuses] = useState({});
@@ -24,7 +25,6 @@ function PetSocialProfile({ user, userProfile, pets, onUpdate }) {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
     const [isOwner, setIsOwner] = useState(false);
-    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isFollowing, setIsFollowing] = useState(false);
     const [followLoading, setFollowLoading] = useState(false);
@@ -73,25 +73,20 @@ function PetSocialProfile({ user, userProfile, pets, onUpdate }) {
     useEffect(() => {
         fetchData();
     }, [fetchData]);
-
-    const handlePostCreated = () => {
-      setIsCreateModalOpen(false);
-      fetchData();
-    };
     
     const handlePetUpdate = () => {
       setIsEditModalOpen(false);
-      onUpdate();
-      fetchData();
+      onUpdate(); // Notifica al layout principal para refrescar datos globales
+      fetchData(); // Vuelve a cargar los datos específicos del perfil
     };
 
-    const handleLikeToggle = async (postId) => {
+    const handleLikeToggle = (postId) => {
         const isCurrentlyLiked = !!likedStatuses[postId];
         setLikedStatuses(prev => ({ ...prev, [postId]: !isCurrentlyLiked }));
         setPosts(prevPosts => prevPosts.map(p => p.id === postId ? { ...p, likesCount: p.likesCount + (isCurrentlyLiked ? -1 : 1) } : p));
     };
     
-    const handleSaveToggle = async (postId) => {
+    const handleSaveToggle = (postId) => {
         const isCurrentlySaved = !!savedStatuses[postId];
         setSavedStatuses(prev => ({ ...prev, [postId]: !isCurrentlySaved }));
     };
@@ -122,6 +117,7 @@ function PetSocialProfile({ user, userProfile, pets, onUpdate }) {
             });
             if (!response.ok) throw new Error('La acción no se pudo completar.');
             setIsFollowing(!isFollowing);
+            setPetProfile(prev => ({...prev, followersCount: prev.followersCount + (isFollowing ? -1 : 1)}));
         } catch (err) {
             console.error("Error toggling follow:", err);
         } finally {
@@ -130,80 +126,78 @@ function PetSocialProfile({ user, userProfile, pets, onUpdate }) {
     };
 
     if (isLoading) return <LoadingComponent text="Cargando perfil de la mascota..." />;
-    if (error) return <div className="error-message">{error}</div>;
+    if (error) return <div className={sharedStyles.responseMessageError} style={{padding: '2rem'}}>{error}</div>;
     if (!petProfile) return <div>No se encontró el perfil.</div>;
 
     return (
         <>
-            {/* 2. APLICAMOS las clases desde el objeto 'styles' */}
-            <header className={styles.container}>
-                <div className={styles.coverPhoto}></div>
-                <div className={styles.header}>
-                    <div className={styles.details}>
-                        <div className={styles.pictureWrapper}>
-                            <img 
-                                src={petProfile.petPictureUrl || 'https://placehold.co/300x300/E2E8F0/4A5568?text=🐾'} 
-                                alt={petProfile.name} 
-                                className={styles.picture}
-                            />
+            <div className={styles.pageContainer}>
+                <header className={styles.container}>
+                    <div className={styles.coverPhoto}></div>
+                    <div className={styles.header}>
+                        <div className={styles.details}>
+                            <div className={styles.pictureWrapper}>
+                                <img 
+                                    src={petProfile.petPictureUrl || 'https://placehold.co/300x300/E2E8F0/4A5568?text=🐾'} 
+                                    alt={petProfile.name} 
+                                    className={styles.picture}
+                                />
+                            </div>
+                            <div className={styles.info}>
+                                <h1>{petProfile.name}</h1>
+                                <p>{petProfile.breed}</p>
+                            </div>
                         </div>
-                        <div className={styles.info}>
-                            <h1>{petProfile.name}</h1>
-                            <p>{petProfile.breed}</p>
+                        <div className={styles.actions}>
+                            {isOwner ? (
+                                <button onClick={() => setIsEditModalOpen(true)} className={`${sharedStyles.button} ${sharedStyles.primary}`}>Editar Perfil</button>
+                            ) : (
+                                <button 
+                                    className={`${sharedStyles.button} ${isFollowing ? sharedStyles.secondary : sharedStyles.primary}`} 
+                                    onClick={handleFollowToggle} 
+                                    disabled={followLoading}
+                                >
+                                    {followLoading ? '...' : (isFollowing ? 'Siguiendo' : 'Seguir')}
+                                </button>
+                            )}
                         </div>
                     </div>
-                     <div className={styles.actions}>
-                        {isOwner ? (
-                            <button onClick={() => setIsEditModalOpen(true)} className={styles.follow}>Editar Perfil</button> 
-                        ) : (
-                            <button 
-                                className={isFollowing ? styles.following : styles.follow} 
-                                onClick={handleFollowToggle} 
-                                disabled={followLoading}
-                            >
-                                {followLoading ? '...' : (isFollowing ? 'Siguiendo' : 'Seguir')}
-                            </button>
-                        )}
-                    </div>
+                </header>
+
+                <div className={sharedStyles.modalTabs} style={{borderRadius: 0, marginTop: '1rem'}}>
+                    <button type="button" className={`${sharedStyles.modalTabButton} ${activeTab === 'posts' ? sharedStyles.active : ''}`} onClick={() => setActiveTab('posts')}>Publicaciones</button>
+                    <button type="button" className={`${sharedStyles.modalTabButton} ${activeTab === 'missions' ? sharedStyles.active : ''}`} onClick={() => setActiveTab('missions')}>Diario de Hitos</button>
                 </div>
-            </header>
 
-            <main className={styles.timeline}>
-                {posts.length > 0 ? (
-                    posts.map(post => (
-                        <PostCard 
-                            key={post.id} 
-                            post={post} 
-                            isLiked={!!likedStatuses[post.id]}
-                            isSaved={!!savedStatuses[post.id]}
-                            onLikeToggle={handleLikeToggle}
-                            onSaveToggle={handleSaveToggle}
-                            onCommentAdded={handleCommentAdded}
-                        />
-                    ))
-                ) : (
-                    <p className={styles.noPostsMessage}>
-                        ¡{petProfile.name} todavía no ha compartido ningún momento!
-                    </p>
-                )}
-            </main>
+                <main className={styles.profileContent}>
+                    {activeTab === 'posts' && (
+                        posts.length > 0 ? (
+                            posts.map(post => (
+                                <PostCard 
+                                    key={post.id} 
+                                    post={post} 
+                                    isLiked={!!likedStatuses[post.id]}
+                                    isSaved={!!savedStatuses[post.id]}
+                                    onLikeToggle={handleLikeToggle}
+                                    onSaveToggle={handleSaveToggle}
+                                    onCommentAdded={handleCommentAdded}
+                                />
+                            ))
+                        ) : (
+                            <p className={styles.noPostsMessage}>¡{petProfile.name} todavía no ha compartido ningún momento!</p>
+                        )
+                    )}
+                    
+                    {activeTab === 'missions' && <PetMissionLog petId={petId} />}
+                </main>
+            </div>
 
-            {isCreateModalOpen && (
-                <CreatePostModal 
-                    userProfile={userProfile}
-                    pets={pets}
-                    initialAuthor={petProfile}
-                    onClose={() => setIsCreateModalOpen(false)}
-                    onPostCreated={handlePostCreated}
-                />
-            )}
-            
             {isEditModalOpen && (
                 <PetEditModal 
-                    pet={petProfile}
-                    user={user}
-                    onClose={() => setIsEditModalOpen(false)}
-                    onUpdate={handlePetUpdate}
+                    pet={petProfile} 
+                    user={user} 
+                    onClose={() => setIsEditModalOpen(false)} 
+                    onUpdate={handlePetUpdate} 
                 />
             )}
         </>

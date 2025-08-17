@@ -116,3 +116,22 @@
     font-weight: bold;
     white-space: nowrap;
   }
+
+  /* --- [NUEVO] Estilos para el banner de misión --- */
+.missionTagInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--background-dark);
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--primary-accent);
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.missionTagInfo strong {
+  color: var(--text-primary);
+  font-weight: bold;
+}
