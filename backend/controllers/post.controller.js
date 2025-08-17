@@ -1,12 +1,15 @@
 // backend/controllers/post.controller.js
-// VERSIÓN CORREGIDA: Añade endpoint para obtener un post por ID.
+// VERSIÓN 2.0: Integra el flujo transaccional para completar misiones al crear un post.
 
 const { db, bucket } = require('../config/firebase');
 const { createNotification } = require('../services/notification.service');
 const admin = require('firebase-admin');
+// --- 1. IMPORTAMOS la función transaccional desde el controlador de misiones ---
+const { completeMission } = require('./mission.controller');
 
-// ... (Todas las funciones existentes como likePost, addComment, etc., permanecen sin cambios)
+// --- (getFeed y otras funciones GET permanecen sin cambios) ---
 const getFeed = async (req, res) => {
+    // ... (código existente sin modificaciones)
     const { uid } = req.user;
     const { cursor } = req.query;
     const POSTS_PER_PAGE = 10;
@@ -65,41 +68,114 @@ const getFeed = async (req, res) => {
         res.status(500).json({ message: 'Error al obtener el feed.' });
     }
 };
+
+/**
+ * --- FUNCIÓN createPost REFACTORIZADA PARA MISIONES ---
+ * Crea un nuevo post. Si se provee un 'missionId', intenta completar la misión
+ * de forma transaccional junto con la creación del post.
+ */
 const createPost = async (req, res) => {
     const { uid } = req.user;
-    const { caption, authorId, authorType } = req.body;
-    if (!req.file || !caption || !authorId || !authorType) return res.status(400).json({ message: 'Imagen, texto, ID y tipo de autor son requeridos.' });
+    // --- 2. Obtenemos los nuevos datos del contexto de la misión ---
+    const { caption, authorId, authorType, missionId, petId } = req.body;
+
+    if (!req.file || !caption || !authorId || !authorType) {
+        return res.status(400).json({ message: 'Imagen, texto, ID y tipo de autor son requeridos.' });
+    }
+
     const authorCollection = authorType === 'pet' ? 'pets' : 'users';
     const authorRef = db.collection(authorCollection).doc(authorId);
+
     try {
         const authorDoc = await authorRef.get();
         if (!authorDoc.exists) return res.status(404).json({ message: 'Autor no encontrado.' });
         if (authorType === 'pet' && authorDoc.data().ownerId !== uid) return res.status(403).json({ message: 'No autorizado.' });
         if (authorType === 'user' && authorId !== uid) return res.status(403).json({ message: 'No autorizado.' });
-        const authorData = authorDoc.data();
+
         const postRef = db.collection('posts').doc();
         const filePath = `posts/${uid}/${postRef.id}/${Date.now()}-${req.file.originalname}`;
         const fileUpload = bucket.file(filePath);
         const blobStream = fileUpload.createWriteStream({ metadata: { contentType: req.file.mimetype } });
+
         blobStream.on('error', (error) => {
             console.error("Error en blobStream (post):", error);
             res.status(500).json({ message: 'Error durante la subida de la imagen.' });
         });
+
         blobStream.on('finish', async () => {
             await fileUpload.makePublic();
             const imageUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
-            const newPost = { authorId, authorType, imageUrl, caption, authorLocation: authorData.location || null, createdAt: new Date().toISOString(), likesCount: 0, commentsCount: 0 };
-            await postRef.set(newPost);
-            const finalPost = { ...newPost, id: postRef.id, author: { id: authorId, name: authorData.name, profilePictureUrl: authorData.profilePictureUrl || authorData.petPictureUrl || '' } };
-            res.status(201).json({ message: 'Publicación creada.', post: finalPost });
+            
+            try {
+                // --- 3. Inicia la lógica transaccional ---
+                const newPost = await db.runTransaction(async (t) => {
+                    let missionData = null;
+                    let finalCaption = caption;
+
+                    // Si es parte de una misión, obtenemos los datos de la misión
+                    if (missionId && petId) {
+                        const missionRef = db.collection('missions').doc(missionId);
+                        const missionDoc = await t.get(missionRef);
+                        if (missionDoc.exists && missionDoc.data().isActive) {
+                            missionData = { id: missionDoc.id, ...missionDoc.data() };
+                            // Anexamos el hashtag de forma segura
+                            if (!finalCaption.includes(missionData.hashtag)) {
+                                finalCaption = `${finalCaption} ${missionData.hashtag}`;
+                            }
+                        }
+                    }
+
+                    const postData = {
+                        authorId,
+                        authorType,
+                        imageUrl,
+                        caption: finalCaption,
+                        authorLocation: authorDoc.data().location || null,
+                        createdAt: new Date().toISOString(),
+                        likesCount: 0,
+                        commentsCount: 0
+                    };
+
+                    // Escritura 1: Crear el post
+                    t.set(postRef, postData);
+                    
+                    // Si hay una misión válida, la completamos dentro de la misma transacción
+                    if (missionData) {
+                        await completeMission(t, {
+                            ownerId: uid,
+                            petId: petId,
+                            mission: missionData,
+                            proofPostId: postRef.id
+                        });
+                    }
+
+                    return { ...postData, id: postRef.id };
+                });
+
+                // --- 4. Post-transacción: Notificación y respuesta ---
+                if (missionId) {
+                    await createNotification(uid, 'system', 'mission_completed', missionId, 'mission');
+                }
+                
+                const finalAuthorData = { id: authorId, name: authorDoc.data().name, profilePictureUrl: authorDoc.data().profilePictureUrl || authorDoc.data().petPictureUrl || '' };
+                res.status(201).json({ message: 'Publicación creada.', post: { ...newPost, author: finalAuthorData } });
+
+            } catch (transactionError) {
+                console.error('Error en la transacción de createPost:', transactionError);
+                res.status(500).json({ message: transactionError.message || 'No se pudo crear la publicación y completar la misión.' });
+            }
         });
+
         blobStream.end(req.file.buffer);
     } catch (error) {
         console.error('Error al crear el post:', error);
         res.status(500).json({ message: 'Error al verificar el autor.' });
     }
 };
+
+// --- (El resto de funciones del controlador permanecen sin cambios) ---
 const getPostsByAuthor = async (req, res) => {
+    // ... (código existente sin modificaciones)
     try {
         const { authorId } = req.params;
         const postsQuery = await db.collection('posts').where('authorId', '==', authorId).orderBy('createdAt', 'desc').get();
@@ -111,6 +187,7 @@ const getPostsByAuthor = async (req, res) => {
     }
 };
 const likePost = async (req, res) => {
+    // ... (código existente sin modificaciones)
     const { uid } = req.user;
     const { postId } = req.params;
     const postRef = db.collection('posts').doc(postId);
@@ -148,6 +225,7 @@ const likePost = async (req, res) => {
     }
 };
 const unlikePost = async (req, res) => {
+    // ... (código existente sin modificaciones)
     const { uid } = req.user;
     const { postId } = req.params;
     const postRef = db.collection('posts').doc(postId);
@@ -166,6 +244,7 @@ const unlikePost = async (req, res) => {
     }
 };
 const getLikeStatuses = async (req, res) => {
+    // ... (código existente sin modificaciones)
     const { uid } = req.user;
     const { postIds } = req.body;
     if (!Array.isArray(postIds) || postIds.length === 0) return res.status(200).json({});
@@ -181,6 +260,7 @@ const getLikeStatuses = async (req, res) => {
     }
 };
 const addComment = async (req, res) => {
+    // ... (código existente sin modificaciones)
     const { uid } = req.user;
     const { postId } = req.params;
     const { text } = req.body;
@@ -220,6 +300,7 @@ const addComment = async (req, res) => {
     }
 };
 const getComments = async (req, res) => {
+    // ... (código existente sin modificaciones)
     try {
         const { postId } = req.params;
         const commentsQuery = await db.collection('posts').doc(postId).collection('comments').orderBy('createdAt', 'asc').get();
@@ -231,6 +312,7 @@ const getComments = async (req, res) => {
     }
 };
 const savePost = async (req, res) => {
+    // ... (código existente sin modificaciones)
     const { uid } = req.user;
     const { postId } = req.params;
     try {
@@ -243,6 +325,7 @@ const savePost = async (req, res) => {
     }
 };
 const unsavePost = async (req, res) => {
+    // ... (código existente sin modificaciones)
     const { uid } = req.user;
     const { postId } = req.params;
     try {
@@ -255,6 +338,7 @@ const unsavePost = async (req, res) => {
     }
 };
 const getSaveStatuses = async (req, res) => {
+    // ... (código existente sin modificaciones)
     const { uid } = req.user;
     const { postIds } = req.body;
     if (!Array.isArray(postIds) || postIds.length === 0) return res.status(200).json({});
@@ -271,6 +355,7 @@ const getSaveStatuses = async (req, res) => {
     }
 };
 const getSavedPosts = async (req, res) => {
+    // ... (código existente sin modificaciones)
     const { uid } = req.user;
     try {
         const savedSnapshot = await db.collection('users').doc(uid).collection('saved_posts').orderBy('savedAt', 'desc').get();
@@ -308,11 +393,8 @@ const getSavedPosts = async (req, res) => {
         res.status(500).json({ message: 'Error al obtener publicaciones guardadas.' });
     }
 };
-
-/**
- * [NUEVO] Obtiene un único post por su ID y enriquece los datos del autor.
- */
 const getPostById = async (req, res) => {
+    // ... (código existente sin modificaciones)
     try {
         const { postId } = req.params;
         const postDoc = await db.collection('posts').doc(postId).get();
@@ -351,5 +433,5 @@ const getPostById = async (req, res) => {
 module.exports = {
     getFeed, createPost, getPostsByAuthor, likePost, unlikePost, getLikeStatuses,
     addComment, getComments, savePost, unsavePost, getSaveStatuses, getSavedPosts,
-    getPostById // <-- Exportamos la nueva función
+    getPostById
 };

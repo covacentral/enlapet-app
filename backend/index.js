@@ -1,5 +1,5 @@
 // backend/index.js
-// Versión 1.7 - Corrección Crítica del Webhook de Pagos
+// Versión 1.8 - Integración del Módulo de Misiones
 
 // --- 1. CONFIGURACIÓN E IMPORTACIONES ---
 require('dotenv').config();
@@ -24,6 +24,7 @@ const vetRoutes = require('./routes/vet.routes');
 const appointmentRoutes = require('./routes/appointment.routes');
 const orderRoutes = require('./routes/order.routes');
 const paymentRoutes = require('./routes/payment.routes');
+const missionRoutes = require('./routes/mission.routes'); // <-- [NUEVO] Importamos las rutas de misiones
 
 // --- 2. INICIALIZACIÓN DE LA APP ---
 const app = express();
@@ -46,13 +47,13 @@ const corsOptions = {
   }
 };
 app.use(cors(corsOptions));
-app.use(express.json()); // Para parsear JSON
-app.use(express.urlencoded({ extended: true })); // Para parsear 'x-www-form-urlencoded'
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // --- 4. DEFINICIÓN DE RUTAS ---
 
 // A. Rutas Públicas
-app.get('/', (req, res) => res.json({ message: "¡Bienvenido a la API de EnlaPet! v1.7 - Webhook Corregido" }));
+app.get('/', (req, res) => res.json({ message: "¡Bienvenido a la API de EnlaPet! v1.8 - Misiones Habilitadas" }));
 app.use('/api/auth', authRoutes);
 app.use('/api', publicRoutes);
 app.post('/api/payments/webhook', handleEpaycoWebhook);
@@ -73,7 +74,7 @@ app.use('/api', vetRoutes);
 app.use('/api', appointmentRoutes);
 app.use('/api', orderRoutes);
 app.use('/api', paymentRoutes);
-
+app.use('/api', missionRoutes); // <-- [NUEVO] Registramos las rutas de misiones
 
 // --- 5. INICIAR SERVIDOR ---
-app.listen(PORT, () => console.log(`Servidor con webhook corregido corriendo en el puerto ${PORT}`));
+app.listen(PORT, () => console.log(`Servidor con Misiones v2.2 corriendo en el puerto ${PORT}`));

@@ -1,5 +1,6 @@
 // backend/models/user.model.js
 // Define la estructura y los valores por defecto para un documento de usuario en Firestore.
+// VERSIÓN 1.1: Añade el campo 'enlaPetPoints' para el sistema de recompensas.
 
 /**
  * @typedef {Object} UserLocation
@@ -29,29 +30,30 @@
  * @returns {Object} El objeto de perfil de usuario para Firestore.
  */
 const getNewUserProfile = (name, email, profilePictureUrl = '') => ({
-    name,
-    email,
-    createdAt: new Date().toISOString(),
-    userType: 'personal',
-    profilePictureUrl,
-    coverPhotoUrl: '',
-    bio: '',
-    phone: '',
-    /** @type {UserLocation} */
-    location: { country: 'Colombia', department: '', city: '' },
-    /** @type {UserPrivacySettings} */
-    privacySettings: { profileVisibility: 'public', showEmail: 'private' },
-    followersCount: 0,
-    followingCount: 0,
-    /** @type {UserVerification} */
-    verification: {
-      type: 'none',
-      status: 'none',
-      lastApplicationDate: null,
-      // Los documentos ya no se guardan aquí, sino en la solicitud individual.
-    }
-  });
-  
-  module.exports = {
-    getNewUserProfile
-  };
+  name,
+  email,
+  createdAt: new Date().toISOString(),
+  userType: 'personal',
+  profilePictureUrl,
+  coverPhotoUrl: '',
+  bio: '',
+  phone: '',
+  /** @type {UserLocation} */
+  location: { country: 'Colombia', department: '', city: '' },
+  /** @type {UserPrivacySettings} */
+  privacySettings: { profileVisibility: 'public', showEmail: 'private' },
+  followersCount: 0,
+  followingCount: 0,
+  enlaPetPoints: 0, // <-- [NUEVO] Campo para el sistema de recompensas de misiones.
+  /** @type {UserVerification} */
+  verification: {
+    type: 'none',
+    status: 'none',
+    lastApplicationDate: null,
+    // Los documentos ya no se guardan aquí, sino en la solicitud individual.
+  }
+});
+
+module.exports = {
+  getNewUserProfile
+};
