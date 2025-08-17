@@ -1,13 +1,12 @@
 // backend/controllers/post.controller.js
-// VERSIÓN 2.0: Integra el flujo transaccional para completar misiones al crear un post.
+// VERSIÓN 2.1: Corrige el flujo transaccional para cumplir las reglas de Firestore (Lecturas antes de Escrituras).
 
 const { db, bucket } = require('../config/firebase');
 const { createNotification } = require('../services/notification.service');
 const admin = require('firebase-admin');
-// --- 1. IMPORTAMOS la función transaccional desde el controlador de misiones ---
-const { completeMission } = require('./mission.controller');
+// Se elimina la importación de 'completeMission', ya que su lógica se integra directamente.
 
-// --- (getFeed y otras funciones GET permanecen sin cambios) ---
+// --- (getFeed y otras funciones no relacionadas con la creación permanecen sin cambios) ---
 const getFeed = async (req, res) => {
     // ... (código existente sin modificaciones)
     const { uid } = req.user;
@@ -70,91 +69,90 @@ const getFeed = async (req, res) => {
 };
 
 /**
- * --- FUNCIÓN createPost REFACTORIZADA PARA MISIONES ---
- * Crea un nuevo post. Si se provee un 'missionId', intenta completar la misión
- * de forma transaccional junto con la creación del post.
+ * --- FUNCIÓN createPost REESTRUCTURADA Y CORREGIDA ---
+ * Garantiza que todas las lecturas de la transacción se ejecuten antes que las escrituras.
  */
 const createPost = async (req, res) => {
     const { uid } = req.user;
-    // --- 2. Obtenemos los nuevos datos del contexto de la misión ---
     const { caption, authorId, authorType, missionId, petId } = req.body;
 
     if (!req.file || !caption || !authorId || !authorType) {
         return res.status(400).json({ message: 'Imagen, texto, ID y tipo de autor son requeridos.' });
     }
 
-    const authorCollection = authorType === 'pet' ? 'pets' : 'users';
-    const authorRef = db.collection(authorCollection).doc(authorId);
-
     try {
-        const authorDoc = await authorRef.get();
-        if (!authorDoc.exists) return res.status(404).json({ message: 'Autor no encontrado.' });
-        if (authorType === 'pet' && authorDoc.data().ownerId !== uid) return res.status(403).json({ message: 'No autorizado.' });
-        if (authorType === 'user' && authorId !== uid) return res.status(403).json({ message: 'No autorizado.' });
+        const authorDoc = await db.collection(authorType === 'pet' ? 'pets' : 'users').doc(authorId).get();
+        if (!authorDoc.exists || (authorType === 'pet' && authorDoc.data().ownerId !== uid) || (authorType === 'user' && authorId !== uid)) {
+            return res.status(403).json({ message: 'Autorización denegada.' });
+        }
 
         const postRef = db.collection('posts').doc();
         const filePath = `posts/${uid}/${postRef.id}/${Date.now()}-${req.file.originalname}`;
         const fileUpload = bucket.file(filePath);
         const blobStream = fileUpload.createWriteStream({ metadata: { contentType: req.file.mimetype } });
 
-        blobStream.on('error', (error) => {
-            console.error("Error en blobStream (post):", error);
-            res.status(500).json({ message: 'Error durante la subida de la imagen.' });
-        });
+        blobStream.on('error', (error) => res.status(500).json({ message: 'Error durante la subida de la imagen.' }));
 
         blobStream.on('finish', async () => {
             await fileUpload.makePublic();
             const imageUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
             
             try {
-                // --- 3. Inicia la lógica transaccional ---
                 const newPost = await db.runTransaction(async (t) => {
-                    let missionData = null;
-                    let finalCaption = caption;
-
-                    // Si es parte de una misión, obtenemos los datos de la misión
+                    // --- FASE 1: TODAS LAS LECTURAS ---
+                    let missionDoc = null;
+                    let completedMissionDoc = null;
                     if (missionId && petId) {
                         const missionRef = db.collection('missions').doc(missionId);
-                        const missionDoc = await t.get(missionRef);
-                        if (missionDoc.exists && missionDoc.data().isActive) {
-                            missionData = { id: missionDoc.id, ...missionDoc.data() };
-                            // Anexamos el hashtag de forma segura
-                            if (!finalCaption.includes(missionData.hashtag)) {
-                                finalCaption = `${finalCaption} ${missionData.hashtag}`;
-                            }
+                        const completedMissionRef = db.collection('pets').doc(petId).collection('completedMissions').doc(missionId);
+                        // Leemos ambos documentos al inicio.
+                        [missionDoc, completedMissionDoc] = await Promise.all([t.get(missionRef), t.get(completedMissionRef)]);
+                    }
+                    
+                    // --- FASE 2: VALIDACIÓN Y PREPARACIÓN ---
+                    let missionData = null;
+                    let finalCaption = caption;
+                    const isMissionPost = missionId && petId && missionDoc && missionDoc.exists && missionDoc.data().isActive && !completedMissionDoc.exists;
+
+                    if (isMissionPost) {
+                        missionData = { id: missionDoc.id, ...missionDoc.data() };
+                        if (!finalCaption.includes(missionData.hashtag)) {
+                            finalCaption = `${finalCaption} ${missionData.hashtag}`;
                         }
                     }
-
+                    
                     const postData = {
-                        authorId,
-                        authorType,
-                        imageUrl,
-                        caption: finalCaption,
+                        authorId, authorType, imageUrl, caption: finalCaption,
                         authorLocation: authorDoc.data().location || null,
                         createdAt: new Date().toISOString(),
-                        likesCount: 0,
-                        commentsCount: 0
+                        likesCount: 0, commentsCount: 0
                     };
 
-                    // Escritura 1: Crear el post
-                    t.set(postRef, postData);
-                    
-                    // Si hay una misión válida, la completamos dentro de la misma transacción
-                    if (missionData) {
-                        await completeMission(t, {
-                            ownerId: uid,
-                            petId: petId,
-                            mission: missionData,
-                            proofPostId: postRef.id
+                    // --- FASE 3: TODAS LAS ESCRITURAS ---
+                    t.set(postRef, postData); // Escritura 1: Post
+
+                    if (isMissionPost) {
+                        const userRef = db.collection('users').doc(uid);
+                        const completedMissionRef = db.collection('pets').doc(petId).collection('completedMissions').doc(missionId);
+                        
+                        // Escritura 2: Hito de la Misión
+                        t.set(completedMissionRef, {
+                            completedAt: new Date().toISOString(), status: 'completed',
+                            proof: { type: 'POST', postId: postRef.id }
+                        });
+                        
+                        // Escritura 3: Puntos del Usuario
+                        t.update(userRef, {
+                            enlaPetPoints: admin.firestore.FieldValue.increment(missionData.reward.points || 0)
                         });
                     }
-
-                    return { ...postData, id: postRef.id };
+                    
+                    return { ...postData, id: postRef.id, isMissionCompleted: isMissionPost, missionData };
                 });
 
-                // --- 4. Post-transacción: Notificación y respuesta ---
-                if (missionId) {
-                    await createNotification(uid, 'system', 'mission_completed', missionId, 'mission');
+                // --- FASE 4: LÓGICA POST-TRANSACCIÓN ---
+                if (newPost.isMissionCompleted) {
+                    await createNotification(uid, 'system', 'mission_completed', newPost.missionData.id, 'mission');
                 }
                 
                 const finalAuthorData = { id: authorId, name: authorDoc.data().name, profilePictureUrl: authorDoc.data().profilePictureUrl || authorDoc.data().petPictureUrl || '' };
@@ -168,12 +166,12 @@ const createPost = async (req, res) => {
 
         blobStream.end(req.file.buffer);
     } catch (error) {
-        console.error('Error al crear el post:', error);
+        console.error('Error al preparar la creación del post:', error);
         res.status(500).json({ message: 'Error al verificar el autor.' });
     }
 };
 
-// --- (El resto de funciones del controlador permanecen sin cambios) ---
+// --- (El resto de funciones como getPostsByAuthor, likePost, etc., no cambian) ---
 const getPostsByAuthor = async (req, res) => {
     // ... (código existente sin modificaciones)
     try {
