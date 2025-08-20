@@ -30,6 +30,19 @@ const generateEPID = customAlphabet('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ', 6);
  */
 
 /**
+ * [NUEVO] Define la estructura para el modo de rescate de una mascota.
+ * @typedef {Object} RescueMode
+ * @property {boolean} isActive - Si el modo rescate está activo o no.
+ * @property {string | null} activatedAt - Fecha de activación en formato ISO.
+ * @property {Object} lastSeen - Información sobre el último avistamiento.
+ * @property {import('firebase-admin').firestore.GeoPoint | null} lastSeen.coordinates - Coordenadas del último avistamiento.
+ * @property {string} lastSeen.address - Descripción textual de la ubicación.
+ * @property {number} lastSeen.radius - Radio de búsqueda en metros.
+ * @property {string} message - Mensaje personalizado del dueño para quien encuentre a la mascota.
+ * @property {boolean} showContactPhone - Decide si el teléfono del dueño se muestra en el perfil de rescate.
+ */
+
+/**
  * Devuelve el objeto base para un nuevo perfil de mascota.
  * @param {string} ownerId - UID del dueño.
  * @param {string} name - Nombre de la mascota.
@@ -49,7 +62,20 @@ const getNewPetProfile = (ownerId, name, breed = '') => ({
   healthRecord: { birthDate: '', gender: '', vaccines: [], medicalHistory: [] },
   followersCount: 0,
   /** @type {Array<VetLink>} */
-  linkedVets: [], // Array para almacenar los IDs y estados de los veterinarios vinculados
+  linkedVets: [],
+  activeVetIds: [], // Para consultas eficientes de veterinarios activos
+  /** @type {RescueMode} */
+  rescueMode: {
+    isActive: false,
+    activatedAt: null,
+    lastSeen: {
+      coordinates: null,
+      address: '',
+      radius: 1000 // Radio por defecto de 1km
+    },
+    message: '',
+    showContactPhone: true
+  },
   // Para perfiles creados por veterinarios para dueños sin cuenta
   unclaimedInfo: {
     isUnclaimed: false,

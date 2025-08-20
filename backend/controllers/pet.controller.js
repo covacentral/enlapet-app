@@ -1,6 +1,6 @@
 // backend/controllers/pet.controller.js
-// Versión 2.2 - Optimización de Vínculos Veterinarios
-// TAREA: Se añade un campo 'activeVetIds' para consultas eficientes.
+// Versión 2.3 - Añade la lógica para el Modo Rescate.
+// TAREA: Se introduce la función `manageRescueMode` para activar, actualizar y desactivar el estado de búsqueda de una mascota.
 
 const { db, bucket } = require('../config/firebase');
 const admin = require('firebase-admin');
@@ -20,10 +20,10 @@ const getPetPublicProfile = async (req, res) => {
         const petData = petDoc.data();
         const userDoc = await db.collection('users').doc(petData.ownerId).get();
 
-        let ownerData = { 
-            id: petData.ownerId, 
-            name: 'Responsable', 
-            phone: 'No disponible' 
+        let ownerData = {
+            id: petData.ownerId,
+            name: 'Responsable',
+            phone: 'No disponible'
         };
 
         if (userDoc.exists) {
@@ -33,6 +33,11 @@ const getPetPublicProfile = async (req, res) => {
                 name: fullOwnerData.name,
                 phone: fullOwnerData.phone || 'No proporcionado'
             };
+        }
+
+        // Si la mascota está en modo rescate y el dueño no quiere mostrar el teléfono, lo ocultamos.
+        if (petData.rescueMode?.isActive && !petData.rescueMode?.showContactPhone) {
+            ownerData.phone = 'Contacto no autorizado por el dueño.';
         }
 
         const publicProfile = {
@@ -73,7 +78,7 @@ const createPet = async (req, res) => {
         }
 
         const newPetData = getNewPetProfile(uid, name, breed || '');
-        
+
         const petRef = await db.collection('pets').add(newPetData);
         res.status(201).json({ message: 'Mascota registrada.', petId: petRef.id, epid: newPetData.epid });
     } catch (error) {
@@ -116,7 +121,7 @@ const updatePet = async (req, res) => {
                 }
             }
         }
-        
+
         res.status(200).json({ message: 'Mascota actualizada con éxito.' });
     } catch (error) {
         console.error(`Error en updatePet para petId ${petId}:`, error);
@@ -144,7 +149,7 @@ const uploadPetPicture = async (req, res) => {
         if (petDoc.data().ownerId !== uid) {
             return res.status(403).json({ message: 'No autorizado para modificar esta mascota.' });
         }
-        
+
         const filePath = `pets-pictures/${petId}/${Date.now()}-${req.file.originalname}`;
         const fileUpload = bucket.file(filePath);
         const blobStream = fileUpload.createWriteStream({ metadata: { contentType: req.file.mimetype } });
@@ -204,16 +209,13 @@ const managePatientLink = async (req, res) => {
                 throw new Error('No se encontró una solicitud de vínculo pendiente de este veterinario.');
             }
 
-            // --- LÓGICA MODIFICADA ---
             const updatePayload = {};
 
             if (action === 'approve') {
                 linkedVets[linkIndex].status = 'active';
-                // Añadimos el ID del veterinario al nuevo array para búsquedas rápidas
                 updatePayload.activeVetIds = admin.firestore.FieldValue.arrayUnion(vetId);
             } else { // 'reject'
                 linkedVets.splice(linkIndex, 1);
-                 // Nos aseguramos de que no quede en el array de búsqueda si se rechaza
                 updatePayload.activeVetIds = admin.firestore.FieldValue.arrayRemove(vetId);
             }
 
@@ -228,11 +230,63 @@ const managePatientLink = async (req, res) => {
     }
 };
 
+// --- [NUEVA FUNCIÓN] ---
+/**
+ * Gestiona el estado de "modo rescate" de una mascota.
+ */
+const manageRescueMode = async (req, res) => {
+    const { uid: ownerId } = req.user;
+    const { petId } = req.params;
+    const { isActive, lastSeen, message, showContactPhone } = req.body;
+
+    const petRef = db.collection('pets').doc(petId);
+
+    try {
+        const petDoc = await petRef.get();
+        if (!petDoc.exists) {
+            return res.status(404).json({ message: 'Mascota no encontrada.' });
+        }
+        if (petDoc.data().ownerId !== ownerId) {
+            return res.status(403).json({ message: 'No autorizado para modificar esta mascota.' });
+        }
+
+        const updatePayload = {};
+
+        if (isActive) {
+            // Activando o actualizando el modo rescate
+            if (!lastSeen || !lastSeen.latitude || !lastSeen.longitude) {
+                return res.status(400).json({ message: 'Se requieren las coordenadas del último avistamiento.' });
+            }
+            updatePayload['rescueMode.isActive'] = true;
+            updatePayload['rescueMode.activatedAt'] = new Date().toISOString();
+            updatePayload['rescueMode.lastSeen.coordinates'] = new admin.firestore.GeoPoint(parseFloat(lastSeen.latitude), parseFloat(lastSeen.longitude));
+            updatePayload['rescueMode.lastSeen.address'] = lastSeen.address || '';
+            updatePayload['rescueMode.message'] = message || '';
+            updatePayload['rescueMode.showContactPhone'] = typeof showContactPhone === 'boolean' ? showContactPhone : true;
+        } else {
+            // Desactivando el modo rescate
+            updatePayload['rescueMode.isActive'] = false;
+            updatePayload['rescueMode.activatedAt'] = null;
+        }
+
+        await petRef.update(updatePayload);
+
+        const statusMessage = isActive ? 'activado' : 'desactivado';
+        res.status(200).json({ message: `Modo rescate ${statusMessage} con éxito.` });
+
+    } catch (error) {
+        console.error('Error en manageRescueMode:', error);
+        res.status(500).json({ message: 'Error interno al gestionar el modo rescate.' });
+    }
+};
+
+
 module.exports = {
     getPetPublicProfile,
     getMyPets,
     createPet,
     updatePet,
     uploadPetPicture,
-    managePatientLink
+    managePatientLink,
+    manageRescueMode // <-- Exportamos la nueva función
 };
