@@ -1,17 +1,14 @@
 // frontend/src/components/ManagementHeaderView.jsx
-// Versión 1.2: Convierte el banner en un Link funcional a la página del producto.
+// Versión 1.3: Conecta el evento para abrir el modal de rescate.
 
 import React from 'react';
-import { Link } from 'react-router-dom'; // 1. Importamos Link
+import { Link } from 'react-router-dom';
 import PetManagementCard from './PetManagementCard';
 import styles from '../MainHeader.module.css';
 
-// ID estático del producto, tal como se definió en ProductPage.jsx
 const ENLAPET_COLLAR_PRODUCT_ID = "ENLAPET_COLLAR_V1";
 
-// --- Componente interno del Banner MODIFICADO ---
 const NfcBanner = () => (
-    // 2. El banner ahora es un componente Link que redirige a la ruta del producto.
     <Link to={`/dashboard/store/product/${ENLAPET_COLLAR_PRODUCT_ID}`} className={styles.nfcBanner}>
         <div>
             <h3 className={styles.nfcBannerTitle}>Protección Inteligente EnlaPet</h3>
@@ -20,7 +17,8 @@ const NfcBanner = () => (
     </Link>
 );
 
-function ManagementHeaderView({ pets }) {
+// --- 1. El componente ahora acepta la prop 'onOpenRescueModal' ---
+function ManagementHeaderView({ pets, onOpenRescueModal }) {
   return (
     <div className={styles.managementViewContainer}>
       <NfcBanner />
@@ -28,7 +26,14 @@ function ManagementHeaderView({ pets }) {
         <h3 className={styles.managementViewTitle}>Mis Mascotas</h3>
         <div className={styles.cardCarousel}>
           {pets && pets.length > 0 ? (
-            pets.map(pet => <PetManagementCard key={pet.id} pet={pet} />)
+            pets.map(pet => (
+              // --- 2. Pasamos la función a cada tarjeta como 'onRescueClick' ---
+              <PetManagementCard 
+                key={pet.id} 
+                pet={pet} 
+                onRescueClick={onOpenRescueModal} 
+              />
+            ))
           ) : (
             <p className={styles.noPetsHeader} style={{textAlign: 'center', width: '100%'}}>
                 Aún no tienes mascotas para gestionar.

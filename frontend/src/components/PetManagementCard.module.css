@@ -1,5 +1,5 @@
 /* frontend/src/components/PetManagementCard.module.css */
-/* Versión 1.1: Ajusta el botón para ser de una sola línea. */
+/* Versión 1.2: Añade estilos para el banner de Modo Rescate y ajusta el footer. */
 
 .card {
     display: flex;
@@ -11,12 +11,33 @@
     border-radius: 12px;
     overflow: hidden;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+    position: relative; /* Necesario para el banner */
 }
 
 .card:hover {
     transform: translateY(-5px);
     box-shadow: 0 8px 20px rgba(0,0,0,0.3);
 }
+
+/* --- [NUEVO] Banner para mascotas en búsqueda --- */
+.rescueBanner {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    background-color: var(--error-red);
+    color: white;
+    padding: 6px;
+    font-size: 0.8rem;
+    font-weight: 800;
+    text-align: center;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
 
 .petImage {
     width: 100%;
@@ -52,24 +73,27 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    font-size: 0.8rem; 
+    font-size: 0.8rem;
     color: var(--warning-yellow);
-    padding: 4px 8px; 
+    padding: 4px 8px;
     background-color: rgba(245, 158, 11, 0.1);
-    border-radius: 6px; 
+    border-radius: 6px;
     margin-bottom: 10px;
 }
 
+/* --- [MODIFICADO] El footer ahora usa flexbox para apilar los botones --- */
 .cardFooter {
     margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px; /* Espacio entre los botones */
 }
 
-/* --- CLASE MODIFICADA --- */
 /* Se ajusta el botón para que ocupe menos espacio vertical y no divida el texto. */
 .rescueButton {
     width: 100%;
-    padding: 8px 10px; /* Se reduce el padding vertical */
-    font-size: 0.85rem; /* Se reduce ligeramente la fuente */
+    padding: 8px 10px;
+    font-size: 0.85rem;
     text-decoration: none;
-    white-space: nowrap; /* Evita que el texto se divida en dos líneas */
+    white-space: nowrap;
 }
