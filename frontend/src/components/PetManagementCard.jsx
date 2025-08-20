@@ -1,27 +1,28 @@
 // frontend/src/components/PetManagementCard.jsx
-// Versión 1.2: Integra la activación del Modo Rescate y un indicador visual.
+// Versión 1.3: Corrige el error de build reemplazando el ícono inexistente.
 
 import React from 'react';
 import { Link } from 'react-router-dom';
 import styles from './PetManagementCard.module.css';
 import sharedStyles from '../shared.module.css';
-import { AlertCircle, Announce } from 'lucide-react';
+// --- LÍNEA CORREGIDA ---
+// Se reemplaza 'Announce' (que no existe) por 'Megaphone'.
+import { AlertCircle, Megaphone } from 'lucide-react';
 
-// --- [NUEVO] Subcomponente para el banner de mascota perdida ---
+// --- Subcomponente para el banner de mascota perdida (con el ícono corregido) ---
 const RescueModeActiveBanner = () => (
     <div className={styles.rescueBanner}>
-        <Announce size={14} />
+        <Megaphone size={14} />
         <span>EN BÚSQUEDA</span>
     </div>
 );
 
 
-function PetManagementCard({ pet, onRescueClick }) { // <-- 1. Añadimos onRescueClick como prop
+function PetManagementCard({ pet, onRescueClick }) {
   const isProfileIncomplete = !pet.location?.city || !pet.healthRecord?.birthDate;
 
   return (
     <div className={styles.card}>
-      {/* --- 2. Mostramos el banner si el modo rescate está activo --- */}
       {pet.rescueMode?.isActive && <RescueModeActiveBanner />}
       
       <img
@@ -41,10 +42,8 @@ function PetManagementCard({ pet, onRescueClick }) { // <-- 1. Añadimos onRescu
         )}
 
         <div className={styles.cardFooter}>
-          {/* --- 3. El botón ahora es condicional --- */}
           {pet.rescueMode?.isActive ? (
             <button
-                // Este botón permitirá abrir el modal para *actualizar* o *desactivar* el modo rescate.
                 onClick={() => onRescueClick(pet)}
                 className={`${sharedStyles.button} ${sharedStyles.danger} ${styles.rescueButton}`}
             >
@@ -52,7 +51,6 @@ function PetManagementCard({ pet, onRescueClick }) { // <-- 1. Añadimos onRescu
             </button>
           ) : (
             <button
-                // Este botón abrirá el modal para *activar* el modo rescate.
                 onClick={() => onRescueClick(pet)}
                 className={`${sharedStyles.button} ${sharedStyles.secondary} ${styles.rescueButton}`}
             >
