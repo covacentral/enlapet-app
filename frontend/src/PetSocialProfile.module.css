@@ -1,226 +1,109 @@
 /* frontend/src/PetSocialProfile.module.css */
-/* Versión 3.6: Estilos completos y actualizados para el perfil social de la mascota. */
+/* Estilos encapsulados para la página de perfil social de una mascota. */
 
-.profileContainer {
-  max-width: 1200px;
-  margin: 2rem auto;
-  padding: 0 1rem;
-}
-
-.backLink {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 1.5rem;
-  color: var(--text-secondary);
-  text-decoration: none;
-  font-weight: 600;
-}
-
-.backLink:hover {
-  color: var(--primary-accent);
-}
-
-.header {
-  background-color: var(--background-light);
-  border: 1px solid var(--border-color);
-  border-radius: 15px;
-  padding: 2rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1.5rem;
-  text-align: center;
-}
-
-@media (min-width: 768px) {
+.container {
+    background-color: var(--background-light);
+    border-radius: 15px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+  }
+  
+  .coverPhoto {
+    height: 200px;
+    background: var(--cover-photo-bg);
+  }
+  
   .header {
-      flex-direction: row;
-      text-align: left;
+    padding: 0 24px 24px;
+    margin-top: -80px;
+    position: relative;
+    text-align: left;
   }
-}
-
-.profilePicture {
-  width: 150px;
-  height: 150px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 5px solid var(--background-dark);
-  flex-shrink: 0;
-}
-
-.headerInfo {
-  flex-grow: 1;
-}
-
-.nameContainer {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  margin-bottom: 0.5rem;
-}
-
-@media (min-width: 768px) {
-  .nameContainer {
-      justify-content: flex-start;
+  
+  .details {
+    display: flex;
+    align-items: flex-end;
+    gap: 20px;
   }
-}
-
-.petName {
-  font-size: 2.5rem;
-  font-weight: 800;
-  margin: 0;
-  color: var(--text-primary);
-}
-
-.editButton {
-  color: var(--text-secondary);
-  background: none;
-  border: none;
-  padding: 5px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-}
-.editButton:hover {
-  background-color: var(--background-dark);
-  color: var(--primary-accent);
-}
-
-
-.petBreed {
-  font-size: 1.2rem;
-  color: var(--text-secondary);
-  margin: 0 0 1rem 0;
-}
-
-.ownerInfo {
-  font-size: 1rem;
-  color: var(--text-secondary);
-  margin-bottom: 1.5rem;
-}
-
-.ownerNameLink {
-  color: var(--primary-accent);
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.stats {
-  display: flex;
-  gap: 2rem;
-  justify-content: center;
-}
-
-@media (min-width: 768px) {
-  .stats {
-      justify-content: flex-start;
+  
+  .pictureWrapper {
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    border: 5px solid var(--background-light);
+    flex-shrink: 0;
+    overflow: hidden;
+    background-color: var(--background-dark);
   }
-}
-
-.statItem {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 1rem;
-  color: var(--text-primary);
-}
-
-.headerActions {
-  display: flex;
-  gap: 1rem;
-  flex-shrink: 0;
-}
-
-.mainContent {
-  margin-top: 2rem;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 2rem;
-}
-
-@media (min-width: 1024px) {
-  .mainContent {
-      grid-template-columns: 1fr 2fr;
+  
+  .picture {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
-}
-
-.leftColumn {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.infoCard {
-  background-color: var(--background-light);
-  border: 1px solid var(--border-color);
-  border-radius: 15px;
-  padding: 1.5rem;
-}
-
-.infoCardHeader {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 1rem;
-  color: var(--text-secondary);
-  border-bottom: 1px solid var(--border-color);
-  padding-bottom: 1rem;
-}
-
-.infoCardHeader h4 {
-  margin: 0;
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.infoCardContent {
-  font-size: 1rem;
-  line-height: 1.8;
-}
-.infoCardContent p {
-  margin: 0.5rem 0;
-}
-.infoCardContent strong {
-  color: var(--text-primary);
-}
-
-.vaccineList, .historyList {
-  padding-left: 20px;
-  margin: 0;
-}
-.vaccineList li, .historyList li {
-  margin-bottom: 0.5rem;
-}
-
-.rightColumn {}
-
-.postsTitle {
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin-bottom: 1.5rem;
-  color: var(--text-primary);
-}
-
-.postsGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1rem;
-}
-
-.postImage {
-  width: 100%;
-  aspect-ratio: 1 / 1;
-  object-fit: cover;
-  border-radius: 12px;
-  border: 1px solid var(--border-color);
-  transition: transform 0.2s ease;
-}
-
-.postImage:hover {
-  transform: scale(1.05);
-}
+  
+  .info {
+    padding-bottom: 10px;
+  }
+  
+  .info h1 {
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin: 0 0 5px;
+    color: var(--text-primary);
+  }
+  
+  .info p {
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    margin: 0;
+  }
+  
+  .actions {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+  }
+  
+  .actionButton {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    font-weight: bold;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+  }
+  
+  .actionButton:active {
+    transform: scale(0.98);
+  }
+  
+  .follow {
+    composes: actionButton;
+    background-color: var(--primary-accent);
+    color: var(--brand-cream);
+  }
+  .follow:hover {
+    background-color: var(--primary-accent-hover);
+  }
+  
+  .following {
+    composes: actionButton;
+    background-color: var(--border-color);
+    color: var(--text-secondary);
+  }
+  .following:hover {
+    background-color: #334155; /* Slate 700 */
+  }
+  
+  .timeline {
+      padding-top: 1rem;
+  }
+  
+  .noPostsMessage {
+      text-align: center;
+      color: var(--text-secondary);
+      padding: 4rem 1rem;
+      font-size: 1.1rem;
+  }
