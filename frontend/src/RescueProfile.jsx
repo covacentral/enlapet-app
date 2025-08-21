@@ -1,29 +1,27 @@
 // frontend/src/RescueProfile.jsx
-// Versión 2.0: Rediseño a "Cartel Digital" compartible en redes sociales.
+// Versión 3.0: Rediseño a "Cartel Digital Compacto" para optimización visual.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Circle } from 'react-leaflet';
 import { auth } from './firebase';
 import LoadingComponent from './LoadingComponent';
-import { Phone, MessageSquare, MapPin, AlertTriangle, ChevronDown } from 'lucide-react';
+import { MessageSquare, MapPin, AlertTriangle, ChevronDown } from 'lucide-react';
 
 import styles from './RescueProfile.module.css';
 import sharedStyles from './shared.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-// --- [NUEVO] Componente de Botón de Navegación Universal ---
+// --- Componente de Botón de Navegación Universal (sin cambios) ---
 const BackButton = () => {
     const navigate = useNavigate();
     const user = auth.currentUser;
 
     const handleClick = () => {
-        // Si el usuario está logueado, simplemente va hacia atrás en el historial.
         if (user) {
             navigate(-1);
         } else {
-            // Si no está logueado, lo lleva a la página de inicio/registro.
             navigate('/');
         }
     };
@@ -35,13 +33,12 @@ const BackButton = () => {
     );
 };
 
-
+// --- Componente principal con JSX reestructurado ---
 function RescueProfile() {
     const { epid } = useParams();
     const [petData, setPetData] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
-    // --- [NUEVO] Estado para controlar la visibilidad del mapa ---
     const [isMapVisible, setIsMapVisible] = useState(false);
 
     const fetchRescueProfile = useCallback(async () => {
@@ -76,14 +73,15 @@ function RescueProfile() {
 
     const hasCoordinates = petData.lastSeen?.coordinates?._latitude && petData.lastSeen?.coordinates?._longitude;
     const position = hasCoordinates ? [petData.lastSeen.coordinates._latitude, petData.lastSeen.coordinates._longitude] : null;
-
+    
+    // --- Botón de WhatsApp rediseñado sin ícono ---
     const WhatsAppButton = ({ phoneNumber }) => {
         if (!phoneNumber) return null;
         const cleanedPhone = phoneNumber.replace(/\D/g, '');
         const whatsappLink = `https://wa.me/${cleanedPhone.startsWith('57') ? cleanedPhone : '57' + cleanedPhone}`;
         return (
             <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className={`${sharedStyles.button} ${styles.whatsappButton}`}>
-                <Phone size={18} /> WhatsApp
+                WhatsApp
             </a>
         );
     };
@@ -95,13 +93,21 @@ function RescueProfile() {
                 
                 <div className={styles.header}>
                     <h1>¡SE BUSCA!</h1>
-                    <img src={petData.petPictureUrl || 'https://placehold.co/300x300/E2E8F0/4A5568?text=🐾'} alt={petData.name} className={styles.picture} />
+                </div>
+
+                <img src={petData.petPictureUrl || 'https://placehold.co/300x300/E2E8F0/4A5568?text=🐾'} alt={petData.name} className={styles.picture} />
+                
+                {/* --- Nombre y raza como pie de foto --- */}
+                <div className={styles.petInfoCaption}>
                     <h2 className={styles.name}>{petData.name}</h2>
                     <p className={styles.breed}>{petData.breed || 'Raza no especificada'}</p>
                 </div>
 
+                {/* --- Mensaje del dueño reubicado --- */}
+                <p className={styles.message}><MessageSquare size={16} /> "{petData.message}"</p>
+
+                {/* --- Sección de contacto sin título explícito --- */}
                 <div className={styles.section}>
-                    <h3>¿Lo viste?</h3>
                     <div className={styles.contactSection}>
                         <p>Contacta a <strong>{petData.ownerName}</strong></p>
                         {petData.contactPhone ? (
@@ -115,6 +121,7 @@ function RescueProfile() {
                     </div>
                 </div>
 
+                {/* --- Acordeón del mapa --- */}
                 <div className={styles.section}>
                     <button className={styles.locationToggle} onClick={() => setIsMapVisible(!isMapVisible)}>
                         <MapPin size={16} /> 
@@ -125,26 +132,15 @@ function RescueProfile() {
                         <div className={styles.mapWrapper}>
                             {position ? (
                                 <MapContainer center={position} zoom={15} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
-                                    <TileLayer
-                                        url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-                                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-                                    />
+                                    <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" attribution='&copy; OpenStreetMap &copy; CARTO' />
                                     <Marker position={position} />
                                     <Circle center={position} radius={petData.lastSeen.radius || 1000} pathOptions={{ color: 'red', fillColor: 'red' }} />
                                 </MapContainer>
                             ) : (
-                                <div className={styles.noMapMessage}>
-                                    <AlertTriangle size={24} />
-                                    <p>La ubicación exacta no fue proporcionada.</p>
-                                </div>
+                                <div className={styles.noMapMessage}><AlertTriangle size={24} /><p>La ubicación exacta no fue proporcionada.</p></div>
                             )}
                         </div>
                     )}
-                </div>
-
-                <div className={styles.section}>
-                    <h3>Mensaje del Dueño</h3>
-                    <p className={styles.message}><MessageSquare size={16} /> "{petData.message}"</p>
                 </div>
 
                 <footer className={styles.footer}>

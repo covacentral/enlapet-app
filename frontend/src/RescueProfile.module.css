@@ -1,171 +1,184 @@
 /* frontend/src/RescueProfile.module.css */
-/* Versión 2.0: Rediseño a "Cartel Digital" compartible en redes sociales. */
+/* Versión 3.0: Rediseño a "Cartel Digital Compacto" tipo historia de Instagram. */
 
 .container {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    justify-content: flex-start; /* Alinea el contenido arriba */
+    justify-content: center; /* Centra la tarjeta verticalmente */
     min-height: 100vh;
-    padding: 10px; /* Margen mínimo para el efecto de "historia" */
+    padding: 8px; /* Margen mínimo en los bordes de la pantalla */
     box-sizing: border-box;
 }
 
 .card {
     background-color: var(--background-light);
-    padding: 20px;
     border-radius: 15px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
     text-align: center;
     width: 100%;
-    max-width: 450px; /* Ancho máximo para que se vea bien en tablets */
+    max-width: 450px;
     border-top: 6px solid var(--error-red);
-    position: relative; /* Para el botón de atrás */
+    position: relative;
     display: flex;
     flex-direction: column;
-    gap: 1rem; /* Espacio entre secciones */
+    padding: 15px; /* Padding interno reducido */
+    gap: 12px; /* Espacio reducido entre elementos */
+    /* Simula la proporción de una historia para evitar el scroll */
+    max-height: calc(100vh - 20px);
+    overflow: hidden; /* Previene cualquier desbordamiento */
 }
 
-/* --- [NUEVO] Botón de navegación --- */
+/* --- Botón "Atrás" reubicado --- */
 .backButton {
     position: absolute;
-    top: 15px;
-    left: 15px;
-    background-color: rgba(0, 0, 0, 0.4);
+    top: 10px;
+    left: 10px;
+    background-color: rgba(0, 0, 0, 0.5);
     border: 1px solid var(--border-color);
     border-radius: 20px;
-    padding: 8px 16px;
+    padding: 6px 14px;
     color: var(--text-primary);
     cursor: pointer;
     font-weight: bold;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     transition: background-color 0.2s;
     z-index: 10;
 }
-
 .backButton:hover {
     background-color: rgba(0, 0, 0, 0.7);
 }
 
-
 .header h1 {
-    font-size: 2.2rem;
+    font-size: 2rem; /* Ligeramente más pequeño para ahorrar espacio */
     color: var(--error-red);
     font-weight: 800;
-    margin-bottom: 1rem;
+    margin-bottom: 10px; /* Espacio reducido */
+    padding-top: 30px; /* Espacio para que no choque con el botón */
     letter-spacing: 1px;
 }
 
-/* --- [MODIFICADO] Foto cuadrada --- */
 .picture {
     width: 100%;
-    max-width: 300px;
     height: auto;
-    aspect-ratio: 1 / 1; /* Asegura que sea cuadrada */
+    aspect-ratio: 1 / 1;
     object-fit: cover;
-    border-radius: 12px; /* Bordes redondeados */
+    border-radius: 12px;
     border: 4px solid var(--border-color);
-    margin: 0 auto 1rem auto;
+    margin: 0 auto;
 }
 
-.name {
-    font-size: 2.5rem;
+/* --- [NUEVO] Pie de foto para nombre y raza --- */
+.petInfoCaption {
+    text-align: center;
+    margin-top: 8px;
+}
+.petInfoCaption .name {
+    font-size: 1.8rem;
     margin: 0;
+    font-weight: 800;
     color: var(--brand-cream);
+    display: inline; /* Permite que la raza esté al lado */
+    margin-right: 8px;
 }
-
-.breed {
-    font-size: 1.2rem;
-    margin-top: 5px;
+.petInfoCaption .breed {
+    font-size: 1.1rem;
     color: var(--text-secondary);
+    display: inline;
 }
 
 .section {
     width: 100%;
-    margin-top: 1rem;
-    padding-top: 1rem;
+    margin-top: 0;
+    padding-top: 12px;
     border-top: 1px solid var(--border-color);
     text-align: left;
 }
-
-.section h3 {
-    font-size: 1.1rem;
-    text-transform: uppercase;
-    color: var(--text-secondary);
-    margin-bottom: 1rem;
-    font-weight: 700;
+.section:first-of-type {
+    border-top: none;
+    padding-top: 0;
 }
 
-/* --- [NUEVO] Acordeón para el mapa --- */
+
+/* --- Acordeón del mapa sin cambios estructurales, solo estéticos --- */
 .locationToggle {
     display: flex;
     align-items: center;
     gap: 8px;
     font-weight: bold;
-    margin-bottom: 1rem;
     cursor: pointer;
     width: 100%;
     background: none;
     border: none;
     color: var(--text-primary);
     text-align: left;
-    padding: 0;
+    padding: 8px;
+    border-radius: 8px;
+    background-color: var(--background-dark);
+}
+.locationToggle:hover {
+    background-color: #1e293b;
 }
 
 .mapWrapper {
-    height: 300px;
+    height: 250px; /* Altura reducida */
     border-radius: 12px;
     overflow: hidden;
     border: 1px solid var(--border-color);
-    background-color: var(--background-dark);
-    margin-top: 1rem;
+    margin-top: 10px;
 }
 
-.noMapMessage {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    color: var(--text-secondary);
-    text-align: center;
-    padding: 1rem;
-}
-
+/* --- Mensaje del dueño sin título --- */
 .message {
     font-style: italic;
-    font-size: 1.1rem;
-    line-height: 1.6;
+    font-size: 1rem;
+    line-height: 1.5;
     display: flex;
     gap: 8px;
-}
-
-/* --- [NUEVO] Sección de contacto optimizada --- */
-.contactSection {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.contactInfo {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    padding: 10px;
     background-color: var(--background-dark);
-    padding: 12px;
     border-radius: 8px;
 }
 
+/* --- [NUEVO] Sección de contacto rediseñada --- */
+.contactSection {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+}
+.contactSection p {
+    margin: 0;
+    font-size: 1rem;
+}
+.contactInfo {
+    display: flex;
+    justify-content: center; /* Centra los elementos */
+    align-items: center;
+    gap: 15px;
+    background-color: var(--background-dark);
+    padding: 12px;
+    border-radius: 8px;
+    flex-wrap: wrap; /* Permite que se apilen si no hay espacio */
+}
 .contactInfo span {
-    font-size: 1.2rem;
+    font-size: 1.5rem;
     font-weight: bold;
+    color: var(--text-primary);
 }
 
+/* --- [MODIFICADO] Botón de WhatsApp más legible --- */
 .whatsappButton {
     background-color: var(--whatsapp-green);
-    padding: 8px 12px;
-    font-size: 0.9rem;
+    color: white; /* Color de texto blanco y legible */
+    font-weight: bold;
+    padding: 10px 20px;
+    border-radius: 8px;
     text-decoration: none;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+.whatsappButton:hover {
+    background-color: #1DA851;
 }
 
 .noContact {
@@ -174,15 +187,14 @@
     background-color: var(--background-dark);
     padding: 1rem;
     border-radius: 8px;
-    margin-top: 1rem;
     text-align: center;
 }
 
-/* --- [MODIFICADO] Footer más visible --- */
 .footer {
-    margin-top: 2rem;
+    margin-top: auto; /* Empuja el footer al final del contenedor flex */
+    padding-top: 10px;
     font-size: 0.9rem;
-    color: var(--text-primary); /* Cambiado a blanco */
+    color: var(--text-primary);
     opacity: 0.8;
 }
 
