@@ -1,13 +1,13 @@
 // frontend/src/components/RescueModeModal.jsx
-// Versión 1.2: Corrige la importación de 'colombiaData' para usar 'export default'.
+// Versión 1.3: Se alinea la importación con la exportación nombrada de 'colombiaData'.
 
 import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import { auth } from '../firebase';
 import { X, AlertTriangle } from 'lucide-react';
 // --- [LÍNEA CORREGIDA] ---
-// Se cambia la importación a 'default' y se usa el nombre 'colombiaData'.
-import colombiaData from '../utils/colombiaData';
+// Se vuelve a una importación nombrada para que coincida con la exportación explícita del archivo de datos.
+import { colombiaDepartments } from '../utils/colombiaData';
 
 import styles from './RescueModeModal.module.css';
 import sharedStyles from '../shared.module.css';
@@ -57,8 +57,8 @@ function RescueModeModal({ pet, onClose, onSuccess }) {
     }
     
     // --- [LÍNEA CORREGIDA] ---
-    // Se usa el nombre correcto de la variable: 'colombiaData'.
-    const departmentData = colombiaData.find(d => d.department === pet.location?.department);
+    // Se usa el nombre de la variable importada correctamente: 'colombiaDepartments'.
+    const departmentData = colombiaDepartments.find(d => d.department === pet.location?.department);
     if (departmentData) {
       const cityData = departmentData.cities.find(c => c.name === pet.location?.city);
       if (cityData) {
