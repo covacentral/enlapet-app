@@ -74,11 +74,27 @@
     margin-bottom: 1rem;
 }
 
+/* --- REGLA CORREGIDA --- */
+/* Se añade una altura explícita para que el mapa pueda renderizarse. */
 .mapWrapper {
     height: 300px;
     border-radius: 12px;
     overflow: hidden;
     border: 1px solid var(--border-color);
+    background-color: var(--background-dark); /* Fondo para el estado de carga o error */
+}
+
+/* --- NUEVA REGLA --- */
+/* Estilos para el mensaje de fallback cuando no hay mapa. */
+.noMapMessage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-secondary);
+    text-align: center;
+    padding: 1rem;
 }
 
 .message {

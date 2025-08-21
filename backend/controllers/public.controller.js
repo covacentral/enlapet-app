@@ -125,7 +125,9 @@ const getRescuePetProfileByEpid = async (req, res) => {
             name: petData.name,
             breed: petData.breed,
             petPictureUrl: petData.petPictureUrl,
-            lastSeen: petData.rescueMode.lastSeen,
+            // --- LÍNEA CORREGIDA ---
+            // Nos aseguramos de que lastSeen siempre sea un objeto, incluso si está vacío.
+            lastSeen: petData.rescueMode.lastSeen || { coordinates: null, address: '', radius: 1000 },
             message: petData.rescueMode.message,
             ownerName: ownerData.name,
             contactPhone: ownerData.phone
