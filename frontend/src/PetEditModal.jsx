@@ -1,11 +1,9 @@
 // frontend/src/PetEditModal.jsx
-// Versión: 4.0 - Corrige el error de referencia al importar el ícono 'X'.
+// Versión: 4.1 - Elimina la imagen de previsualización del modal, conservando el botón de carga.
 
 import { useState, useEffect, useRef } from 'react';
 import { colombiaDepartments } from './utils/colombiaData';
 import { auth } from './firebase';
-// --- LÍNEA CORREGIDA ---
-// Se añade la importación del ícono 'X' que faltaba.
 import { Plus, Trash2, Copy, Check, X } from 'lucide-react';
 
 import styles from './PetEditModal.module.css';
@@ -13,7 +11,7 @@ import sharedStyles from './shared.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-// --- Subcomponentes (sin cambios en la lógica) ---
+// --- Subcomponentes (sin cambios) ---
 const AddVaccineForm = ({ onSave, onCancel }) => {
   const [vaccine, setVaccine] = useState({ name: '', date: '', nextDate: '' });
   const handleChange = (e) => setVaccine({ ...vaccine, [e.target.name]: e.target.value });
@@ -194,13 +192,14 @@ function PetEditModal({ pet, onClose, onPetUpdate }) {
             <div className={styles.body}>
               {activeTab === 'info' && (
                 <>
+                  {/* --- SECCIÓN DE IMAGEN ELIMINADA, SE CONSERVA EL BOTÓN --- */}
                   <div className={styles.profilePictureSection}>
-                    <img src={formData.petPictureUrl || 'https://placehold.co/300x300/E2E8F0/4A5568?text=🐾'} alt={formData.name} className={styles.profilePicture} />
                     <button type="button" className={`${sharedStyles.button} ${sharedStyles.secondary}`} onClick={() => fileInputRef.current.click()} disabled={isUploading}>
                       {isUploading ? 'Subiendo...' : 'Cambiar Foto'}
                     </button>
                     <input type="file" ref={fileInputRef} onChange={handleFileChange} style={{display: 'none'}} accept="image/*" />
                   </div>
+                  
                   <div className={sharedStyles.formGroup}><label>Nombre</label><input type="text" name="name" value={formData.name} onChange={handleChange} /></div>
                   <div className={sharedStyles.formGroup}><label>Raza</label><input type="text" name="breed" value={formData.breed} onChange={handleChange} /></div>
                   
