@@ -1,8 +1,9 @@
 // frontend/src/MainHeader.jsx
-// Versión 2.3: Recibe y pasa la prop 'onOpenRescueModal' a la vista de gestión.
+// Versión 2.4: Integra la nueva barra de navegación superior con 5 íconos.
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Trophy, LayoutGrid, X } from 'lucide-react';
+import { NavLink } from 'react-router-dom';
+import { Trophy, LayoutGrid, X, Search, Map, Calendar, Megaphone, Menu } from 'lucide-react';
 
 import styles from './MainHeader.module.css';
 import sharedStyles from './shared.module.css';
@@ -13,7 +14,6 @@ import DefaultHeaderView from './components/DefaultHeaderView';
 import ManagementHeaderView from './components/ManagementHeaderView';
 import MissionsHeaderView from './components/MissionsHeaderView';
 
-// --- 1. La firma del componente ahora incluye 'onOpenRescueModal' ---
 function MainHeader({ userProfile, pets, onAcceptMission, onOpenRescueModal }) {
   const [viewMode, setViewMode] = useState('default');
   const [lastViewMode, setLastViewMode] = useState('default');
@@ -49,6 +49,15 @@ function MainHeader({ userProfile, pets, onAcceptMission, onOpenRescueModal }) {
 
   const handleToggleManagement = () => handleToggle('management');
   const handleToggleMissions = () => handleToggle('missions');
+  
+  const handleSearchClick = () => {
+    alert('Próximamente: Búsqueda de usuarios, mascotas y perfiles verificados.');
+  };
+
+  // Función para aplicar la clase 'active' a los NavLinks
+  const getTopNavLinkClass = ({ isActive }) => {
+    return isActive ? `${styles.topNavButton} ${styles.active}` : styles.topNavButton;
+  };
 
   const ManagementIcon = viewMode === 'management' ? X : LayoutGrid;
   const MissionsIcon = viewMode === 'missions' ? X : Trophy;
@@ -58,12 +67,30 @@ function MainHeader({ userProfile, pets, onAcceptMission, onOpenRescueModal }) {
       className={styles.header}
       style={{ minHeight, transition: 'min-height 0.4s ease-in-out' }}
     >
+      {/* --- [NUEVA] Barra de Navegación Superior --- */}
+      <div className={styles.topNavBar}>
+          <button onClick={handleSearchClick} className={styles.topNavButton} title="Buscar (Próximamente)">
+              <Search size={22} />
+          </button>
+          <NavLink to="/dashboard/map" className={getTopNavLinkClass} title="Mapa Comunitario">
+              <Map size={22} />
+          </NavLink>
+          <NavLink to="/dashboard/events" className={getTopNavLinkClass} title="Eventos">
+              <Calendar size={22} />
+          </NavLink>
+          <NavLink to="/dashboard/rescue" className={getTopNavLinkClass} title="Búsquedas Activas">
+              <Megaphone size={22} />
+          </NavLink>
+          <NavLink to="/dashboard/settings" className={getTopNavLinkClass} title="Ajustes y Menú">
+              <Menu size={22} />
+          </NavLink>
+      </div>
+
       <div ref={defaultRef} className={`${styles.viewWrapper} ${viewMode !== 'default' ? styles.hidden : ''}`}>
         <DefaultHeaderView userProfile={userProfile} pets={pets} />
       </div>
 
       <div ref={managementRef} className={`${styles.viewWrapper} ${viewMode !== 'management' ? styles.hidden : ''}`}>
-        {/* --- 2. Pasamos la prop 'onOpenRescueModal' al componente hijo --- */}
         <ManagementHeaderView pets={pets} onOpenRescueModal={onOpenRescueModal} />
       </div>
       
