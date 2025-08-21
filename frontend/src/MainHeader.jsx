@@ -1,9 +1,8 @@
 // frontend/src/MainHeader.jsx
-// Versión 2.5: Añade la barra de navegación superior flotante y la reestructura para posicionamiento absoluto.
+// Versión 2.6: Limpia el componente principal, que ahora delega la barra de navegación superior a DefaultHeaderView.
 
 import React, { useState, useRef, useEffect } from 'react';
-import { NavLink } from 'react-router-dom';
-import { Trophy, LayoutGrid, X, Search, Map, Calendar, Megaphone, Menu } from 'lucide-react';
+import { Trophy, LayoutGrid, X } from 'lucide-react';
 
 import styles from './MainHeader.module.css';
 
@@ -23,7 +22,6 @@ function MainHeader({ userProfile, pets, onAcceptMission, onOpenRescueModal }) {
   const missionsRef = useRef(null);
 
   useEffect(() => {
-    // La lógica para la altura animada se mantiene
     const defaultHeight = defaultRef.current?.offsetHeight || 0;
     const managementHeight = managementRef.current?.offsetHeight || 0;
     const missionsHeight = missionsRef.current?.offsetHeight || 0;
@@ -33,10 +31,8 @@ function MainHeader({ userProfile, pets, onAcceptMission, onOpenRescueModal }) {
     else if (viewMode === 'management') targetHeight = managementHeight;
     else if (viewMode === 'missions') targetHeight = missionsHeight;
     
-    // Añadimos el espacio para los botones flotantes a la altura calculada
-    const topPadding = 80; 
     if (targetHeight > 0) {
-      setMinHeight(`${targetHeight + topPadding}px`);
+      setMinHeight(`${targetHeight}px`);
     }
   }, [viewMode, userProfile, pets]);
 
@@ -51,14 +47,6 @@ function MainHeader({ userProfile, pets, onAcceptMission, onOpenRescueModal }) {
 
   const handleToggleManagement = () => handleToggle('management');
   const handleToggleMissions = () => handleToggle('missions');
-  
-  const handleSearchClick = () => {
-    alert('Próximamente: Búsqueda de usuarios, mascotas y perfiles verificados.');
-  };
-
-  const getTopNavLinkClass = ({ isActive }) => {
-    return isActive ? `${styles.topNavButton} ${styles.active}` : styles.topNavButton;
-  };
 
   const ManagementIcon = viewMode === 'management' ? X : LayoutGrid;
   const MissionsIcon = viewMode === 'missions' ? X : Trophy;
@@ -68,25 +56,6 @@ function MainHeader({ userProfile, pets, onAcceptMission, onOpenRescueModal }) {
       className={styles.header}
       style={{ minHeight, transition: 'min-height 0.4s ease-in-out' }}
     >
-      {/* Barra de Navegación Superior Flotante */}
-      <div className={styles.topNavBar}>
-          <button onClick={handleSearchClick} className={styles.topNavButton} title="Buscar (Próximamente)">
-              <Search size={22} />
-          </button>
-          <NavLink to="/dashboard/map" className={getTopNavLinkClass} title="Mapa Comunitario">
-              <Map size={22} />
-          </NavLink>
-          <NavLink to="/dashboard/events" className={getTopNavLinkClass} title="Eventos">
-              <Calendar size={22} />
-          </NavLink>
-          <NavLink to="/dashboard/rescue" className={getTopNavLinkClass} title="Búsquedas Activas">
-              <Megaphone size={22} />
-          </NavLink>
-          <NavLink to="/dashboard/settings" className={getTopNavLinkClass} title="Ajustes y Menú">
-              <Menu size={22} />
-          </NavLink>
-      </div>
-
       {/* Contenedor para las vistas intercambiables */}
       <div className={styles.mainHeaderContent}>
         <div ref={defaultRef} className={`${styles.viewWrapper} ${viewMode !== 'default' ? styles.hidden : ''}`}>

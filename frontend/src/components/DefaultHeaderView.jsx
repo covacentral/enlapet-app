@@ -1,12 +1,12 @@
 // frontend/src/components/DefaultHeaderView.jsx
-// Versión 1.0: Componente que encapsula la vista original del MainHeader.
+// Versión 1.2: Se integra la barra de navegación superior y se reestructura el layout.
 
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import { auth } from '../firebase';
-import { Plus, Stethoscope } from 'lucide-react';
+import { Plus, Stethoscope, Search, Map, Calendar, Megaphone, Menu } from 'lucide-react';
 
-import styles from '../MainHeader.module.css'; // Reutilizamos los estilos existentes
+import styles from '../MainHeader.module.css';
 import sharedStyles from '../shared.module.css';
 
 const PetBubble = ({ pet }) => (
@@ -29,9 +29,37 @@ function DefaultHeaderView({ userProfile, pets }) {
   const currentUserId = auth.currentUser?.uid;
   const isVerifiedVet = userProfile.verification?.status === 'verified' && userProfile.verification?.type === 'vet';
 
+  const handleSearchClick = () => {
+    alert('Próximamente: Búsqueda de usuarios, mascotas y perfiles verificados.');
+  };
+
+  const getTopNavLinkClass = ({ isActive }) => {
+    return isActive ? `${styles.topNavButton} ${styles.active}` : styles.topNavButton;
+  };
+
   return (
-    <div className={styles.header}>
+    // Usamos un Fragment para que este componente no imponga un div extra. El layout lo manejan las clases de los elementos hijos.
+    <>
       <div className={styles.userProfileSection}>
+          {/* La barra de navegación ahora vive aquí y se posiciona con 'order: -1' desde el CSS */}
+          <div className={styles.topNavBar}>
+              <button onClick={handleSearchClick} className={styles.topNavButton} title="Buscar (Próximamente)">
+                  <Search size={22} />
+              </button>
+              <NavLink to="/dashboard/map" className={getTopNavLinkClass} title="Mapa Comunitario">
+                  <Map size={22} />
+              </NavLink>
+              <NavLink to="/dashboard/events" className={getTopNavLinkClass} title="Eventos">
+                  <Calendar size={22} />
+              </NavLink>
+              <NavLink to="/dashboard/rescue" className={getTopNavLinkClass} title="Búsquedas Activas">
+                  <Megaphone size={22} />
+              </NavLink>
+              <NavLink to="/dashboard/settings" className={getTopNavLinkClass} title="Ajustes y Menú">
+                  <Menu size={22} />
+              </NavLink>
+          </div>
+
         <Link to={`/dashboard/user/${currentUserId}`} className={styles.userProfileLink}>
             <h2 className={styles.userName}>{userProfile.name}</h2>
             <div className={styles.profilePictureContainer}>
@@ -51,6 +79,7 @@ function DefaultHeaderView({ userProfile, pets }) {
             </Link>
         )}
       </div>
+
       <div className={styles.userPetsSection}>
         <h1 className={styles.brandTitle}>enlapet</h1>
         <div className={styles.petBubblesContainer}>
@@ -62,7 +91,7 @@ function DefaultHeaderView({ userProfile, pets }) {
           <AddPetBubble />
         </div>
       </div>
-    </div>
+    </>
   );
 }
 

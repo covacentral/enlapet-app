@@ -1,33 +1,28 @@
 /* frontend/src/MainHeader.module.css */
-/* Versión 1.6: Rediseña la barra de navegación superior a un estilo flotante. */
+/* Versión 1.7: Corrige la visibilidad del panel de gestión y ajusta la barra superior para un layout de flujo. */
 
 .header {
   display: flex;
   flex-direction: column;
   background-color: var(--background-light);
   padding: 25px;
-  padding-top: 80px;
   border-radius: 15px;
   margin-bottom: 20px;
-  position: relative; /* Clave para los botones de esquina y la nueva barra flotante */
+  position: relative; 
   overflow: hidden;
 }
 
-/* --- [NUEVO] Contenedor para el contenido principal relativo a la barra flotante --- */
 .mainHeaderContent {
   position: relative;
   width: 100%;
 }
 
-
 .userProfileSection {
   display: flex;
-  flex-direction: column;
+  flex-direction: column; /* Cambiado para apilar la nueva barra y el contenido */
   align-items: center;
-  gap: 10px;
-  border-right: 1px solid var(--border-color);
-  padding-right: 30px;
-  text-align: center;
+  gap: 15px; /* Espaciado uniforme entre elementos */
+  width: 100%;
 }
 
 .userProfileLink {
@@ -36,7 +31,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
+    gap: 15px; /* Espaciado entre nombre y foto */
 }
 
 .userName {
@@ -44,7 +39,6 @@
   color: var(--text-primary);
   font-size: 1.5rem;
   font-weight: 700;
-  order: -1;
 }
 
 .profilePictureContainer {
@@ -90,19 +84,22 @@
 
 .userPetsSection {
   overflow: hidden;
+  width: 100%;
+  margin-top: 20px;
 }
 
 .brandTitle {
   font-family: var(--font-family-sans);
   font-weight: 800;
   font-size: 2rem;
-  text-align: right;
+  text-align: center;
   margin: 0 0 15px 0;
   color: var(--brand-cream);
 }
 
 .petBubblesContainer {
   display: flex;
+  justify-content: center;
   gap: 15px;
   overflow-x: auto;
   padding-bottom: 15px;
@@ -144,7 +141,6 @@
 
 .addPetBubble {
     composes: petBubble;
-    background-color: var(--background-dark);
     border-color: var(--border-color);
     border-style: dashed;
 }
@@ -168,10 +164,6 @@
   padding: 1rem;
   border-radius: 8px;
   text-align: left;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
 }
 
 .nfcBannerTitle {
@@ -214,22 +206,19 @@
   opacity: 0;
   transform: scale(0.98);
   position: absolute;
-  top: 0; /* Se ajustará con el nuevo layout */
-  left: 0;
-  right: 0;
+  top: 25px;
+  left: 25px;
+  right: 25px;
   pointer-events: none;
 }
 
-/* --- [ESTILOS MODIFICADOS] Barra de Navegación Superior Flotante --- */
+/* --- [ESTILOS MODIFICADOS] Barra de Navegación Superior como parte del flujo --- */
 .topNavBar {
-  position: absolute;
-  top: 15px; /* Pequeño margen superior dentro del header */
-  left: 0;
-  right: 0;
   display: flex;
-  justify-content: center; /* Centra los botones */
-  gap: 20px; /* Espacio entre botones */
-  z-index: 5; /* Por encima del contenido, debajo de los botones de esquina */
+  justify-content: center;
+  gap: 1rem;
+  width: 100%;
+  order: -1; /* Mueve la barra de botones al inicio del contenedor flex */
 }
 
 .topNavButton {
@@ -254,28 +243,14 @@
   color: var(--primary-accent);
 }
 
-
-/* --- Media Queries --- */
+/* Se elimina la media query que ocultaba .managementViewContainer */
 @media (max-width: 900px) {
   .header {
-      gap: 20px;
-      /* Añadimos padding-top para dar espacio a los botones flotantes */
+    gap: 20px;
   }
+
   .userProfileSection {
     border-right: none;
     padding-right: 0;
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 20px;
-    justify-content: center;
-    width: 100%;
-  }
-
-  .brandTitle {
-    text-align: center;
-  }
-
-  /* Ocultamos la vista de gestión en móviles para simplificar, se puede acceder desde el panel de veterinario */
-  .managementViewContainer {
-      display: none;
   }
 }
