@@ -1,5 +1,5 @@
 // frontend/src/ProfileLayout.jsx
-// Versión 4.8: Corrige el flujo de props para el modal de rescate.
+// Versión 4.9: Integra la página de notificaciones y el conteo de no leídos.
 
 import { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
@@ -28,6 +28,9 @@ import MainHeader from './MainHeader.jsx';
 import PostDetailModal from './PostDetailModal.jsx';
 import LostAndFoundPage from './LostAndFoundPage.jsx';
 import RescueModeModal from './components/RescueModeModal.jsx';
+// --- 1. Importamos la página de Notificaciones ---
+import NotificationsPage from './NotificationsPage.jsx';
+
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -41,6 +44,9 @@ function ProfileLayout({ user }) {
 
   const [isRescueModalOpen, setIsRescueModalOpen] = useState(false);
   const [petForRescue, setPetForRescue] = useState(null);
+  
+  // --- 2. Nuevo estado para el conteo de notificaciones ---
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const fetchCoreData = useCallback(async () => {
     if (!user) return;
@@ -63,10 +69,52 @@ function ProfileLayout({ user }) {
     }
   }, [user]);
 
+  // --- 3. Nueva función para obtener el conteo de no leídos ---
+  const fetchUnreadCount = useCallback(async () => {
+    if (!user) return;
+    try {
+        const idToken = await user.getIdToken();
+        const response = await fetch(`${API_URL}/api/notifications/unread-count`, {
+            headers: { 'Authorization': `Bearer ${idToken}` }
+        });
+        if (response.ok) {
+            const data = await response.json();
+            setUnreadCount(data.count);
+        }
+    } catch (error) {
+        // No mostramos un error al usuario por esto, es una tarea de fondo.
+        console.error("Error fetching unread count:", error);
+    }
+  }, [user]);
+
+  // --- 4. useEffect para cargar datos y actualizar el conteo periódicamente ---
   useEffect(() => {
     setLoading(true);
-    fetchCoreData().finally(() => setLoading(false));
-  }, [fetchCoreData]);
+    Promise.all([
+        fetchCoreData(),
+        fetchUnreadCount()
+    ]).finally(() => setLoading(false));
+
+    // Refresca el conteo de notificaciones cada 60 segundos
+    const interval = setInterval(fetchUnreadCount, 60000); 
+    return () => clearInterval(interval);
+  }, [fetchCoreData, fetchUnreadCount]);
+
+  // --- 5. Nueva función para marcar notificaciones como leídas ---
+  const handleMarkAsRead = async () => {
+    if (unreadCount === 0) return;
+    try {
+        const idToken = await user.getIdToken();
+        await fetch(`${API_URL}/api/notifications/mark-as-read`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${idToken}` }
+        });
+        setUnreadCount(0); // Actualizamos el estado local inmediatamente
+    } catch (error) {
+        console.error("Error marking notifications as read:", error);
+    }
+  };
+
 
   const handleAcceptMission = (mission, petId) => {
     setMissionContext({ missionId: mission.id, petId: petId, missionHashtag: mission.hashtag });
@@ -110,8 +158,6 @@ function ProfileLayout({ user }) {
         />
       )}
 
-      {/* --- LÍNEA CORREGIDA --- */}
-      {/* Se añade la prop 'onOpenRescueModal' para pasarla al siguiente componente. */}
       <MainHeader 
         userProfile={userProfile} 
         pets={pets} 
@@ -134,6 +180,9 @@ function ProfileLayout({ user }) {
           <Route path="store/product/:productId" element={<ProductPage />} />
           <Route path="checkout" element={<CheckoutPage />} />
           <Route path="order-confirmation" element={<OrderConfirmationPage />} />
+          
+          {/* --- 6. Añadimos la nueva ruta para la página de notificaciones --- */}
+          <Route path="notifications" element={<NotificationsPage onMarkAsRead={handleMarkAsRead} />} />
         </Routes>
       </main>
 
@@ -141,7 +190,8 @@ function ProfileLayout({ user }) {
         <Route path="notifications/post/:postId" element={<PostDetailModal />} />
       </Routes>
 
-      <BottomNavBar onOpenCreatePost={handleOpenCreatePost} />
+      {/* --- 7. Pasamos el conteo de notificaciones a la barra de navegación --- */}
+      <BottomNavBar onOpenCreatePost={handleOpenCreatePost} notificationCount={unreadCount} />
     </div>
   );
 }
