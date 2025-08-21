@@ -1,17 +1,19 @@
 // frontend/src/PetEditModal.jsx
-// Versión: 3.9 - Corrige la aplicación de clases CSS para restaurar los estilos del modal.
+// Versión: 4.0 - Corrige el error de referencia al importar el ícono 'X'.
 
 import { useState, useEffect, useRef } from 'react';
 import { colombiaDepartments } from './utils/colombiaData';
 import { auth } from './firebase';
-import { Plus, Trash2, Copy, Check } from 'lucide-react';
+// --- LÍNEA CORREGIDA ---
+// Se añade la importación del ícono 'X' que faltaba.
+import { Plus, Trash2, Copy, Check, X } from 'lucide-react';
 
 import styles from './PetEditModal.module.css';
 import sharedStyles from './shared.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-// --- Subcomponentes con estilos corregidos ---
+// --- Subcomponentes (sin cambios en la lógica) ---
 const AddVaccineForm = ({ onSave, onCancel }) => {
   const [vaccine, setVaccine] = useState({ name: '', date: '', nextDate: '' });
   const handleChange = (e) => setVaccine({ ...vaccine, [e.target.name]: e.target.value });
@@ -27,7 +29,6 @@ const AddVaccineForm = ({ onSave, onCancel }) => {
       <div className={sharedStyles.formGroup}><label>Nombre de la Vacuna</label><input type="text" name="name" value={vaccine.name} onChange={handleChange} /></div>
       <div className={sharedStyles.formGroup}><label>Fecha de Aplicación</label><input type="date" name="date" value={vaccine.date} onChange={handleChange} /></div>
       <div className={sharedStyles.formGroup}><label>Próxima Dosis (Opcional)</label><input type="date" name="nextDate" value={vaccine.nextDate} onChange={handleChange} /></div>
-      {/* --- CLASES CORREGIDAS --- */}
       <div className={styles.addRecordFormActions}>
         <button type="button" className={`${sharedStyles.button} ${sharedStyles.secondary}`} onClick={onCancel}>Cancelar</button>
         <button type="button" className={`${sharedStyles.button} ${sharedStyles.primary}`} onClick={handleSave}>Guardar</button>
@@ -51,7 +52,6 @@ const AddMedicalHistoryForm = ({ onSave, onCancel }) => {
       <div className={sharedStyles.formGroup}><label>Título del Registro</label><input type="text" name="title" value={history.title} onChange={handleChange} /></div>
       <div className={sharedStyles.formGroup}><label>Fecha</label><input type="date" name="date" value={history.date} onChange={handleChange} /></div>
       <div className={sharedStyles.formGroup}><label>Descripción</label><textarea name="description" value={history.description} onChange={handleChange}></textarea></div>
-      {/* --- CLASES CORREGIDAS --- */}
       <div className={styles.addRecordFormActions}>
         <button type="button" className={`${sharedStyles.button} ${sharedStyles.secondary}`} onClick={onCancel}>Cancelar</button>
         <button type="button" className={`${sharedStyles.button} ${sharedStyles.primary}`} onClick={handleSave}>Guardar</button>
@@ -120,7 +120,7 @@ function PetEditModal({ pet, onClose, onPetUpdate }) {
         
         setFormData(prev => ({ ...prev, petPictureUrl: data.petPictureUrl }));
         setMessage('Foto actualizada con éxito.');
-        onPetUpdate(); // Actualiza la UI en tiempo real
+        onPetUpdate();
     } catch (error) {
         setMessage(`Error: ${error.message}`);
     } finally {
@@ -185,20 +185,17 @@ function PetEditModal({ pet, onClose, onPetUpdate }) {
             </button>
           </div>
           
-          {/* --- CLASES CORREGIDAS --- */}
           <div className={sharedStyles.modalTabs}>
-            <button onClick={() => setActiveTab('info')} className={`${sharedStyles.modalTabButton} ${activeTab === 'info' ? sharedStyles.active : ''}`}>Información</button>
-            <button onClick={() => setActiveTab('health')} className={`${sharedStyles.modalTabButton} ${activeTab === 'health' ? sharedStyles.active : ''}`}>Salud</button>
+            <button type="button" onClick={() => setActiveTab('info')} className={`${sharedStyles.modalTabButton} ${activeTab === 'info' ? sharedStyles.active : ''}`}>Información</button>
+            <button type="button" onClick={() => setActiveTab('health')} className={`${sharedStyles.modalTabButton} ${activeTab === 'health' ? sharedStyles.active : ''}`}>Salud</button>
           </div>
 
           <form onSubmit={handleSubmit} className={styles.form}>
-            {/* El div 'body' asegura el padding correcto para el contenido de las pestañas */}
             <div className={styles.body}>
               {activeTab === 'info' && (
                 <>
                   <div className={styles.profilePictureSection}>
                     <img src={formData.petPictureUrl || 'https://placehold.co/300x300/E2E8F0/4A5568?text=🐾'} alt={formData.name} className={styles.profilePicture} />
-                    {/* --- CLASES CORREGIDAS --- */}
                     <button type="button" className={`${sharedStyles.button} ${sharedStyles.secondary}`} onClick={() => fileInputRef.current.click()} disabled={isUploading}>
                       {isUploading ? 'Subiendo...' : 'Cambiar Foto'}
                     </button>
