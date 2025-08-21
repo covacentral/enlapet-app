@@ -1,22 +1,21 @@
 // frontend/src/PetSocialProfile.jsx
-// Versión 3.5: Corrige la advertencia de "missing key" en la galería de posts.
+// Versión 3.6: Corrige el error de importación de react-query.
 
 import React from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useQuery } from 'react-query';
+// --- LÍNEA CORREGIDA ---
+// Se actualiza la importación al nombre correcto del paquete: @tanstack/react-query
+import { useQuery } from '@tanstack/react-query'; 
 import { auth } from './firebase';
 import styles from './PetSocialProfile.module.css';
 import sharedStyles from './shared.module.css';
 import { Calendar, Droplet, ShieldCheck, Stethoscope, Mail, Heart, MessageCircle, ArrowLeft, Edit } from 'lucide-react';
 import LoadingComponent from './LoadingComponent';
-import PetMissionLog from './components/PetMissionLog'; // Se mantiene el componente de Hitos
+import PetMissionLog from './components/PetMissionLog';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-// --- (Las funciones fetchPetProfile y fetchPetPosts no cambian) ---
 const fetchPetProfile = async (petId) => {
-    // Para asegurar que vemos la data más fresca, no usamos la caché pública aquí
-    // sino que hacemos una petición autenticada si es posible.
     const user = auth.currentUser;
     let headers = {};
     if (user) {
@@ -24,10 +23,8 @@ const fetchPetProfile = async (petId) => {
         headers['Authorization'] = `Bearer ${idToken}`;
     }
 
-    // Usamos el endpoint de perfil de mascota que devuelve datos del dueño si está autenticado
     const response = await fetch(`${API_URL}/api/pets/${petId}/profile`, { headers });
     if (!response.ok) {
-        // Fallback a la ruta pública si la autenticada falla (ej. perfil no propio)
         const publicResponse = await fetch(`${API_URL}/api/public/pets/${petId}`);
         if (!publicResponse.ok) throw new Error('Mascota no encontrada');
         return publicResponse.json();
@@ -43,24 +40,20 @@ const fetchPetPosts = async (petId) => {
     return response.json();
 };
 
-
 function PetSocialProfile({ user, onUpdate }) {
     const { petId } = useParams();
     const navigate = useNavigate();
 
-    // Usamos react-query para el fetching y caching de datos
     const { data: profile, isLoading: isLoadingProfile, error: profileError, refetch: refetchProfile } = useQuery(
         ['petProfile', petId], 
         () => fetchPetProfile(petId),
-        { staleTime: 5 * 60 * 1000 } // Cache de 5 minutos
+        { staleTime: 5 * 60 * 1000 }
     );
     const { data: posts, isLoading: isLoadingPosts, error: postsError } = useQuery(
         ['petPosts', petId], 
         () => fetchPetPosts(petId),
         { staleTime: 5 * 60 * 1000 }
     );
-    
-    // --- (Toda la lógica de estado y componentes internos se mantiene intacta) ---
 
     if (isLoadingProfile || isLoadingPosts) {
         return <LoadingComponent text="Cargando perfil de la mascota..." />;
@@ -73,8 +66,8 @@ function PetSocialProfile({ user, onUpdate }) {
     const isOwner = user && user.uid === owner.id;
 
     const handleProfileUpdate = () => {
-        refetchProfile(); // Refresca los datos del perfil
-        if (onUpdate) onUpdate(); // Llama a la función onUpdate del layout si existe
+        refetchProfile();
+        if (onUpdate) onUpdate();
     };
 
     const InfoCard = ({ icon, title, children }) => (
@@ -150,9 +143,7 @@ function PetSocialProfile({ user, onUpdate }) {
                         ) : <p>Sin historial médico registrado.</p>}
                     </InfoCard>
 
-                    {/* El componente de Hitos se mantiene intacto */}
                     <PetMissionLog petId={petId} isOwner={isOwner} />
-
                 </div>
                 <div className={styles.rightColumn}>
                     <h3 className={styles.postsTitle}>Momentos de {pet.name}</h3>
@@ -160,7 +151,6 @@ function PetSocialProfile({ user, onUpdate }) {
                         <p className={sharedStyles.responseMessageError}>No se pudieron cargar los momentos.</p>
                     ) : posts && posts.length > 0 ? (
                         <div className={styles.postsGrid}>
-                            {/* --- ÚNICA LÍNEA CORREGIDA --- */}
                             {posts.map(post => (
                                 <img key={post.id} src={post.imageUrl} alt="Publicación de la mascota" className={styles.postImage} />
                             ))}
