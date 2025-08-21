@@ -1,12 +1,11 @@
 // frontend/src/MainHeader.jsx
-// Versión 2.4: Integra la nueva barra de navegación superior con 5 íconos.
+// Versión 2.5: Añade la barra de navegación superior flotante y la reestructura para posicionamiento absoluto.
 
 import React, { useState, useRef, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { Trophy, LayoutGrid, X, Search, Map, Calendar, Megaphone, Menu } from 'lucide-react';
 
 import styles from './MainHeader.module.css';
-import sharedStyles from './shared.module.css';
 
 // Importamos los componentes de las vistas y el botón
 import CornerButton from './components/CornerButton';
@@ -24,6 +23,7 @@ function MainHeader({ userProfile, pets, onAcceptMission, onOpenRescueModal }) {
   const missionsRef = useRef(null);
 
   useEffect(() => {
+    // La lógica para la altura animada se mantiene
     const defaultHeight = defaultRef.current?.offsetHeight || 0;
     const managementHeight = managementRef.current?.offsetHeight || 0;
     const missionsHeight = missionsRef.current?.offsetHeight || 0;
@@ -33,8 +33,10 @@ function MainHeader({ userProfile, pets, onAcceptMission, onOpenRescueModal }) {
     else if (viewMode === 'management') targetHeight = managementHeight;
     else if (viewMode === 'missions') targetHeight = missionsHeight;
     
+    // Añadimos el espacio para los botones flotantes a la altura calculada
+    const topPadding = 80; 
     if (targetHeight > 0) {
-      setMinHeight(`${targetHeight}px`);
+      setMinHeight(`${targetHeight + topPadding}px`);
     }
   }, [viewMode, userProfile, pets]);
 
@@ -54,7 +56,6 @@ function MainHeader({ userProfile, pets, onAcceptMission, onOpenRescueModal }) {
     alert('Próximamente: Búsqueda de usuarios, mascotas y perfiles verificados.');
   };
 
-  // Función para aplicar la clase 'active' a los NavLinks
   const getTopNavLinkClass = ({ isActive }) => {
     return isActive ? `${styles.topNavButton} ${styles.active}` : styles.topNavButton;
   };
@@ -67,7 +68,7 @@ function MainHeader({ userProfile, pets, onAcceptMission, onOpenRescueModal }) {
       className={styles.header}
       style={{ minHeight, transition: 'min-height 0.4s ease-in-out' }}
     >
-      {/* --- [NUEVA] Barra de Navegación Superior --- */}
+      {/* Barra de Navegación Superior Flotante */}
       <div className={styles.topNavBar}>
           <button onClick={handleSearchClick} className={styles.topNavButton} title="Buscar (Próximamente)">
               <Search size={22} />
@@ -86,16 +87,19 @@ function MainHeader({ userProfile, pets, onAcceptMission, onOpenRescueModal }) {
           </NavLink>
       </div>
 
-      <div ref={defaultRef} className={`${styles.viewWrapper} ${viewMode !== 'default' ? styles.hidden : ''}`}>
-        <DefaultHeaderView userProfile={userProfile} pets={pets} />
-      </div>
+      {/* Contenedor para las vistas intercambiables */}
+      <div className={styles.mainHeaderContent}>
+        <div ref={defaultRef} className={`${styles.viewWrapper} ${viewMode !== 'default' ? styles.hidden : ''}`}>
+          <DefaultHeaderView userProfile={userProfile} pets={pets} />
+        </div>
 
-      <div ref={managementRef} className={`${styles.viewWrapper} ${viewMode !== 'management' ? styles.hidden : ''}`}>
-        <ManagementHeaderView pets={pets} onOpenRescueModal={onOpenRescueModal} />
-      </div>
-      
-      <div ref={missionsRef} className={`${styles.viewWrapper} ${viewMode !== 'missions' ? styles.hidden : ''}`}>
-        <MissionsHeaderView pets={pets} onAcceptMission={onAcceptMission} />
+        <div ref={managementRef} className={`${styles.viewWrapper} ${viewMode !== 'management' ? styles.hidden : ''}`}>
+          <ManagementHeaderView pets={pets} onOpenRescueModal={onOpenRescueModal} />
+        </div>
+        
+        <div ref={missionsRef} className={`${styles.viewWrapper} ${viewMode !== 'missions' ? styles.hidden : ''}`}>
+          <MissionsHeaderView pets={pets} onAcceptMission={onAcceptMission} />
+        </div>
       </div>
       
       <CornerButton 

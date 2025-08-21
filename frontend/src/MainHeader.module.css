@@ -1,18 +1,24 @@
 /* frontend/src/MainHeader.module.css */
-/* Versión 1.5: Añade estilos para la barra de navegación superior. */
+/* Versión 1.6: Rediseña la barra de navegación superior a un estilo flotante. */
 
 .header {
-  /* --- ESTRUCTURA MODIFICADA --- */
-  /* Cambiamos a flexbox para una transición de altura más sencilla */
   display: flex;
   flex-direction: column;
   background-color: var(--background-light);
   padding: 25px;
+  padding-top: 80px;
   border-radius: 15px;
   margin-bottom: 20px;
-  position: relative; /* Necesario para los botones de esquina */
-  overflow: hidden; /* Oculta el contenido que se desborda durante la animación */
+  position: relative; /* Clave para los botones de esquina y la nueva barra flotante */
+  overflow: hidden;
 }
+
+/* --- [NUEVO] Contenedor para el contenido principal relativo a la barra flotante --- */
+.mainHeaderContent {
+  position: relative;
+  width: 100%;
+}
+
 
 .userProfileSection {
   display: flex;
@@ -150,8 +156,6 @@
   margin: auto 0;
 }
 
-/* --- Estilos para la Vista de Gestión --- */
-
 .managementViewContainer {
   display: flex;
   flex-direction: column;
@@ -183,16 +187,6 @@
   margin: 0;
 }
 
-.nfcBannerButton {
-  background-color: rgba(255, 255, 255, 0.2);
-  color: white;
-  border: none;
-  flex-shrink: 0;
-}
-.nfcBannerButton:hover {
-  background-color: rgba(255, 255, 255, 0.3);
-}
-
 .managementViewTitle {
   font-size: 1.2rem;
   font-weight: 800;
@@ -211,12 +205,62 @@
   display: none;
 }
 
+.viewWrapper {
+  width: 100%;
+  transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
+}
+
+.viewWrapper.hidden {
+  opacity: 0;
+  transform: scale(0.98);
+  position: absolute;
+  top: 0; /* Se ajustará con el nuevo layout */
+  left: 0;
+  right: 0;
+  pointer-events: none;
+}
+
+/* --- [ESTILOS MODIFICADOS] Barra de Navegación Superior Flotante --- */
+.topNavBar {
+  position: absolute;
+  top: 15px; /* Pequeño margen superior dentro del header */
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center; /* Centra los botones */
+  gap: 20px; /* Espacio entre botones */
+  z-index: 5; /* Por encima del contenido, debajo de los botones de esquina */
+}
+
+.topNavButton {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  padding: 8px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.topNavButton:hover {
+  color: var(--text-primary);
+  background-color: var(--border-color);
+}
+
+.topNavButton.active {
+  color: var(--primary-accent);
+}
+
+
 /* --- Media Queries --- */
 @media (max-width: 900px) {
   .header {
       gap: 20px;
+      /* Añadimos padding-top para dar espacio a los botones flotantes */
   }
-
   .userProfileSection {
     border-right: none;
     padding-right: 0;
@@ -229,57 +273,9 @@
   .brandTitle {
     text-align: center;
   }
-}
 
-/* --- Estilos para la Transición entre Vistas --- */
-.viewWrapper {
-  width: 100%;
-  transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
-}
-
-.viewWrapper.hidden {
-  opacity: 0;
-  transform: scale(0.98);
-  position: absolute;
-  top: 25px;
-  left: 25px;
-  right: 25px;
-  pointer-events: none;
-}
-
-/* --- [NUEVO] Barra de Navegación Superior --- */
-.topNavBar {
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  width: 100%;
-  padding-bottom: 1.5rem;
-  border-bottom: 1px solid var(--border-color);
-  margin-bottom: 1.5rem;
-}
-
-.topNavButton {
-  background-color: transparent;
-  border: 2px solid var(--border-color);
-  color: var(--text-secondary);
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
-  transition: all 0.2s ease;
-}
-
-.topNavButton:hover {
-  color: var(--text-primary);
-  border-color: var(--primary-accent);
-  transform: translateY(-2px);
-}
-
-.topNavButton.active {
-  color: var(--primary-accent);
-  border-color: var(--primary-accent);
-  background-color: rgba(0, 187, 167, 0.1);
+  /* Ocultamos la vista de gestión en móviles para simplificar, se puede acceder desde el panel de veterinario */
+  .managementViewContainer {
+      display: none;
+  }
 }
