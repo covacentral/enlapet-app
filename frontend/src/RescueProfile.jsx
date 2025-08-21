@@ -1,23 +1,48 @@
 // frontend/src/RescueProfile.jsx
-// Versión 1.2: CORREGIDO. Se integra la lógica del mapa directamente y se robustece el renderizado.
+// Versión 2.0: Rediseño a "Cartel Digital" compartible en redes sociales.
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Circle } from 'react-leaflet';
+import { auth } from './firebase';
 import LoadingComponent from './LoadingComponent';
-import { Phone, MessageSquare, MapPin, AlertTriangle } from 'lucide-react';
+import { Phone, MessageSquare, MapPin, AlertTriangle, ChevronDown } from 'lucide-react';
 
 import styles from './RescueProfile.module.css';
 import sharedStyles from './shared.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-// --- COMPONENTE CORREGIDO ---
+// --- [NUEVO] Componente de Botón de Navegación Universal ---
+const BackButton = () => {
+    const navigate = useNavigate();
+    const user = auth.currentUser;
+
+    const handleClick = () => {
+        // Si el usuario está logueado, simplemente va hacia atrás en el historial.
+        if (user) {
+            navigate(-1);
+        } else {
+            // Si no está logueado, lo lleva a la página de inicio/registro.
+            navigate('/');
+        }
+    };
+
+    return (
+        <button onClick={handleClick} className={styles.backButton}>
+            &larr; {user ? 'Atrás' : 'Ir a EnlaPet'}
+        </button>
+    );
+};
+
+
 function RescueProfile() {
     const { epid } = useParams();
     const [petData, setPetData] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
+    // --- [NUEVO] Estado para controlar la visibilidad del mapa ---
+    const [isMapVisible, setIsMapVisible] = useState(false);
 
     const fetchRescueProfile = useCallback(async () => {
         setIsLoading(true);
@@ -41,6 +66,7 @@ function RescueProfile() {
     if (isLoading) return <LoadingComponent text="Cargando aviso de búsqueda..." />;
     if (error) return (
         <div className={`${styles.container} ${styles.errorContainer}`}>
+            <BackButton />
             <h2>Error</h2>
             <p>{error}</p>
             <Link to="/" className={sharedStyles.linkButton}>Volver al inicio de EnlaPet</Link>
@@ -57,7 +83,7 @@ function RescueProfile() {
         const whatsappLink = `https://wa.me/${cleanedPhone.startsWith('57') ? cleanedPhone : '57' + cleanedPhone}`;
         return (
             <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className={`${sharedStyles.button} ${styles.whatsappButton}`}>
-                <Phone size={18} /> Contactar por WhatsApp
+                <Phone size={18} /> WhatsApp
             </a>
         );
     };
@@ -65,6 +91,8 @@ function RescueProfile() {
     return (
         <div className={styles.container}>
             <div className={styles.card}>
+                <BackButton />
+                
                 <div className={styles.header}>
                     <h1>¡SE BUSCA!</h1>
                     <img src={petData.petPictureUrl || 'https://placehold.co/300x300/E2E8F0/4A5568?text=🐾'} alt={petData.name} className={styles.picture} />
@@ -73,25 +101,45 @@ function RescueProfile() {
                 </div>
 
                 <div className={styles.section}>
-                    <h3>Última vez visto en:</h3>
-                    <p className={styles.address}><MapPin size={16} /> {petData.lastSeen.address || 'Ubicación no especificada'}</p>
-                    <div className={styles.mapWrapper}>
-                        {position ? (
-                            <MapContainer center={position} zoom={15} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
-                                <TileLayer
-                                    url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-                                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-                                />
-                                <Marker position={position} />
-                                <Circle center={position} radius={petData.lastSeen.radius || 1000} pathOptions={{ color: 'red', fillColor: 'red' }} />
-                            </MapContainer>
-                        ) : (
-                            <div className={styles.noMapMessage}>
-                                <AlertTriangle size={24} />
-                                <p>La ubicación exacta no fue proporcionada por el dueño.</p>
+                    <h3>¿Lo viste?</h3>
+                    <div className={styles.contactSection}>
+                        <p>Contacta a <strong>{petData.ownerName}</strong></p>
+                        {petData.contactPhone ? (
+                            <div className={styles.contactInfo}>
+                                <span>{petData.contactPhone}</span>
+                                <WhatsAppButton phoneNumber={petData.contactPhone} />
                             </div>
+                        ) : (
+                            <p className={styles.noContact}>El dueño ha preferido no compartir su número. Por favor, llévalo a una veterinaria cercana para escanear su placa NFC.</p>
                         )}
                     </div>
+                </div>
+
+                <div className={styles.section}>
+                    <button className={styles.locationToggle} onClick={() => setIsMapVisible(!isMapVisible)}>
+                        <MapPin size={16} /> 
+                        <span>Última vez visto en: {petData.lastSeen.address || 'Ubicación no especificada'}</span>
+                        <ChevronDown size={20} style={{ marginLeft: 'auto', transform: isMapVisible ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                    </button>
+                    {isMapVisible && (
+                        <div className={styles.mapWrapper}>
+                            {position ? (
+                                <MapContainer center={position} zoom={15} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
+                                    <TileLayer
+                                        url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+                                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+                                    />
+                                    <Marker position={position} />
+                                    <Circle center={position} radius={petData.lastSeen.radius || 1000} pathOptions={{ color: 'red', fillColor: 'red' }} />
+                                </MapContainer>
+                            ) : (
+                                <div className={styles.noMapMessage}>
+                                    <AlertTriangle size={24} />
+                                    <p>La ubicación exacta no fue proporcionada.</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 <div className={styles.section}>
@@ -99,13 +147,9 @@ function RescueProfile() {
                     <p className={styles.message}><MessageSquare size={16} /> "{petData.message}"</p>
                 </div>
 
-                <div className={styles.section}>
-                    <h3>¿Lo viste?</h3>
-                    <p>Contacta a <strong>{petData.ownerName}</strong></p>
-                    {petData.contactPhone ? <WhatsAppButton phoneNumber={petData.contactPhone} /> : <p className={styles.noContact}>El dueño ha preferido no compartir su número. Por favor, llévalo a una veterinaria cercana para escanear su placa NFC.</p>}
-                </div>
-
-                <footer className={styles.footer}><p>Potenciado por EnlaPet</p></footer>
+                <footer className={styles.footer}>
+                    <p>Potenciado por EnlaPet</p>
+                </footer>
             </div>
         </div>
     );

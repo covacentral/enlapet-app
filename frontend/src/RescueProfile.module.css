@@ -1,13 +1,13 @@
 /* frontend/src/RescueProfile.module.css */
-/* Estilos para la página de perfil público de rescate. */
+/* Versión 2.0: Rediseño a "Cartel Digital" compartible en redes sociales. */
 
 .container {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start; /* Alinea el contenido arriba */
     min-height: 100vh;
-    padding: 20px;
+    padding: 10px; /* Margen mínimo para el efecto de "historia" */
     box-sizing: border-box;
 }
 
@@ -17,10 +17,36 @@
     border-radius: 15px;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
     text-align: center;
-    max-width: 500px;
     width: 100%;
+    max-width: 450px; /* Ancho máximo para que se vea bien en tablets */
     border-top: 6px solid var(--error-red);
+    position: relative; /* Para el botón de atrás */
+    display: flex;
+    flex-direction: column;
+    gap: 1rem; /* Espacio entre secciones */
 }
+
+/* --- [NUEVO] Botón de navegación --- */
+.backButton {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    background-color: rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 8px 16px;
+    color: var(--text-primary);
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 0.9rem;
+    transition: background-color 0.2s;
+    z-index: 10;
+}
+
+.backButton:hover {
+    background-color: rgba(0, 0, 0, 0.7);
+}
+
 
 .header h1 {
     font-size: 2.2rem;
@@ -30,13 +56,16 @@
     letter-spacing: 1px;
 }
 
+/* --- [MODIFICADO] Foto cuadrada --- */
 .picture {
-    width: 180px;
-    height: 180px;
-    border-radius: 50%;
+    width: 100%;
+    max-width: 300px;
+    height: auto;
+    aspect-ratio: 1 / 1; /* Asegura que sea cuadrada */
     object-fit: cover;
-    border: 6px solid var(--border-color);
-    margin-bottom: 1rem;
+    border-radius: 12px; /* Bordes redondeados */
+    border: 4px solid var(--border-color);
+    margin: 0 auto 1rem auto;
 }
 
 .name {
@@ -52,8 +81,9 @@
 }
 
 .section {
-    margin-top: 2rem;
-    padding-top: 1.5rem;
+    width: 100%;
+    margin-top: 1rem;
+    padding-top: 1rem;
     border-top: 1px solid var(--border-color);
     text-align: left;
 }
@@ -66,26 +96,31 @@
     font-weight: 700;
 }
 
-.address {
+/* --- [NUEVO] Acordeón para el mapa --- */
+.locationToggle {
     display: flex;
     align-items: center;
     gap: 8px;
     font-weight: bold;
     margin-bottom: 1rem;
+    cursor: pointer;
+    width: 100%;
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    text-align: left;
+    padding: 0;
 }
 
-/* --- REGLA CORREGIDA --- */
-/* Se añade una altura explícita para que el mapa pueda renderizarse. */
 .mapWrapper {
     height: 300px;
     border-radius: 12px;
     overflow: hidden;
     border: 1px solid var(--border-color);
-    background-color: var(--background-dark); /* Fondo para el estado de carga o error */
+    background-color: var(--background-dark);
+    margin-top: 1rem;
 }
 
-/* --- NUEVA REGLA --- */
-/* Estilos para el mensaje de fallback cuando no hay mapa. */
 .noMapMessage {
     display: flex;
     flex-direction: column;
@@ -105,15 +140,32 @@
     gap: 8px;
 }
 
-.section p {
-    text-align: center;
-    font-size: 1.1rem;
+/* --- [NUEVO] Sección de contacto optimizada --- */
+.contactSection {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.contactInfo {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--background-dark);
+    padding: 12px;
+    border-radius: 8px;
+}
+
+.contactInfo span {
+    font-size: 1.2rem;
+    font-weight: bold;
 }
 
 .whatsappButton {
     background-color: var(--whatsapp-green);
-    width: 100%;
-    margin-top: 1rem;
+    padding: 8px 12px;
+    font-size: 0.9rem;
+    text-decoration: none;
 }
 
 .noContact {
@@ -123,14 +175,15 @@
     padding: 1rem;
     border-radius: 8px;
     margin-top: 1rem;
+    text-align: center;
 }
 
-
+/* --- [MODIFICADO] Footer más visible --- */
 .footer {
     margin-top: 2rem;
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-    opacity: 0.7;
+    font-size: 0.9rem;
+    color: var(--text-primary); /* Cambiado a blanco */
+    opacity: 0.8;
 }
 
 .errorContainer {
