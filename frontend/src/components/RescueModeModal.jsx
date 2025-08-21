@@ -1,11 +1,13 @@
 // frontend/src/components/RescueModeModal.jsx
-// Versión 1.1: Soluciona el error de pantalla negra al manejar coordenadas iniciales nulas.
+// Versión 1.2: Corrige la importación de 'colombiaData' para usar 'export default'.
 
 import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import { auth } from '../firebase';
 import { X, AlertTriangle } from 'lucide-react';
-import { colombiaDepartments } from '../utils/colombiaData';
+// --- [LÍNEA CORREGIDA] ---
+// Se cambia la importación a 'default' y se usa el nombre 'colombiaData'.
+import colombiaData from '../utils/colombiaData';
 
 import styles from './RescueModeModal.module.css';
 import sharedStyles from '../shared.module.css';
@@ -22,14 +24,8 @@ function LocationPicker({ onLocationSelect, initialPos }) {
       setPosition(newPos);
       onLocationSelect(newPos);
     },
-    locationfound(e) {
-      // Opcional: Centrar en la ubicación del usuario si se desea
-      // setPosition(e.latlng);
-      // map.flyTo(e.latlng, map.getZoom());
-    },
   });
 
-  // Centra el mapa en la posición inicial cuando se carga
   useEffect(() => {
     if (initialPos) {
       map.setView(initialPos, 13);
@@ -46,16 +42,12 @@ function RescueModeModal({ pet, onClose, onSuccess }) {
     address: pet.rescueMode?.lastSeen?.address || '',
   });
   
-  // --- [LÓGICA CORREGIDA] ---
-  // Se establece un estado inicial seguro para las coordenadas del mapa.
   const [initialMapPosition, setInitialMapPosition] = useState(initialPosition);
   const [selectedCoordinates, setSelectedCoordinates] = useState(null);
-
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    // Si la mascota ya tiene un reporte previo, usamos esas coordenadas.
     const petCoords = pet.rescueMode?.lastSeen?.coordinates;
     if (petCoords?._latitude && petCoords?._longitude) {
       const savedPos = { lat: petCoords._latitude, lng: petCoords._longitude };
@@ -64,8 +56,9 @@ function RescueModeModal({ pet, onClose, onSuccess }) {
       return;
     }
     
-    // Si no, intentamos centrar el mapa en la ciudad/departamento de la mascota.
-    const departmentData = colombiaDepartments.find(d => d.department === pet.location?.department);
+    // --- [LÍNEA CORREGIDA] ---
+    // Se usa el nombre correcto de la variable: 'colombiaData'.
+    const departmentData = colombiaData.find(d => d.department === pet.location?.department);
     if (departmentData) {
       const cityData = departmentData.cities.find(c => c.name === pet.location?.city);
       if (cityData) {
@@ -84,17 +77,11 @@ function RescueModeModal({ pet, onClose, onSuccess }) {
         setMessage('Error: Por favor, marca en el mapa la última ubicación donde viste a tu mascota.');
         return;
     }
-
     setIsLoading(true);
     setMessage('Activando modo rescate...');
-
     const payload = {
         isActive: true,
-        lastSeen: {
-            latitude: selectedCoordinates.lat,
-            longitude: selectedCoordinates.lng,
-            address: formData.address,
-        },
+        lastSeen: { latitude: selectedCoordinates.lat, longitude: selectedCoordinates.lng, address: formData.address },
         message: formData.message,
         showContactPhone: formData.showContactPhone,
     };
@@ -103,16 +90,13 @@ function RescueModeModal({ pet, onClose, onSuccess }) {
         const user = auth.currentUser;
         if (!user) throw new Error("No autenticado.");
         const idToken = await user.getIdToken();
-
         const response = await fetch(`${API_URL}/api/pets/${pet.id}/rescue-mode`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}`},
             body: JSON.stringify(payload)
         });
-
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
-
         setMessage('¡Modo rescate activado! El aviso ya es visible para la comunidad.');
         onSuccess();
         setTimeout(() => onClose(), 2000);
