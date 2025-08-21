@@ -1,5 +1,5 @@
 // backend/index.js
-// VERSIÓN 2.0: Integra las rutas públicas y de reportes.
+// VERSIÓN 2.1: Implementa una configuración de CORS robusta para Vercel y Render.
 
 const express = require('express');
 const cors = require('cors');
@@ -23,27 +23,34 @@ const verificationRoutes = require('./routes/verification.routes');
 const productRoutes = require('./routes/product.routes');
 const paymentRoutes = require('./routes/payment.routes');
 const orderRoutes = require('./routes/order.routes');
-const reportRoutes = require('./routes/reports.routes'); // <-- [NUEVO] Importamos las rutas de reportes
-const publicRoutes = require('./routes/public.routes');   // <-- [NUEVO] Importamos las rutas públicas
+const reportRoutes = require('./routes/reports.routes');
+const publicRoutes = require('./routes/public.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Configuración de CORS
+// --- [NUEVA CONFIGURACIÓN DE CORS] ---
+// Lista de orígenes fijos permitidos.
 const allowedOrigins = [
     'http://localhost:5173',
-    'https://enlapet.app',
-    'https://enlapet-app-git-main-covacentral.vercel.app',
-    process.env.VERCEL_URL // URL de preview de Vercel
+    'https://enlapet.app'
 ];
+
+// Expresión regular para permitir cualquier subdominio de Vercel de nuestro proyecto.
+const vercelPreviewPattern = /^https:\/\/enlapet-app-.*\.vercel\.app$/;
 
 const corsOptions = {
     origin: (origin, callback) => {
-        // Permitir solicitudes sin 'origin' (como las de Postman o apps móviles)
-        if (!origin) return callback(null, true);
-        if (allowedOrigins.indexOf(origin) !== -1 || origin.includes('enlapet-app-git-') || origin.includes('enlapet-app-covacentral')) {
+        // Permitir solicitudes sin 'origin' (como Postman, apps móviles, etc.)
+        if (!origin) {
+            return callback(null, true);
+        }
+        
+        // Permitir si el origen está en la lista fija O si coincide con el patrón de Vercel.
+        if (allowedOrigins.includes(origin) || vercelPreviewPattern.test(origin)) {
             callback(null, true);
         } else {
+            // Si no coincide, rechazar la solicitud.
             callback(new Error('Not allowed by CORS'));
         }
     },
@@ -54,14 +61,12 @@ app.use(cors(corsOptions));
 app.use(express.json());
 
 // --- Rutas Públicas ---
-// Estas rutas no requieren el middleware de autenticación y deben ir primero.
-app.use('/api', publicRoutes); // <-- [NUEVO] Usamos el enrutador público
+app.use('/api', publicRoutes);
 
-// --- Rutas de Autenticación (también son públicas) ---
+// --- Rutas de Autenticación ---
 app.use('/api', authRoutes);
 
-
-// A partir de aquí, todas las rutas requieren autenticación.
+// Middleware de autenticación para rutas protegidas
 app.use(authenticateUser);
 
 // --- Rutas Protegidas ---
@@ -78,15 +83,12 @@ app.use('/api', verificationRoutes);
 app.use('/api', productRoutes);
 app.use('/api', paymentRoutes);
 app.use('/api', orderRoutes);
-app.use('/api', reportRoutes); // <-- [NUEVO] Usamos el enrutador de reportes
+app.use('/api', reportRoutes);
 
-
-// Endpoint de prueba para verificar que el servidor está funcionando
 app.get('/', (req, res) => {
     res.send('Backend de EnlaPet funcionando correctamente.');
 });
 
-// Test de conexión a Firestore al iniciar
 db.collection('users').limit(1).get()
     .then(() => console.log('Conexión a Firestore exitosa.'))
     .catch(err => console.error('Error de conexión a Firestore:', err));
