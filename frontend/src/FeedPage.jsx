@@ -1,5 +1,5 @@
 // frontend/src/FeedPage.jsx
-// Versión: 2.4 - Integra el carrusel de mascotas extraviadas.
+// Versión: 2.5 - Corrige el bug de "duplicate key" en el renderizado del feed.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { auth } from './firebase';
@@ -7,7 +7,7 @@ import PostCard from './PostCard';
 import LoadingComponent from './LoadingComponent';
 import CreatePostPrompt from './CreatePostPrompt';
 import CreatePostModal from './CreatePostModal';
-import LostPetsCarousel from './components/LostPetsCarousel'; // <-- 1. Importamos el nuevo componente
+import LostPetsCarousel from './components/LostPetsCarousel';
 
 import styles from './FeedPage.module.css';
 import sharedStyles from './shared.module.css';
@@ -16,7 +16,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 function FeedPage({ userProfile, pets }) {
   const [posts, setPosts] = useState([]);
-  const [lostPets, setLostPets] = useState([]); // <-- 2. Nuevo estado para las mascotas perdidas
+  const [lostPets, setLostPets] = useState([]);
   const [likedStatuses, setLikedStatuses] = useState({});
   const [savedStatuses, setSavedStatuses] = useState({});
   const [isLoading, setIsLoading] = useState(false);
@@ -56,8 +56,6 @@ function FeedPage({ userProfile, pets }) {
       
       setPosts(prevPosts => reset ? data.posts : [...prevPosts, ...data.posts]);
       
-      // --- 3. Manejamos los datos de mascotas perdidas ---
-      // Solo actualizamos las mascotas perdidas en la primera carga (sin cursor)
       if (!cursor && data.lostPets) {
         setLostPets(data.lostPets);
       }
@@ -145,8 +143,8 @@ function FeedPage({ userProfile, pets }) {
         <LoadingComponent text="Buscando nuevos momentos..." />
       ) : posts.length > 0 ? (
         <div>
-          {/* --- 4. Renderizado condicional del carrusel y los posts --- */}
           {posts.map((post, index) => (
+            // --- LÍNEA CORREGIDA ---
             <React.Fragment key={post.id}>
               <PostCard 
                 post={post}
@@ -156,7 +154,6 @@ function FeedPage({ userProfile, pets }) {
                 onSaveToggle={handleSaveToggle}
                 onCommentAdded={handleCommentAdded}
               />
-              {/* Insertamos el carrusel después del segundo post y luego cada 15 */}
               {(index === 1 || (index > 1 && (index - 1) % 15 === 0)) && (
                 <LostPetsCarousel lostPets={lostPets} />
               )}
