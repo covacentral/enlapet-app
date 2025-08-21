@@ -1,10 +1,11 @@
 // frontend/src/components/RescueModeModal.jsx
-// (NUEVO) Modal para activar y gestionar el modo de rescate de una mascota.
+// Versión 1.1: Soluciona el error de pantalla negra al manejar coordenadas iniciales nulas.
 
 import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import { auth } from '../firebase';
 import { X, AlertTriangle } from 'lucide-react';
+import { colombiaDepartments } from '../utils/colombiaData';
 
 import styles from './RescueModeModal.module.css';
 import sharedStyles from '../shared.module.css';
@@ -12,52 +13,74 @@ import sharedStyles from '../shared.module.css';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 const initialPosition = [4.5709, -74.2973]; // Centro de Colombia
 
-// Componente reutilizado para seleccionar ubicación en el mapa
 function LocationPicker({ onLocationSelect, initialPos }) {
   const [position, setPosition] = useState(initialPos);
-  useMapEvents({
+  
+  const map = useMapEvents({
     click(e) {
-      setPosition(e.latlng);
-      onLocationSelect(e.latlng);
+      const newPos = e.latlng;
+      setPosition(newPos);
+      onLocationSelect(newPos);
+    },
+    locationfound(e) {
+      // Opcional: Centrar en la ubicación del usuario si se desea
+      // setPosition(e.latlng);
+      // map.flyTo(e.latlng, map.getZoom());
     },
   });
+
+  // Centra el mapa en la posición inicial cuando se carga
+  useEffect(() => {
+    if (initialPos) {
+      map.setView(initialPos, 13);
+    }
+  }, [initialPos, map]);
+
   return position ? <Marker position={position}></Marker> : null;
 }
 
 function RescueModeModal({ pet, onClose, onSuccess }) {
   const [formData, setFormData] = useState({
     message: pet.rescueMode?.message || `¡Ayúdame a volver a casa! Si me ves, por favor contacta a mi familia.`,
-    showContactPhone: pet.rescueMode?.showContactPhone !== false, // Default to true
+    showContactPhone: pet.rescueMode?.showContactPhone !== false,
     address: pet.rescueMode?.lastSeen?.address || '',
   });
-  const [coordinates, setCoordinates] = useState(null);
+  
+  // --- [LÓGICA CORREGIDA] ---
+  // Se establece un estado inicial seguro para las coordenadas del mapa.
+  const [initialMapPosition, setInitialMapPosition] = useState(initialPosition);
+  const [selectedCoordinates, setSelectedCoordinates] = useState(null);
+
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    // Si la mascota ya tiene coordenadas guardadas, las usamos
+    // Si la mascota ya tiene un reporte previo, usamos esas coordenadas.
     const petCoords = pet.rescueMode?.lastSeen?.coordinates;
     if (petCoords?._latitude && petCoords?._longitude) {
-        setCoordinates({ lat: petCoords._latitude, lng: petCoords._longitude });
+      const savedPos = { lat: petCoords._latitude, lng: petCoords._longitude };
+      setSelectedCoordinates(savedPos);
+      setInitialMapPosition(savedPos);
+      return;
+    }
+    
+    // Si no, intentamos centrar el mapa en la ciudad/departamento de la mascota.
+    const departmentData = colombiaDepartments.find(d => d.department === pet.location?.department);
+    if (departmentData) {
+      const cityData = departmentData.cities.find(c => c.name === pet.location?.city);
+      if (cityData) {
+        setInitialMapPosition([cityData.latitude, cityData.longitude]);
+      }
     }
   }, [pet]);
 
-
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
-  };
-
   const handleLocationSelect = (latlng) => {
-    setCoordinates(latlng);
+    setSelectedCoordinates(latlng);
   };
   
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!coordinates) {
+    if (!selectedCoordinates) {
         setMessage('Error: Por favor, marca en el mapa la última ubicación donde viste a tu mascota.');
         return;
     }
@@ -68,8 +91,8 @@ function RescueModeModal({ pet, onClose, onSuccess }) {
     const payload = {
         isActive: true,
         lastSeen: {
-            latitude: coordinates.lat,
-            longitude: coordinates.lng,
+            latitude: selectedCoordinates.lat,
+            longitude: selectedCoordinates.lng,
             address: formData.address,
         },
         message: formData.message,
@@ -100,34 +123,35 @@ function RescueModeModal({ pet, onClose, onSuccess }) {
     }
   };
 
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+  };
 
   return (
     <div className={sharedStyles.modalBackdrop} onClick={onClose}>
       <div className={styles.content} onClick={e => e.stopPropagation()}>
         <div className={sharedStyles.modalHeader}>
           <h2>Reportar a {pet.name} como extraviado</h2>
-          <button onClick={onClose} className={sharedStyles.closeButton} disabled={isLoading}>
-            <X size={24} />
-          </button>
+          <button onClick={onClose} className={sharedStyles.closeButton} disabled={isLoading}><X size={24} /></button>
         </div>
 
         <form onSubmit={handleSubmit} className={styles.form}>
             <div className={styles.warningBox}>
-                <AlertTriangle size={32} />
-                <p>Estás a punto de activar el **Modo Rescate**. El perfil de tu mascota será visible públicamente para ayudar en su búsqueda.</p>
+                <AlertTriangle size={32} /><p>Estás a punto de activar el <strong>Modo Rescate</strong>. El perfil de tu mascota será visible públicamente para ayudar en su búsqueda.</p>
             </div>
           
             <div className={sharedStyles.formGroup}>
                 <label>Última ubicación conocida</label>
                 <p className={styles.formDescription}>Haz clic en el mapa para marcar el punto exacto donde viste a {pet.name} por última vez.</p>
                 <div className={styles.miniMapWrapper}>
-                    <MapContainer center={coordinates || [pet.location?.city, pet.location?.department] || initialPosition} zoom={13}>
+                    <MapContainer center={initialMapPosition} zoom={13}>
                         <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
-                        <LocationPicker onLocationSelect={handleLocationSelect} initialPos={coordinates} />
+                        <LocationPicker onLocationSelect={handleLocationSelect} initialPos={selectedCoordinates} />
                     </MapContainer>
                 </div>
-                 {!coordinates && <small className={styles.mapPrompt}>Selecciona un punto en el mapa.</small>}
-                 {coordinates && <small className={styles.mapPromptSuccess}>¡Ubicación seleccionada!</small>}
+                 {!selectedCoordinates && <small className={styles.mapPrompt}>Selecciona un punto en el mapa.</small>}
+                 {selectedCoordinates && <small className={styles.mapPromptSuccess}>¡Ubicación seleccionada!</small>}
             </div>
 
             <div className={sharedStyles.formGroup}>
@@ -149,12 +173,7 @@ function RescueModeModal({ pet, onClose, onSuccess }) {
             
             <div className={sharedStyles.modalFooter}>
                 {message && <p className={message.startsWith('Error') ? sharedStyles.responseMessageError : sharedStyles.responseMessage}>{message}</p>}
-                <button 
-                    type="submit" 
-                    className={`${sharedStyles.button} ${sharedStyles.danger}`} 
-                    style={{width: '100%', backgroundColor: 'var(--error-red)'}} 
-                    disabled={isLoading}
-                >
+                <button type="submit" className={`${sharedStyles.button} ${sharedStyles.danger}`} style={{width: '100%', backgroundColor: 'var(--error-red)'}} disabled={isLoading}>
                     {isLoading ? 'Activando...' : `Activar Modo Rescate`}
                 </button>
             </div>
