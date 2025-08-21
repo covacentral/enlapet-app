@@ -1,5 +1,5 @@
 // backend/index.js
-// VERSIÓN 2.1: Implementa una configuración de CORS robusta para Vercel y Render.
+// VERSIÓN 2.3: Corrige la configuración de CORS con el dominio de producción correcto.
 
 const express = require('express');
 const cors = require('cors');
@@ -29,11 +29,12 @@ const publicRoutes = require('./routes/public.routes');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// --- [NUEVA CONFIGURACIÓN DE CORS] ---
-// Lista de orígenes fijos permitidos.
+// --- [CONFIGURACIÓN DE CORS DEFINITIVA] ---
+// Se utilizan los dominios correctos proporcionados.
 const allowedOrigins = [
     'http://localhost:5173',
-    'https://enlapet.app'
+    'https://covacentral.shop',
+    'https://www.covacentral.shop' 
 ];
 
 // Expresión regular para permitir cualquier subdominio de Vercel de nuestro proyecto.
@@ -41,16 +42,13 @@ const vercelPreviewPattern = /^https:\/\/enlapet-app-.*\.vercel\.app$/;
 
 const corsOptions = {
     origin: (origin, callback) => {
-        // Permitir solicitudes sin 'origin' (como Postman, apps móviles, etc.)
         if (!origin) {
             return callback(null, true);
         }
         
-        // Permitir si el origen está en la lista fija O si coincide con el patrón de Vercel.
         if (allowedOrigins.includes(origin) || vercelPreviewPattern.test(origin)) {
             callback(null, true);
         } else {
-            // Si no coincide, rechazar la solicitud.
             callback(new Error('Not allowed by CORS'));
         }
     },
@@ -60,16 +58,14 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// --- Rutas Públicas ---
+// Rutas Públicas y de Autenticación
 app.use('/api', publicRoutes);
-
-// --- Rutas de Autenticación ---
 app.use('/api', authRoutes);
 
 // Middleware de autenticación para rutas protegidas
 app.use(authenticateUser);
 
-// --- Rutas Protegidas ---
+// Rutas Protegidas
 app.use('/api', profileRoutes);
 app.use('/api', petRoutes);
 app.use('/api', postRoutes);
