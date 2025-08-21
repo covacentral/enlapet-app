@@ -1,19 +1,18 @@
 // backend/controllers/post.controller.js
-// VERSIÓN 2.2: Integra el sistema de rescate en el feed principal.
+// VERSIÓN 2.3: Añade el EPID al payload de mascotas extraviadas.
 
 const { db, bucket } = require('../config/firebase');
 const { createNotification } = require('../services/notification.service');
 const admin = require('firebase-admin');
+// Se elimina la importación de 'completeMission', ya que su lógica se integra directamente.
 
-/**
- * Obtiene el feed de publicaciones para el usuario y añade una lista de mascotas extraviadas.
- */
+// --- (getFeed y otras funciones no relacionadas con la creación permanecen sin cambios) ---
 const getFeed = async (req, res) => {
+    // ... (código existente sin modificaciones)
     const { uid } = req.user;
     const { cursor } = req.query;
     const POSTS_PER_PAGE = 10;
     try {
-        // --- Lógica de Publicaciones (sin cambios) ---
         const followingSnapshot = await db.collection('users').doc(uid).collection('following').get();
         const followedIds = followingSnapshot.docs.map(doc => doc.id);
         const authorsToInclude = [...new Set([...followedIds, uid])];
@@ -78,6 +77,7 @@ const getFeed = async (req, res) => {
                     const data = doc.data();
                     return {
                         id: doc.id,
+                        epid: data.epid, // <-- CAMBIO CLAVE: Añadimos el EPID
                         name: data.name,
                         breed: data.breed,
                         petPictureUrl: data.petPictureUrl,
@@ -100,8 +100,10 @@ const getFeed = async (req, res) => {
     }
 };
 
-
-// --- (El resto de funciones como createPost, likePost, etc., no cambian) ---
+/**
+ * --- FUNCIÓN createPost REESTRUCTURADA Y CORREGIDA ---
+ * Garantiza que todas las lecturas de la transacción se ejecuten antes que las escrituras.
+ */
 const createPost = async (req, res) => {
     const { uid } = req.user;
     const { caption, authorId, authorType, missionId, petId } = req.body;
@@ -126,17 +128,20 @@ const createPost = async (req, res) => {
         blobStream.on('finish', async () => {
             await fileUpload.makePublic();
             const imageUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
-
+            
             try {
                 const newPost = await db.runTransaction(async (t) => {
+                    // --- FASE 1: TODAS LAS LECTURAS ---
                     let missionDoc = null;
                     let completedMissionDoc = null;
                     if (missionId && petId) {
                         const missionRef = db.collection('missions').doc(missionId);
                         const completedMissionRef = db.collection('pets').doc(petId).collection('completedMissions').doc(missionId);
+                        // Leemos ambos documentos al inicio.
                         [missionDoc, completedMissionDoc] = await Promise.all([t.get(missionRef), t.get(completedMissionRef)]);
                     }
                     
+                    // --- FASE 2: VALIDACIÓN Y PREPARACIÓN ---
                     let missionData = null;
                     let finalCaption = caption;
                     const isMissionPost = missionId && petId && missionDoc && missionDoc.exists && missionDoc.data().isActive && !completedMissionDoc.exists;
@@ -155,17 +160,20 @@ const createPost = async (req, res) => {
                         likesCount: 0, commentsCount: 0
                     };
 
-                    t.set(postRef, postData);
+                    // --- FASE 3: TODAS LAS ESCRITURAS ---
+                    t.set(postRef, postData); // Escritura 1: Post
 
                     if (isMissionPost) {
                         const userRef = db.collection('users').doc(uid);
                         const completedMissionRef = db.collection('pets').doc(petId).collection('completedMissions').doc(missionId);
                         
+                        // Escritura 2: Hito de la Misión
                         t.set(completedMissionRef, {
                             completedAt: new Date().toISOString(), status: 'completed',
                             proof: { type: 'POST', postId: postRef.id }
                         });
                         
+                        // Escritura 3: Puntos del Usuario
                         t.update(userRef, {
                             enlaPetPoints: admin.firestore.FieldValue.increment(missionData.reward.points || 0)
                         });
@@ -174,6 +182,7 @@ const createPost = async (req, res) => {
                     return { ...postData, id: postRef.id, isMissionCompleted: isMissionPost, missionData };
                 });
 
+                // --- FASE 4: LÓGICA POST-TRANSACCIÓN ---
                 if (newPost.isMissionCompleted) {
                     await createNotification(uid, 'system', 'mission_completed', newPost.missionData.id, 'mission');
                 }
@@ -205,7 +214,6 @@ const getPostsByAuthor = async (req, res) => {
         res.status(500).json({ message: 'Error al obtener las publicaciones.' });
     }
 };
-
 const likePost = async (req, res) => {
     const { uid } = req.user;
     const { postId } = req.params;
@@ -243,7 +251,6 @@ const likePost = async (req, res) => {
         res.status(500).json({ message: 'No se pudo registrar el like.' });
     }
 };
-
 const unlikePost = async (req, res) => {
     const { uid } = req.user;
     const { postId } = req.params;
@@ -262,7 +269,6 @@ const unlikePost = async (req, res) => {
         res.status(500).json({ message: 'No se pudo quitar el like.' });
     }
 };
-
 const getLikeStatuses = async (req, res) => {
     const { uid } = req.user;
     const { postIds } = req.body;
@@ -278,7 +284,6 @@ const getLikeStatuses = async (req, res) => {
         res.status(500).json({ message: 'Error al verificar likes.' });
     }
 };
-
 const addComment = async (req, res) => {
     const { uid } = req.user;
     const { postId } = req.params;
@@ -318,7 +323,6 @@ const addComment = async (req, res) => {
         res.status(500).json({ message: 'No se pudo publicar el comentario.' });
     }
 };
-
 const getComments = async (req, res) => {
     try {
         const { postId } = req.params;
@@ -330,7 +334,6 @@ const getComments = async (req, res) => {
         res.status(500).json({ message: 'No se pudieron obtener los comentarios.' });
     }
 };
-
 const savePost = async (req, res) => {
     const { uid } = req.user;
     const { postId } = req.params;
@@ -343,7 +346,6 @@ const savePost = async (req, res) => {
         res.status(500).json({ message: 'No se pudo guardar la publicación.' });
     }
 };
-
 const unsavePost = async (req, res) => {
     const { uid } = req.user;
     const { postId } = req.params;
@@ -356,7 +358,6 @@ const unsavePost = async (req, res) => {
         res.status(500).json({ message: 'No se pudo quitar la publicación.' });
     }
 };
-
 const getSaveStatuses = async (req, res) => {
     const { uid } = req.user;
     const { postIds } = req.body;
@@ -373,7 +374,6 @@ const getSaveStatuses = async (req, res) => {
         res.status(500).json({ message: 'Error al verificar guardados.' });
     }
 };
-
 const getSavedPosts = async (req, res) => {
     const { uid } = req.user;
     try {
@@ -412,7 +412,6 @@ const getSavedPosts = async (req, res) => {
         res.status(500).json({ message: 'Error al obtener publicaciones guardadas.' });
     }
 };
-
 const getPostById = async (req, res) => {
     try {
         const { postId } = req.params;

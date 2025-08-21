@@ -1,19 +1,18 @@
 // frontend/src/App.jsx
-// Versión: 2.6 - Integración del Proveedor del Carrito de Compras
-// TAREA: Se envuelve el layout protegido con CartProvider para dar acceso global al estado del carrito.
+// Versión: 2.7 - Integra las rutas del Módulo de Rescate.
 
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { auth } from './firebase';
 import { onAuthStateChanged } from "firebase/auth";
 
-// --- 1. IMPORTAMOS nuestro nuevo CartProvider ---
 import { CartProvider } from './context/CartContext';
 
 import AuthPage from './AuthPage.jsx';
 import ProfileLayout from './ProfileLayout.jsx';
 import PetProfile from './PetProfile.jsx';
 import LoadingComponent from './LoadingComponent.jsx';
+import RescueProfile from './RescueProfile.jsx'; // <-- 1. Importamos el nuevo perfil de rescate
 
 function ProtectedRoute({ user, isLoading, children }) {
   if (isLoading) {
@@ -44,13 +43,15 @@ function App() {
   return (
     <div className="App">
       <Routes>
+        {/* --- 2. Añadimos la nueva ruta pública para el perfil de rescate --- */}
+        <Route path="/rescate/epid/:epid" element={<RescueProfile />} />
+        
         <Route path="/pet/:petId" element={<PetProfile />} />
         
         <Route 
           path="/dashboard/*" 
           element={
             <ProtectedRoute user={user} isLoading={isAuthLoading}>
-              {/* --- 2. ENVOLVEMOS el ProfileLayout con el CartProvider --- */}
               <CartProvider>
                 <ProfileLayout user={user} />
               </CartProvider>

@@ -1,5 +1,5 @@
 // frontend/src/ProfileLayout.jsx
-// Versión 4.5: Implementa el handler para 'onAcceptMission' y lo pasa al MainHeader.
+// Versión 4.7: Integra la ruta de Búsquedas Activas y finaliza el Módulo de Rescate.
 
 import { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
@@ -24,9 +24,10 @@ import OrderConfirmationPage from './OrderConfirmationPage.jsx';
 import LoadingComponent from './LoadingComponent.jsx';
 import BottomNavBar from './BottomNavBar.jsx';
 import CreatePostModal from './CreatePostModal.jsx';
-import ShoppingCartModal from './components/ShoppingCartModal.jsx';
 import MainHeader from './MainHeader.jsx';
 import PostDetailModal from './PostDetailModal.jsx';
+import LostAndFoundPage from './LostAndFoundPage.jsx';
+import RescueModeModal from './components/RescueModeModal.jsx'; // Importamos el modal de rescate
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -35,13 +36,15 @@ function ProfileLayout({ user }) {
   const [pets, setPets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isCartOpen, setIsCartOpen] = useState(false);
-  // --- [NUEVO] Estado para el contexto de la misión ---
   const [missionContext, setMissionContext] = useState(null);
   const navigate = useNavigate();
 
+  // --- [NUEVO] Estados para el modal de rescate ---
+  const [isRescueModalOpen, setIsRescueModalOpen] = useState(false);
+  const [petForRescue, setPetForRescue] = useState(null);
+
+
   const fetchCoreData = useCallback(async () => {
-    // ... (lógica de fetching sin cambios)
     if (!user) return;
     try {
       const idToken = await user.getIdToken();
@@ -67,48 +70,65 @@ function ProfileLayout({ user }) {
     fetchCoreData().finally(() => setLoading(false));
   }, [fetchCoreData]);
 
-  // --- [NUEVO] Handler para aceptar una misión ---
   const handleAcceptMission = (mission, petId) => {
-    // Guardamos los datos de la misión en el estado
     setMissionContext({
       missionId: mission.id,
       petId: petId,
       missionHashtag: mission.hashtag
     });
-    // Abrimos el modal para crear el post
     setIsCreateModalOpen(true);
   };
 
   const handlePostCreated = (newPost) => {
     setIsCreateModalOpen(false);
-    setMissionContext(null); // Limpiamos el contexto después de crear el post
+    setMissionContext(null);
     if (newPost) {
-      navigate('/dashboard'); // Navegamos al feed para ver el nuevo post
+      navigate('/dashboard');
     }
-    fetchCoreData(); // Refrescamos los datos por si se completó una misión
+    fetchCoreData();
   };
 
   const handleOpenCreatePost = () => {
-    setMissionContext(null); // Aseguramos que no haya contexto de misión
+    setMissionContext(null);
     setIsCreateModalOpen(true);
   };
+  
+  // --- [NUEVO] Handlers para el modal de rescate ---
+  const handleOpenRescueModal = (pet) => {
+    setPetForRescue(pet);
+    setIsRescueModalOpen(true);
+  };
+
+  const handleRescueSuccess = () => {
+    // Cuando el modo rescate se activa/desactiva, refrescamos todos los datos
+    fetchCoreData();
+  };
+
 
   if (loading) return <LoadingComponent text="Cargando tu universo EnlaPet..." />;
 
   return (
     <div className={styles.container}>
-      {/* El modal ahora recibe el contexto de la misión */}
       {isCreateModalOpen && ( <CreatePostModal userProfile={userProfile} pets={pets} onClose={() => setIsCreateModalOpen(false)} onPostCreated={handlePostCreated} missionContext={missionContext} /> )}
-      {isCartOpen && <ShoppingCartModal onClose={() => setIsCartOpen(false)} />}
+      
+      {/* --- Renderizado del nuevo modal de rescate --- */}
+      {isRescueModalOpen && petForRescue && (
+        <RescueModeModal 
+            pet={petForRescue}
+            onClose={() => setIsRescueModalOpen(false)}
+            onSuccess={handleRescueSuccess}
+        />
+      )}
 
-      {/* Pasamos el nuevo handler 'handleAcceptMission' al MainHeader */}
-      <MainHeader userProfile={userProfile} pets={pets} onAcceptMission={handleAcceptMission} />
+      {/* Pasamos el handler para abrir el modal de rescate */}
+      <MainHeader userProfile={userProfile} pets={pets} onAcceptMission={handleAcceptMission} onOpenRescueModal={handleOpenRescueModal} />
 
       <main>
         <Routes>
           <Route index element={<FeedPage userProfile={userProfile} pets={pets} />} />
           <Route path="map" element={<MapPage />} />
           <Route path="events" element={<EventsPage user={user} />} />
+          <Route path="rescue" element={<LostAndFoundPage />} />
           <Route path="appointments" element={<AppointmentsTab userProfile={userProfile} />} />
           <Route path="saved" element={<SavedPostsPage />} />
           <Route path="pets" element={<PetsTab user={user} initialPets={pets} onPetsUpdate={fetchCoreData} />} />
@@ -125,16 +145,11 @@ function ProfileLayout({ user }) {
         <Route path="notifications/post/:postId" element={<PostDetailModal />} />
       </Routes>
 
-      <BottomNavBar 
-        onOpenCreatePost={handleOpenCreatePost}
-        onOpenCart={() => setIsCartOpen(true)}
-      />
+      <BottomNavBar onOpenCreatePost={handleOpenCreatePost} />
     </div>
   );
 }
 
-
-// --- Necesitamos envolver el ProfileLayout en el CartProvider ---
 function ProfileLayoutWrapper({ user }) {
   return (
     <CartProvider>

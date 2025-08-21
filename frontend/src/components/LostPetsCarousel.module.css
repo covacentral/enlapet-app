@@ -1,0 +1,47 @@
+/* frontend/src/components/LostPetsCarousel.module.css */
+/* Estilos para el carrusel de mascotas extraviadas en el feed. */
+
+.container {
+    background-color: var(--background-light);
+    border: 1px solid var(--border-color);
+    border-radius: 15px;
+    padding: 1.5rem;
+    margin: 2rem 0;
+    text-align: left;
+}
+
+.title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    color: var(--text-primary);
+}
+
+.carousel {
+    display: flex;
+    gap: 1rem;
+    overflow-x: auto; /* Habilita el scroll horizontal */
+    padding-bottom: 1rem; /* Espacio para la barra de scroll */
+    scrollbar-width: thin; /* Para Firefox */
+    scrollbar-color: var(--primary-accent) var(--border-color);
+}
+
+/* Estilos para la barra de scroll en navegadores WebKit (Chrome, Safari) */
+.carousel::-webkit-scrollbar {
+  height: 8px;
+}
+
+.carousel::-webkit-scrollbar-track {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+.carousel::-webkit-scrollbar-thumb {
+  background-color: var(--primary-accent);
+  border-radius: 4px;
+}
+
+.carousel::-webkit-scrollbar-thumb:hover {
+    background-color: var(--primary-accent-hover);
+}

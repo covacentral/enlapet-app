@@ -33,7 +33,6 @@ const getPetPublicProfile = async (req, res) => {
             };
         }
         
-        // Si la mascota está en modo rescate y el dueño no quiere mostrar el teléfono, lo ocultamos.
         if (petData.rescueMode?.isActive && !petData.rescueMode?.showContactPhone) {
             ownerData.phone = 'Contacto no autorizado por el dueño.';
         }
@@ -108,7 +107,6 @@ const getRescuePetProfileByEpid = async (req, res) => {
         const petDoc = snapshot.docs[0];
         const petData = petDoc.data();
 
-        // Verificación clave: solo devolvemos datos si el modo rescate está activo.
         if (!petData.rescueMode?.isActive) {
             return res.status(403).json({ message: 'Esta mascota no ha sido reportada como extraviada.' });
         }
@@ -118,13 +116,11 @@ const getRescuePetProfileByEpid = async (req, res) => {
 
         if (userDoc.exists) {
             ownerData.name = userDoc.data().name;
-            // Solo incluimos el teléfono si el dueño lo autorizó explícitamente.
             if (petData.rescueMode.showContactPhone) {
                 ownerData.phone = userDoc.data().phone || null;
             }
         }
         
-        // Construimos un objeto de respuesta específico para la página de rescate
         const rescueProfile = {
             name: petData.name,
             breed: petData.breed,
@@ -142,9 +138,46 @@ const getRescuePetProfileByEpid = async (req, res) => {
     }
 };
 
+// --- [NUEVA FUNCIÓN] ---
+/**
+ * Obtiene una lista de todas las mascotas actualmente en modo rescate.
+ * Esta ruta es pública para la página de "Búsquedas Activas".
+ */
+const getActiveRescuePets = async (req, res) => {
+    try {
+        const snapshot = await db.collection('pets')
+            .where('rescueMode.isActive', '==', true)
+            .orderBy('rescueMode.activatedAt', 'desc')
+            .get();
+
+        if (snapshot.empty) {
+            return res.status(200).json([]);
+        }
+
+        const rescuePets = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                epid: data.epid,
+                name: data.name,
+                breed: data.breed,
+                petPictureUrl: data.petPictureUrl,
+                lastSeenAddress: data.rescueMode.lastSeen.address,
+                activatedAt: data.rescueMode.activatedAt
+            };
+        });
+
+        res.status(200).json(rescuePets);
+    } catch (error) {
+        console.error('Error en getActiveRescuePets:', error);
+        res.status(500).json({ message: 'Error interno al obtener las mascotas en búsqueda.' });
+    }
+};
+
 
 module.exports = {
     getPetPublicProfile,
     getUserPublicProfile,
-    getRescuePetProfileByEpid
+    getRescuePetProfileByEpid,
+    getActiveRescuePets // <-- Exportamos la nueva función
 };

@@ -1,6 +1,5 @@
 // frontend/src/FeedPage.jsx
-// Versión: 2.3 - Corrección de Error Crítico de Build
-// TAREA: Se corrige la sintaxis de className en el h2 para permitir el despliegue.
+// Versión: 2.4 - Integra el carrusel de mascotas extraviadas.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { auth } from './firebase';
@@ -8,6 +7,7 @@ import PostCard from './PostCard';
 import LoadingComponent from './LoadingComponent';
 import CreatePostPrompt from './CreatePostPrompt';
 import CreatePostModal from './CreatePostModal';
+import LostPetsCarousel from './components/LostPetsCarousel'; // <-- 1. Importamos el nuevo componente
 
 import styles from './FeedPage.module.css';
 import sharedStyles from './shared.module.css';
@@ -16,6 +16,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 function FeedPage({ userProfile, pets }) {
   const [posts, setPosts] = useState([]);
+  const [lostPets, setLostPets] = useState([]); // <-- 2. Nuevo estado para las mascotas perdidas
   const [likedStatuses, setLikedStatuses] = useState({});
   const [savedStatuses, setSavedStatuses] = useState({});
   const [isLoading, setIsLoading] = useState(false);
@@ -54,6 +55,13 @@ function FeedPage({ userProfile, pets }) {
       const data = await response.json();
       
       setPosts(prevPosts => reset ? data.posts : [...prevPosts, ...data.posts]);
+      
+      // --- 3. Manejamos los datos de mascotas perdidas ---
+      // Solo actualizamos las mascotas perdidas en la primera carga (sin cursor)
+      if (!cursor && data.lostPets) {
+        setLostPets(data.lostPets);
+      }
+
       setNextCursor(data.nextCursor);
       if (!data.nextCursor) setHasMore(false);
 
@@ -137,21 +145,26 @@ function FeedPage({ userProfile, pets }) {
         <LoadingComponent text="Buscando nuevos momentos..." />
       ) : posts.length > 0 ? (
         <div>
-          {posts.map((post) => (
-            <PostCard 
-              key={post.id} 
-              post={post}
-              isLiked={!!likedStatuses[post.id]}
-              isSaved={!!savedStatuses[post.id]}
-              onLikeToggle={handleLikeToggle}
-              onSaveToggle={handleSaveToggle}
-              onCommentAdded={handleCommentAdded}
-            />
+          {/* --- 4. Renderizado condicional del carrusel y los posts --- */}
+          {posts.map((post, index) => (
+            <React.Fragment key={post.id}>
+              <PostCard 
+                post={post}
+                isLiked={!!likedStatuses[post.id]}
+                isSaved={!!savedStatuses[post.id]}
+                onLikeToggle={handleLikeToggle}
+                onSaveToggle={handleSaveToggle}
+                onCommentAdded={handleCommentAdded}
+              />
+              {/* Insertamos el carrusel después del segundo post y luego cada 15 */}
+              {(index === 1 || (index > 1 && (index - 1) % 15 === 0)) && (
+                <LostPetsCarousel lostPets={lostPets} />
+              )}
+            </React.Fragment>
           ))}
         </div>
       ) : (
         <div className={sharedStyles.emptyStateMessage}>
-          {/* --- LÍNEA CORREGIDA --- */}
           <h2 className={styles.emptyStateMessage}>¡Bienvenido a EnlaPet!</h2>
           <p>Tu feed de inicio está un poco vacío.</p>
           <p>Empieza a seguir a otras mascotas para no perderte sus momentos.</p>

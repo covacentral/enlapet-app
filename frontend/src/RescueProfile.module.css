@@ -1,0 +1,123 @@
+/* frontend/src/RescueProfile.module.css */
+/* Estilos para la página de perfil público de rescate. */
+
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.card {
+    background-color: var(--background-light);
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    text-align: center;
+    max-width: 500px;
+    width: 100%;
+    border-top: 6px solid var(--error-red);
+}
+
+.header h1 {
+    font-size: 2.2rem;
+    color: var(--error-red);
+    font-weight: 800;
+    margin-bottom: 1rem;
+    letter-spacing: 1px;
+}
+
+.picture {
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 6px solid var(--border-color);
+    margin-bottom: 1rem;
+}
+
+.name {
+    font-size: 2.5rem;
+    margin: 0;
+    color: var(--brand-cream);
+}
+
+.breed {
+    font-size: 1.2rem;
+    margin-top: 5px;
+    color: var(--text-secondary);
+}
+
+.section {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+    text-align: left;
+}
+
+.section h3 {
+    font-size: 1.1rem;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+    font-weight: 700;
+}
+
+.address {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: bold;
+    margin-bottom: 1rem;
+}
+
+.mapWrapper {
+    height: 300px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+.message {
+    font-style: italic;
+    font-size: 1.1rem;
+    line-height: 1.6;
+    display: flex;
+    gap: 8px;
+}
+
+.section p {
+    text-align: center;
+    font-size: 1.1rem;
+}
+
+.whatsappButton {
+    background-color: var(--whatsapp-green);
+    width: 100%;
+    margin-top: 1rem;
+}
+
+.noContact {
+    font-size: 0.9rem !important;
+    color: var(--text-secondary);
+    background-color: var(--background-dark);
+    padding: 1rem;
+    border-radius: 8px;
+    margin-top: 1rem;
+}
+
+
+.footer {
+    margin-top: 2rem;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+.errorContainer {
+    composes: card;
+    border-top-color: var(--warning-yellow);
+}

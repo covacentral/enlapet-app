@@ -8,7 +8,8 @@ const { Router } = require('express');
 const {
     getPetPublicProfile,
     getUserPublicProfile,
-    getRescuePetProfileByEpid
+    getRescuePetProfileByEpid,
+    getActiveRescuePets // <-- Se añade la nueva función
 } = require('../controllers/public.controller');
 
 // La importación del controlador de productos se mantiene, ya que es pública.
@@ -21,11 +22,13 @@ const router = Router();
 router.get('/public/pets/:petId', getPetPublicProfile);
 router.get('/public/users/:userId', getUserPublicProfile);
 
-// --- [NUEVA RUTA] Ruta de Rescate Pública ---
-// URL: /api/public/rescue/:epid
-// Método: GET
-// Función: Obtiene el perfil de búsqueda de una mascota por su EPID.
+// --- Rutas de Rescate Públicas ---
+
+// Obtiene el perfil de búsqueda de una mascota por su EPID.
 router.get('/public/rescue/:epid', getRescuePetProfileByEpid);
+
+// [NUEVA RUTA] Obtiene la lista de todas las mascotas en búsqueda activa.
+router.get('/public/rescue/all', getActiveRescuePets);
 
 
 // --- Rutas de Productos Públicas ---
