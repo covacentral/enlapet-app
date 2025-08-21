@@ -1,6 +1,5 @@
 // backend/controllers/pet.controller.js
-// Versión 2.3 - Añade la lógica para el Modo Rescate.
-// TAREA: Se introduce la función `manageRescueMode` para activar, actualizar y desactivar el estado de búsqueda de una mascota.
+// Versión 2.4 - Añade la lógica para obtener las misiones completadas de una mascota.
 
 const { db, bucket } = require('../config/firebase');
 const admin = require('firebase-admin');
@@ -35,7 +34,6 @@ const getPetPublicProfile = async (req, res) => {
             };
         }
 
-        // Si la mascota está en modo rescate y el dueño no quiere mostrar el teléfono, lo ocultamos.
         if (petData.rescueMode?.isActive && !petData.rescueMode?.showContactPhone) {
             ownerData.phone = 'Contacto no autorizado por el dueño.';
         }
@@ -230,7 +228,6 @@ const managePatientLink = async (req, res) => {
     }
 };
 
-// --- [NUEVA FUNCIÓN] ---
 /**
  * Gestiona el estado de "modo rescate" de una mascota.
  */
@@ -253,7 +250,6 @@ const manageRescueMode = async (req, res) => {
         const updatePayload = {};
 
         if (isActive) {
-            // Activando o actualizando el modo rescate
             if (!lastSeen || !lastSeen.latitude || !lastSeen.longitude) {
                 return res.status(400).json({ message: 'Se requieren las coordenadas del último avistamiento.' });
             }
@@ -264,7 +260,6 @@ const manageRescueMode = async (req, res) => {
             updatePayload['rescueMode.message'] = message || '';
             updatePayload['rescueMode.showContactPhone'] = typeof showContactPhone === 'boolean' ? showContactPhone : true;
         } else {
-            // Desactivando el modo rescate
             updatePayload['rescueMode.isActive'] = false;
             updatePayload['rescueMode.activatedAt'] = null;
         }
@@ -280,6 +275,45 @@ const manageRescueMode = async (req, res) => {
     }
 };
 
+// --- [NUEVA FUNCIÓN] ---
+/**
+ * Obtiene el historial de misiones completadas (hitos) para una mascota.
+ */
+const getCompletedMissions = async (req, res) => {
+    const { petId } = req.params;
+    const { uid } = req.user;
+
+    try {
+        // Validación de propiedad: Asegurarse de que el usuario que solicita es el dueño.
+        const petDoc = await db.collection('pets').doc(petId).get();
+        if (!petDoc.exists || petDoc.data().ownerId !== uid) {
+            return res.status(403).json({ message: 'No autorizado para ver esta información.' });
+        }
+
+        // 1. Obtener los IDs de las misiones completadas desde la subcolección.
+        const completedSnapshot = await db.collection('pets').doc(petId).collection('completedMissions').get();
+        if (completedSnapshot.empty) {
+            return res.status(200).json([]);
+        }
+        const missionIds = completedSnapshot.docs.map(doc => doc.id);
+
+        // 2. Obtener los detalles completos de esas misiones desde la colección principal 'missions'.
+        const missionsRef = db.collection('missions');
+        const missionsSnapshot = await missionsRef.where(admin.firestore.FieldPath.documentId(), 'in', missionIds).get();
+        
+        const missionsData = missionsSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+
+        res.status(200).json(missionsData);
+
+    } catch (error) {
+        console.error(`Error en getCompletedMissions para petId ${petId}:`, error);
+        res.status(500).json({ message: 'Error interno al obtener el historial de misiones.' });
+    }
+};
+
 
 module.exports = {
     getPetPublicProfile,
@@ -288,5 +322,6 @@ module.exports = {
     updatePet,
     uploadPetPicture,
     managePatientLink,
-    manageRescueMode // <-- Exportamos la nueva función
+    manageRescueMode,
+    getCompletedMissions // <-- Exportamos la nueva función
 };
