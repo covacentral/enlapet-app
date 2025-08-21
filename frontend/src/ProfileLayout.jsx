@@ -1,5 +1,5 @@
 // frontend/src/ProfileLayout.jsx
-// Versión 4.7: Integra la ruta de Búsquedas Activas y finaliza el Módulo de Rescate.
+// Versión 4.8: Corrige el flujo de props para el modal de rescate.
 
 import { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
@@ -27,7 +27,7 @@ import CreatePostModal from './CreatePostModal.jsx';
 import MainHeader from './MainHeader.jsx';
 import PostDetailModal from './PostDetailModal.jsx';
 import LostAndFoundPage from './LostAndFoundPage.jsx';
-import RescueModeModal from './components/RescueModeModal.jsx'; // Importamos el modal de rescate
+import RescueModeModal from './components/RescueModeModal.jsx';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -39,10 +39,8 @@ function ProfileLayout({ user }) {
   const [missionContext, setMissionContext] = useState(null);
   const navigate = useNavigate();
 
-  // --- [NUEVO] Estados para el modal de rescate ---
   const [isRescueModalOpen, setIsRescueModalOpen] = useState(false);
   const [petForRescue, setPetForRescue] = useState(null);
-
 
   const fetchCoreData = useCallback(async () => {
     if (!user) return;
@@ -71,11 +69,7 @@ function ProfileLayout({ user }) {
   }, [fetchCoreData]);
 
   const handleAcceptMission = (mission, petId) => {
-    setMissionContext({
-      missionId: mission.id,
-      petId: petId,
-      missionHashtag: mission.hashtag
-    });
+    setMissionContext({ missionId: mission.id, petId: petId, missionHashtag: mission.hashtag });
     setIsCreateModalOpen(true);
   };
 
@@ -93,17 +87,14 @@ function ProfileLayout({ user }) {
     setIsCreateModalOpen(true);
   };
   
-  // --- [NUEVO] Handlers para el modal de rescate ---
   const handleOpenRescueModal = (pet) => {
     setPetForRescue(pet);
     setIsRescueModalOpen(true);
   };
 
   const handleRescueSuccess = () => {
-    // Cuando el modo rescate se activa/desactiva, refrescamos todos los datos
     fetchCoreData();
   };
-
 
   if (loading) return <LoadingComponent text="Cargando tu universo EnlaPet..." />;
 
@@ -111,7 +102,6 @@ function ProfileLayout({ user }) {
     <div className={styles.container}>
       {isCreateModalOpen && ( <CreatePostModal userProfile={userProfile} pets={pets} onClose={() => setIsCreateModalOpen(false)} onPostCreated={handlePostCreated} missionContext={missionContext} /> )}
       
-      {/* --- Renderizado del nuevo modal de rescate --- */}
       {isRescueModalOpen && petForRescue && (
         <RescueModeModal 
             pet={petForRescue}
@@ -120,8 +110,14 @@ function ProfileLayout({ user }) {
         />
       )}
 
-      {/* Pasamos el handler para abrir el modal de rescate */}
-      <MainHeader userProfile={userProfile} pets={pets} onAcceptMission={handleAcceptMission} onOpenRescueModal={handleOpenRescueModal} />
+      {/* --- LÍNEA CORREGIDA --- */}
+      {/* Se añade la prop 'onOpenRescueModal' para pasarla al siguiente componente. */}
+      <MainHeader 
+        userProfile={userProfile} 
+        pets={pets} 
+        onAcceptMission={handleAcceptMission} 
+        onOpenRescueModal={handleOpenRescueModal} 
+      />
 
       <main>
         <Routes>

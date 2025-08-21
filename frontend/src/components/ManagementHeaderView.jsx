@@ -1,5 +1,5 @@
 // frontend/src/components/ManagementHeaderView.jsx
-// Versión 1.3: Conecta el evento para abrir el modal de rescate.
+// Versión 1.4: Se confirma la correcta recepción y pase de props para el modal de rescate.
 
 import React from 'react';
 import { Link } from 'react-router-dom';
@@ -17,7 +17,7 @@ const NfcBanner = () => (
     </Link>
 );
 
-// --- 1. El componente ahora acepta la prop 'onOpenRescueModal' ---
+// El componente ya acepta 'onOpenRescueModal' correctamente.
 function ManagementHeaderView({ pets, onOpenRescueModal }) {
   return (
     <div className={styles.managementViewContainer}>
@@ -27,7 +27,7 @@ function ManagementHeaderView({ pets, onOpenRescueModal }) {
         <div className={styles.cardCarousel}>
           {pets && pets.length > 0 ? (
             pets.map(pet => (
-              // --- 2. Pasamos la función a cada tarjeta como 'onRescueClick' ---
+              // Pasa la función a cada tarjeta como 'onRescueClick', lo cual es correcto.
               <PetManagementCard 
                 key={pet.id} 
                 pet={pet} 

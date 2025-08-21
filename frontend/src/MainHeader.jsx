@@ -1,5 +1,5 @@
 // frontend/src/MainHeader.jsx
-// Versión 2.2: Se asegura de pasar la prop 'onAcceptMission' a la vista de misiones.
+// Versión 2.3: Recibe y pasa la prop 'onOpenRescueModal' a la vista de gestión.
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Trophy, LayoutGrid, X } from 'lucide-react';
@@ -13,8 +13,8 @@ import DefaultHeaderView from './components/DefaultHeaderView';
 import ManagementHeaderView from './components/ManagementHeaderView';
 import MissionsHeaderView from './components/MissionsHeaderView';
 
-// --- 1. La firma del componente ahora incluye 'onAcceptMission' ---
-function MainHeader({ userProfile, pets, onAcceptMission }) {
+// --- 1. La firma del componente ahora incluye 'onOpenRescueModal' ---
+function MainHeader({ userProfile, pets, onAcceptMission, onOpenRescueModal }) {
   const [viewMode, setViewMode] = useState('default');
   const [lastViewMode, setLastViewMode] = useState('default');
   
@@ -32,58 +32,42 @@ function MainHeader({ userProfile, pets, onAcceptMission }) {
     if (viewMode === 'default') targetHeight = defaultHeight;
     else if (viewMode === 'management') targetHeight = managementHeight;
     else if (viewMode === 'missions') targetHeight = missionsHeight;
-
+    
     if (targetHeight > 0) {
-      setMinHeight(`${targetHeight + 50}px`);
+      setMinHeight(`${targetHeight}px`);
     }
-
   }, [viewMode, userProfile, pets]);
 
-  const handleToggleManagement = () => {
-    const newMode = viewMode === 'management' ? 'default' : 'management';
-    // Si estamos en la vista de misiones, el botón de gestión nos lleva a 'management'
-    if (viewMode === 'missions') {
-        setViewMode('management');
-        setLastViewMode('management');
+  const handleToggle = (targetMode) => {
+    if (viewMode === targetMode) {
+      setViewMode(lastViewMode === targetMode ? 'default' : lastViewMode);
     } else {
-        setViewMode(newMode);
-        setLastViewMode(newMode);
+      setLastViewMode(viewMode);
+      setViewMode(targetMode);
     }
   };
 
-  const handleToggleMissions = () => {
-    if (viewMode === 'missions') {
-      setViewMode(lastViewMode);
-    } else {
-      setLastViewMode(viewMode);
-      setViewMode('missions');
-    }
-  };
-  
-  // Pequeña mejora: pasamos el componente de ícono en lugar de solo el nombre para mayor flexibilidad.
+  const handleToggleManagement = () => handleToggle('management');
+  const handleToggleMissions = () => handleToggle('missions');
+
   const ManagementIcon = viewMode === 'management' ? X : LayoutGrid;
   const MissionsIcon = viewMode === 'missions' ? X : Trophy;
 
-
-  if (!userProfile) {
-    return null;
-  }
-
   return (
     <header 
-        className={styles.header}
-        style={{ minHeight: minHeight, transition: 'min-height 0.4s ease-in-out' }}
+      className={styles.header}
+      style={{ minHeight, transition: 'min-height 0.4s ease-in-out' }}
     >
       <div ref={defaultRef} className={`${styles.viewWrapper} ${viewMode !== 'default' ? styles.hidden : ''}`}>
         <DefaultHeaderView userProfile={userProfile} pets={pets} />
       </div>
 
       <div ref={managementRef} className={`${styles.viewWrapper} ${viewMode !== 'management' ? styles.hidden : ''}`}>
-        <ManagementHeaderView pets={pets} />
+        {/* --- 2. Pasamos la prop 'onOpenRescueModal' al componente hijo --- */}
+        <ManagementHeaderView pets={pets} onOpenRescueModal={onOpenRescueModal} />
       </div>
       
       <div ref={missionsRef} className={`${styles.viewWrapper} ${viewMode !== 'missions' ? styles.hidden : ''}`}>
-        {/* --- 2. Pasamos la prop 'onAcceptMission' al componente hijo --- */}
         <MissionsHeaderView pets={pets} onAcceptMission={onAcceptMission} />
       </div>
       
@@ -102,13 +86,5 @@ function MainHeader({ userProfile, pets, onAcceptMission }) {
     </header>
   );
 }
-
-// Corregimos un pequeño error en mi implementación anterior del CornerButton para que acepte el componente directamente
-const CornerButtonWithIcon = ({ position, iconComponent, onClick, ...props }) => (
-    <CornerButton position={position} onClick={onClick} {...props}>
-        {iconComponent}
-    </CornerButton>
-);
-
 
 export default MainHeader;
