@@ -1,11 +1,9 @@
 // frontend/src/PetSocialProfile.jsx
-// Versión 3.6: Corrige el error de importación de react-query.
+// Versión 3.7: Corrige la concatenación de clases CSS en la vista del dueño.
 
 import React from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-// --- LÍNEA CORREGIDA ---
-// Se actualiza la importación al nombre correcto del paquete: @tanstack/react-query
-import { useQuery } from '@tanstack/react-query'; 
+import { useQuery } from '@tanstack/react-query';
 import { auth } from './firebase';
 import styles from './PetSocialProfile.module.css';
 import sharedStyles from './shared.module.css';
@@ -22,7 +20,6 @@ const fetchPetProfile = async (petId) => {
         const idToken = await user.getIdToken();
         headers['Authorization'] = `Bearer ${idToken}`;
     }
-
     const response = await fetch(`${API_URL}/api/pets/${petId}/profile`, { headers });
     if (!response.ok) {
         const publicResponse = await fetch(`${API_URL}/api/public/pets/${petId}`);
@@ -65,11 +62,6 @@ function PetSocialProfile({ user, onUpdate }) {
     const { pet, owner } = profile;
     const isOwner = user && user.uid === owner.id;
 
-    const handleProfileUpdate = () => {
-        refetchProfile();
-        if (onUpdate) onUpdate();
-    };
-
     const InfoCard = ({ icon, title, children }) => (
         <div className={styles.infoCard}>
             <div className={styles.infoCardHeader}>
@@ -84,7 +76,9 @@ function PetSocialProfile({ user, onUpdate }) {
         <div className={styles.profileContainer}>
             <button onClick={() => navigate(-1)} className={styles.backLink}><ArrowLeft /> Volver</button>
 
-            <header className={styles.header}>
+            {/* --- LÍNEA CORREGIDA --- */}
+            {/* Se añade un espacio en la plantilla de string para separar las clases. */}
+            <header className={`${styles.header} ${isOwner ? styles.ownerView : ''}`}>
                 <img src={pet.petPictureUrl || 'https://placehold.co/300x300/E2E8F0/4A5568?text=🐾'} alt={pet.name} className={styles.profilePicture} />
                 <div className={styles.headerInfo}>
                     <div className={styles.nameContainer}>
@@ -144,6 +138,7 @@ function PetSocialProfile({ user, onUpdate }) {
                     </InfoCard>
 
                     <PetMissionLog petId={petId} isOwner={isOwner} />
+
                 </div>
                 <div className={styles.rightColumn}>
                     <h3 className={styles.postsTitle}>Momentos de {pet.name}</h3>
