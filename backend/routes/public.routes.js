@@ -1,20 +1,16 @@
 // backend/routes/public.routes.js
-// Define exclusivamente los endpoints públicos de la API.
-// VERSIÓN ACTUALIZADA: Centraliza los controladores públicos y añade la ruta de rescate.
+// VERSIÓN CORREGIDA: Reordena las rutas de rescate para evitar conflictos.
 
 const { Router } = require('express');
 
-// 1. Importamos las funciones desde el nuevo controlador público centralizado.
 const {
     getPetPublicProfile,
     getUserPublicProfile,
     getRescuePetProfileByEpid,
-    getActiveRescuePets // <-- Se añade la nueva función
+    getActiveRescuePets
 } = require('../controllers/public.controller');
 
-// La importación del controlador de productos se mantiene, ya que es pública.
 const { getActiveProducts, getProductById } = require('../controllers/product.controller');
-
 
 const router = Router();
 
@@ -22,13 +18,13 @@ const router = Router();
 router.get('/public/pets/:petId', getPetPublicProfile);
 router.get('/public/users/:userId', getUserPublicProfile);
 
-// --- Rutas de Rescate Públicas ---
+// --- Rutas de Rescate Públicas (ORDEN CORREGIDO) ---
 
-// Obtiene el perfil de búsqueda de una mascota por su EPID.
-router.get('/public/rescue/:epid', getRescuePetProfileByEpid);
-
-// [NUEVA RUTA] Obtiene la lista de todas las mascotas en búsqueda activa.
+// 1. La ruta específica '/all' debe ir PRIMERO.
 router.get('/public/rescue/all', getActiveRescuePets);
+
+// 2. La ruta con el parámetro dinámico '/:epid' va DESPUÉS.
+router.get('/public/rescue/:epid', getRescuePetProfileByEpid);
 
 
 // --- Rutas de Productos Públicas ---
