@@ -223,7 +223,7 @@ function PetEditModal({ pet, onClose, onPetUpdate }) {
             </div>
 
             <div className={sharedStyles.modalFooter}>
-              {message && <p className={message.startsWith('Error') ? sharedStyles.responseMessageError : sharedStyles.responseMessage}>{message}</p>}\
+              {message && <p className={message.startsWith('Error') ? sharedStyles.responseMessageError : sharedStyles.responseMessage}>{message}</p>}
               <button type="submit" className={`${sharedStyles.button} ${sharedStyles.primary}`} style={{width:'100%'}} disabled={isLoading || isUploading}>{isLoading ? 'Guardando...' : 'Guardar Cambios'}</button>
             </div>
           </form>

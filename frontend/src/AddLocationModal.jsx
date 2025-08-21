@@ -1,11 +1,13 @@
 // frontend/src/AddLocationModal.jsx
-// Versión: 1.8 - Corrección de Estilos de Botón
-// TAREA: Se aplican las clases correctas del sistema de botones compartidos.
+// Versión 1.9: Se alinea la importación de 'colombiaData' con el estándar del proyecto, respetando la versión 1.8.
 
 import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import { auth } from './firebase';
 import { X } from 'lucide-react';
+// --- [LÍNEA CORREGIDA] ---
+// Se corrige la importación para usar la exportación nombrada explícita.
+import { colombiaDepartments } from './utils/colombiaData';
 
 import styles from './AddLocationModal.module.css';
 import sharedStyles from './shared.module.css';
@@ -33,71 +35,63 @@ function AddLocationModal({ categories, onClose, onLocationAdded }) {
   const [coordinates, setCoordinates] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
-  const [mapInstance, setMapInstance] = useState(null);
-
-  useEffect(() => {
-    if (!mapInstance) return;
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const coords = [position.coords.latitude, position.coords.longitude];
-        mapInstance.setView(coords, 13);
-      },
-      () => {
-        console.log("No se pudo obtener la ubicación, se usará la inicial.");
-      }
-    );
-  }, [mapInstance]);
+  const [cities, setCities] = useState([]);
+  const [department, setDepartment] = useState('');
+  const [city, setCity] = useState('');
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleDepartmentChange = (e) => {
+    const newDepartment = e.target.value;
+    setDepartment(newDepartment);
+    setCity(''); // Resetea la ciudad al cambiar de departamento
+    // --- [LÍNEA CORREGIDA] ---
+    const departmentData = colombiaDepartments.find(d => d.department === newDepartment);
+    setCities(departmentData ? departmentData.cities.map(c => c.name) : []);
+  };
+
   const handleLocationSelect = (latlng) => {
-    setCoordinates({ latitude: latlng.lat, longitude: latlng.lng });
+    setCoordinates({ lat: latlng.lat, lng: latlng.lng });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.category) {
-        setMessage('Por favor, selecciona una categoría.');
-        return;
-    }
-    if (!coordinates) {
-      setMessage('Por favor, selecciona una ubicación en el mapa.');
+    if (!coordinates || !formData.category || !formData.name) {
+      setMessage("Por favor, completa el nombre, la categoría y selecciona un punto en el mapa.");
       return;
     }
     setIsLoading(true);
-    setMessage('Añadiendo lugar...');
+    setMessage('');
 
     try {
       const user = auth.currentUser;
-      if (!user) throw new Error("No autenticado");
+      if (!user) throw new Error("Usuario no autenticado.");
       const idToken = await user.getIdToken();
 
       const payload = {
-        name: formData.name,
-        category: formData.category,
-        address: formData.address,
-        description: formData.description,
-        latitude: coordinates.latitude,
-        longitude: coordinates.longitude,
-        contact: {
-          phone: formData.phone,
-          email: formData.email
-        }
+        ...formData,
+        latitude: coordinates.lat,
+        longitude: coordinates.lng,
+        department,
+        city
       };
 
       const response = await fetch(`${API_URL}/api/locations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
-      
+
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message);
-      
-      setMessage('¡Lugar añadido con éxito!');
-      onLocationAdded();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Error al añadir la ubicación.');
+      }
+
+      setMessage("Ubicación añadida con éxito.");
+      onLocationAdded(data);
       setTimeout(() => onClose(), 1500);
 
     } catch (error) {
@@ -111,12 +105,24 @@ function AddLocationModal({ categories, onClose, onLocationAdded }) {
     <div className={sharedStyles.modalBackdrop} onClick={onClose}>
       <div className={styles.content} onClick={e => e.stopPropagation()}>
         <div className={sharedStyles.modalHeader}>
-          <h2>Añadir un Nuevo Lugar</h2>
+          <h2>Añadir Nuevo Lugar</h2>
           <button onClick={onClose} className={sharedStyles.closeButton} disabled={isLoading}>
             <X size={24} />
           </button>
         </div>
+
         <form onSubmit={handleSubmit} className={styles.form}>
+          <div className={styles.mapFormContainer}>
+            <div className={styles.miniMapWrapper}>
+              <MapContainer center={initialPosition} zoom={5}>
+                <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
+                <LocationPicker onLocationSelect={handleLocationSelect} />
+              </MapContainer>
+            </div>
+            {!coordinates && <small className={styles.mapPrompt}>Haz clic en el mapa para seleccionar la ubicación.</small>}
+            {coordinates && <small className={styles.mapPromptSuccess}>¡Ubicación seleccionada!</small>}
+          </div>
+
           <div className={sharedStyles.formGroup}>
             <label htmlFor="name">Nombre del Lugar</label>
             <input type="text" id="name" name="name" value={formData.name} onChange={handleChange} required />
@@ -124,22 +130,32 @@ function AddLocationModal({ categories, onClose, onLocationAdded }) {
           <div className={sharedStyles.formGroup}>
             <label htmlFor="category">Categoría</label>
             <select id="category" name="category" value={formData.category} onChange={handleChange} required>
-              <option value="" disabled>Selecciona una categoría...</option>
+              <option value="" disabled>Selecciona una categoría</option>
               {categories.map(cat => (
-                <option key={cat.id} value={cat.key}>{cat.name}</option>
+                <option key={cat.id} value={cat.name}>{cat.name}</option>
               ))}
             </select>
           </div>
-          <div className={sharedStyles.formGroup}>
-            <label>Selecciona la ubicación en el mapa</label>
-            <div className={styles.miniMapWrapper}>
-              <MapContainer center={initialPosition} zoom={13} whenCreated={setMapInstance}>
-                <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
-                <LocationPicker onLocationSelect={handleLocationSelect} />
-              </MapContainer>
+          <div className={sharedStyles.formRow}>
+            <div className={sharedStyles.formGroup}>
+              <label htmlFor="department">Departamento</label>
+              <select id="department" value={department} onChange={handleDepartmentChange}>
+                <option value="">Selecciona un departamento</option>
+                {/* --- [LÍNEA CORREGIDA] --- */}
+                {colombiaDepartments.map(d => (
+                  <option key={d.id} value={d.department}>{d.department}</option>
+                ))}
+              </select>
             </div>
-            {!coordinates && <small className={styles.mapPrompt}>Haz clic en el mapa para marcar el punto exacto.</small>}
-            {coordinates && <small className={styles.mapPromptSuccess}>¡Ubicación seleccionada!</small>}
+            <div className={sharedStyles.formGroup}>
+              <label htmlFor="city">Ciudad</label>
+              <select id="city" value={city} onChange={e => setCity(e.target.value)} disabled={!department}>
+                <option value="">Selecciona una ciudad</option>
+                {cities.map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
           </div>
            <div className={sharedStyles.formGroup}>
             <label htmlFor="description">Descripción (Opcional)</label>
@@ -155,7 +171,6 @@ function AddLocationModal({ categories, onClose, onLocationAdded }) {
           </div>
           <div className={sharedStyles.modalFooter}>
             {message && <p className={message.startsWith('Error') ? sharedStyles.responseMessageError : sharedStyles.responseMessage}>{message}</p>}
-            {/* --- LÍNEA CORREGIDA --- */}
             <button 
               type="submit" 
               className={`${sharedStyles.button} ${sharedStyles.primary}`} 

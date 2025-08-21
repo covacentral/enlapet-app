@@ -1,17 +1,17 @@
 // frontend/src/CheckoutPage.jsx
-// Versión 2.0: Implementa la lógica de pago del lado del cliente con el SDK de ePayco.
+// Versión 2.1: Se alinea la importación de 'colombiaData' con el estándar del proyecto.
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth } from './firebase';
 import { useCart } from './context/CartContext';
-import { colombiaData } from './utils/colombiaData';
+// --- [LÍNEA CORREGIDA] ---
+import { colombiaDepartments } from './utils/colombiaData';
 
 import styles from './CheckoutPage.module.css';
 import sharedStyles from './shared.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-// 1. OBTENEMOS LA LLAVE PÚBLICA DE EPAYCO DESDE LAS VARIABLES DE ENTORNO DEL FRONTEND
 const EPAYCO_PUBLIC_KEY = import.meta.env.VITE_EPAYCO_PUBLIC_KEY;
 
 function CheckoutPage() {
@@ -47,23 +47,24 @@ function CheckoutPage() {
         };
         fetchProfile();
 
-        const initialDeptData = colombiaData.find(d => d.departamento === 'Córdoba');
-        if (initialDeptData) setCities(initialDeptData.ciudades);
+        // --- [LÍNEA CORREGIDA] ---
+        const initialDeptData = colombiaDepartments.find(d => d.department === 'Córdoba');
+        if (initialDeptData) setCities(initialDeptData.cities.map(c => c.name));
 
     }, [cartItems, navigate]);
     
     const handleDepartmentChange = (e) => {
         const newDepartment = e.target.value;
         setFormData({ ...formData, department: newDepartment, city: '' });
-        const departmentData = colombiaData.find(d => d.departamento === newDepartment);
-        setCities(departmentData ? departmentData.ciudades : []);
+        // --- [LÍNEA CORREGIDA] ---
+        const departmentData = colombiaDepartments.find(d => d.department === newDepartment);
+        setCities(departmentData ? departmentData.cities.map(c => c.name) : []);
     };
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    // --- 2. LÓGICA DE PAGO COMPLETAMENTE REESCRITA ---
     const handlePlaceOrder = async (e) => {
         e.preventDefault();
         setIsLoading(true);
@@ -80,7 +81,6 @@ function CheckoutPage() {
             if (!user) throw new Error("Debes iniciar sesión para completar la compra.");
             const idToken = await user.getIdToken();
             
-            // Paso 1: Crear la orden en nuestro backend para obtener un ID.
             const orderPayload = {
                 items: cartItems.map(item => ({ productId: item.id, quantity: item.quantity })),
                 shippingAddress: { ...formData, country: 'Colombia' }
@@ -95,14 +95,13 @@ function CheckoutPage() {
 
             setMessage('Orden creada. Abriendo pasarela de pago...');
 
-            // Paso 2: Configurar y abrir el checkout de ePayco en el cliente.
             const handler = window.ePayco.checkout.configure({
                 key: EPAYCO_PUBLIC_KEY,
                 test: true
             });
 
             const data = {
-                name: "Compra Collar Inteligente EnlaPet",
+                name: "Compra de Productos EnlaPet",
                 description: `Orden de compra #${orderData.orderId}`,
                 invoice: orderData.orderId,
                 currency: "cop",
@@ -112,16 +111,15 @@ function CheckoutPage() {
                 country: "co",
                 lang: "es",
                 external: "false",
+                extra1: orderData.orderId,
+                confirmation: `${API_URL}/api/payments/epayco-confirmation`,
                 response: `${window.location.origin}/dashboard/order-confirmation`,
-                confirmation: `${API_URL}/api/payments/webhook`,
                 name_billing: formData.fullName,
                 address_billing: formData.addressLine1,
-                mobilephone_billing: formData.phone,
+                phone_billing: formData.phone,
                 email_billing: user.email,
-                extra1: orderData.orderId, // Enviamos nuestro ID de orden para el webhook
             };
             
-            // Limpiamos el carrito ANTES de redirigir
             clearCart();
             handler.open(data);
 
@@ -130,51 +128,51 @@ function CheckoutPage() {
             setIsLoading(false);
         }
     };
-    
-    const formatPrice = (amount) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(amount / 100);
+
+    const formatPrice = (amount) => {
+        return new Intl.NumberFormat('es-CO', {
+          style: 'currency', currency: 'COP', minimumFractionDigits: 0
+        }).format(amount / 100);
+    };
 
     return (
-        <div className={styles.container}>
-            <h2 className={sharedStyles.tabTitle}>Finalizar Compra</h2>
-            <div className={styles.checkoutLayout}>
-                <div className={styles.formColumn}>
-                    <h3>Dirección de Envío</h3>
-                    <form id="checkout-form" onSubmit={handlePlaceOrder}>
-                        <div className={sharedStyles.formGroup}><label>Nombre Completo</label><input type="text" name="fullName" value={formData.fullName} onChange={handleChange} required /></div>
-                        <div className={sharedStyles.formGroup}><label>Dirección</label><input type="text" name="addressLine1" placeholder="Carrera 5 # 20-30" value={formData.addressLine1} onChange={handleChange} required /></div>
-                        <div className={sharedStyles.formGroup}><label>Apartamento, Interior, etc. (Opcional)</label><input type="text" name="addressLine2" value={formData.addressLine2} onChange={handleChange} /></div>
-                        <div className={sharedStyles.formRow}>
-                            <div className={sharedStyles.formGroup}><label>Departamento</label><select name="department" value={formData.department} onChange={handleDepartmentChange} required><option disabled value="">Selecciona...</option>{colombiaData.map(d => <option key={d.departamento} value={d.departamento}>{d.departamento}</option>)}</select></div>
-                            <div className={sharedStyles.formGroup}><label>Ciudad</label><select name="city" value={formData.city} onChange={handleChange} required><option disabled value="">Selecciona...</option>{cities.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
-                        </div>
-                        <div className={sharedStyles.formGroup}><label>Teléfono de Contacto</label><input type="tel" name="phone" value={formData.phone} onChange={handleChange} required /></div>
-                    </form>
-                </div>
-                <div className={styles.summaryColumn}>
-                    <h3>Resumen de la Orden</h3>
-                    <div className={styles.summaryCard}>
-                        {cartItems.map(item => (
-                            <div key={item.id} className={styles.summaryItem}>
-                                <span>{item.name} x {item.quantity}</span>
-                                <span>{formatPrice(item.price.amount * item.quantity)}</span>
+        <div className={sharedStyles.tabTitle} style={{textAlign: 'left'}}>
+            <h2>Finalizar Compra</h2>
+            <div className={styles.container}>
+                <div className={styles.checkoutLayout}>
+                    <div className={styles.formColumn}>
+                        <h3>Dirección de Envío</h3>
+                        <form onSubmit={handlePlaceOrder}>
+                            <div className={sharedStyles.formGroup}><label htmlFor="fullName">Nombre Completo</label><input type="text" id="fullName" name="fullName" value={formData.fullName} onChange={handleChange} required /></div>
+                            <div className={sharedStyles.formGroup}><label htmlFor="addressLine1">Dirección</label><input type="text" id="addressLine1" name="addressLine1" value={formData.addressLine1} onChange={handleChange} required /></div>
+                            <div className={sharedStyles.formGroup}><label htmlFor="addressLine2">Apartamento, Interior, etc. (Opcional)</label><input type="text" id="addressLine2" name="addressLine2" value={formData.addressLine2} onChange={handleChange} /></div>
+                            <div className={sharedStyles.formRow}>
+                                <div className={sharedStyles.formGroup}><label htmlFor="department">Departamento</label><select id="department" name="department" value={formData.department} onChange={handleDepartmentChange} required><option value="" disabled>Selecciona...</option>{colombiaDepartments.map(d => <option key={d.id} value={d.department}>{d.department}</option>)}</select></div>
+                                <div className={sharedStyles.formGroup}><label htmlFor="city">Ciudad</label><select id="city" name="city" value={formData.city} onChange={handleChange} disabled={cities.length === 0} required><option value="" disabled>Selecciona...</option>{cities.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
                             </div>
-                        ))}
-                        <hr className={styles.divider} />
-                        <div className={`${styles.summaryItem} ${styles.summaryTotal}`}>
-                            <span>Total</span>
-                            <span>{formatPrice(cartTotal)}</span>
+                            <div className={sharedStyles.formGroup}><label htmlFor="phone">Teléfono de Contacto</label><input type="tel" id="phone" name="phone" value={formData.phone} onChange={handleChange} required /></div>
+                        </form>
+                    </div>
+                    <div className={styles.summaryColumn}>
+                        <h3>Resumen de la Orden</h3>
+                        <div className={styles.summaryCard}>
+                            {cartItems.map(item => (
+                                <div key={item.id} className={styles.summaryItem}>
+                                    <span>{item.name} x {item.quantity}</span>
+                                    <strong>{formatPrice(item.price.amount * item.quantity)}</strong>
+                                </div>
+                            ))}
+                            <hr className={styles.divider} />
+                            <div className={`${styles.summaryItem} ${styles.total}`}>
+                                <span>Total</span>
+                                <strong>{formatPrice(cartTotal)}</strong>
+                            </div>
+                            {message && <p className={sharedStyles.responseMessage}>{message}</p>}
+                            <button onClick={handlePlaceOrder} className={`${sharedStyles.button} ${sharedStyles.primary}`} style={{width: '100%', marginTop: '1rem'}} disabled={isLoading}>
+                                {isLoading ? 'Procesando...' : `Pagar ${formatPrice(cartTotal)}`}
+                            </button>
                         </div>
                     </div>
-                    {message && <p className={sharedStyles.responseMessageError} style={{marginTop: '1rem'}}>{message}</p>}
-                    <button 
-                        type="submit" 
-                        form="checkout-form"
-                        className={`${sharedStyles.button} ${sharedStyles.primary}`} 
-                        style={{width: '100%', marginTop: '1.5rem'}}
-                        disabled={isLoading}
-                    >
-                        {isLoading ? 'Procesando...' : `Pagar ${formatPrice(cartTotal)} con ePayco`}
-                    </button>
                 </div>
             </div>
         </div>
