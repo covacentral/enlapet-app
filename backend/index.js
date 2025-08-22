@@ -1,5 +1,5 @@
 // backend/index.js
-// VERSIÓN 2.3: Corrige la configuración de CORS con el dominio de producción correcto.
+// VERSIÓN 2.4: Corrige el orden de la ruta raíz para permitir pings de UptimeRobot.
 
 const express = require('express');
 const cors = require('cors');
@@ -30,14 +30,12 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // --- [CONFIGURACIÓN DE CORS DEFINITIVA] ---
-// Se utilizan los dominios correctos proporcionados.
 const allowedOrigins = [
     'http://localhost:5173',
     'https://covacentral.shop',
     'https://www.covacentral.shop' 
 ];
 
-// Expresión regular para permitir cualquier subdominio de Vercel de nuestro proyecto.
 const vercelPreviewPattern = /^https:\/\/enlapet-app-.*\.vercel\.app$/;
 
 const corsOptions = {
@@ -57,6 +55,12 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.use(express.json());
+
+// --- LÍNEA MOVIDA ---
+// Esta ruta ahora está ANTES del middleware de autenticación, haciéndola pública.
+app.get('/', (req, res) => {
+    res.send('Backend de EnlaPet funcionando correctamente.');
+});
 
 // Rutas Públicas y de Autenticación
 app.use('/api', publicRoutes);
@@ -80,10 +84,6 @@ app.use('/api', productRoutes);
 app.use('/api', paymentRoutes);
 app.use('/api', orderRoutes);
 app.use('/api', reportRoutes);
-
-app.get('/', (req, res) => {
-    res.send('Backend de EnlaPet funcionando correctamente.');
-});
 
 db.collection('users').limit(1).get()
     .then(() => console.log('Conexión a Firestore exitosa.'))
