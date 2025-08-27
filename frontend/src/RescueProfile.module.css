@@ -1,60 +1,70 @@
 /* frontend/src/RescueProfile.module.css */
-/* Versión 3.0: Rediseño a "Cartel Digital Compacto" tipo historia de Instagram. */
+/* Versión 4.0: Implementación final del diseño "Cartel Digital" basado en la imagen de referencia. */
 
-.container {
-    display: flex;
-    align-items: center;
-    justify-content: center; /* Centra la tarjeta verticalmente */
-    min-height: 100vh;
-    padding: 8px; /* Margen mínimo en los bordes de la pantalla */
-    box-sizing: border-box;
-}
-
-.card {
-    background-color: var(--background-light);
-    border-radius: 15px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-    text-align: center;
+/* Contenedor de toda la página, incluyendo el botón "Atrás" */
+.pageContainer {
     width: 100%;
-    max-width: 450px;
-    border-top: 6px solid var(--error-red);
-    position: relative;
+    max-width: 450px; /* Ancho máximo para mantener la proporción en pantallas grandes */
+    margin: 0 auto;
+    padding: 10px;
     display: flex;
     flex-direction: column;
-    padding: 15px; /* Padding interno reducido */
-    gap: 12px; /* Espacio reducido entre elementos */
-    /* Simula la proporción de una historia para evitar el scroll */
-    max-height: calc(100vh - 20px);
-    overflow: hidden; /* Previene cualquier desbordamiento */
+    align-items: center;
+    gap: 10px; /* Espacio entre el botón "Atrás" y la tarjeta */
 }
 
-/* --- Botón "Atrás" reubicado --- */
+/* Botón "Atrás" posicionado fuera de la tarjeta */
 .backButton {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    background-color: rgba(0, 0, 0, 0.5);
+    align-self: flex-start; /* Se alinea a la izquierda del pageContainer */
+    background-color: rgba(15, 23, 42, 0.8);
     border: 1px solid var(--border-color);
     border-radius: 20px;
-    padding: 6px 14px;
+    padding: 8px 16px;
     color: var(--text-primary);
     cursor: pointer;
     font-weight: bold;
-    font-size: 0.8rem;
+    font-size: 0.9rem;
     transition: background-color 0.2s;
     z-index: 10;
 }
 .backButton:hover {
-    background-color: rgba(0, 0, 0, 0.7);
+    background-color: var(--border-color);
+}
+
+
+/* La tarjeta principal (El Cartel) */
+.card {
+    background-color: var(--background-light);
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+    width: 100%;
+    border: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    padding: 15px;
+    box-sizing: border-box;
+    gap: 8px; /* Espaciado vertical súper compacto */
+    aspect-ratio: 9 / 16;
+    max-height: 90vh;
+    transition: max-height 0.5s ease-in-out;
+    overflow: hidden; /* Oculta el scroll en estado colapsado */
+}
+
+/* Clase para expandir la tarjeta cuando se muestra el mapa */
+.card.expanded {
+    max-height: 120vh;
+    aspect-ratio: unset;
+    overflow: visible;
 }
 
 .header h1 {
-    font-size: 2rem; /* Ligeramente más pequeño para ahorrar espacio */
+    font-size: 2.2rem;
     color: var(--error-red);
     font-weight: 800;
-    margin-bottom: 10px; /* Espacio reducido */
-    padding-top: 30px; /* Espacio para que no choque con el botón */
-    letter-spacing: 1px;
+    margin: 0 0 8px 0;
+    padding-top: 5px;
+    letter-spacing: 1.5px;
+    text-align: center;
 }
 
 .picture {
@@ -67,138 +77,113 @@
     margin: 0 auto;
 }
 
-/* --- [NUEVO] Pie de foto para nombre y raza --- */
 .petInfoCaption {
-    text-align: center;
-    margin-top: 8px;
+    text-align: left;
+    line-height: 1.2;
+    padding: 5px 0;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
 }
 .petInfoCaption .name {
-    font-size: 1.8rem;
+    font-size: 2.5rem;
     margin: 0;
     font-weight: 800;
     color: var(--brand-cream);
-    display: inline; /* Permite que la raza esté al lado */
-    margin-right: 8px;
 }
 .petInfoCaption .breed {
-    font-size: 1.1rem;
+    font-size: 1.2rem;
     color: var(--text-secondary);
-    display: inline;
 }
 
-.section {
-    width: 100%;
-    margin-top: 0;
-    padding-top: 12px;
-    border-top: 1px solid var(--border-color);
-    text-align: left;
-}
-.section:first-of-type {
-    border-top: none;
-    padding-top: 0;
-}
-
-
-/* --- Acordeón del mapa sin cambios estructurales, solo estéticos --- */
-.locationToggle {
+.infoBox {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-weight: bold;
-    cursor: pointer;
-    width: 100%;
-    background: none;
-    border: none;
-    color: var(--text-primary);
-    text-align: left;
-    padding: 8px;
-    border-radius: 8px;
-    background-color: var(--background-dark);
-}
-.locationToggle:hover {
-    background-color: #1e293b;
-}
-
-.mapWrapper {
-    height: 250px; /* Altura reducida */
-    border-radius: 12px;
-    overflow: hidden;
-    border: 1px solid var(--border-color);
-    margin-top: 10px;
-}
-
-/* --- Mensaje del dueño sin título --- */
-.message {
-    font-style: italic;
-    font-size: 1rem;
-    line-height: 1.5;
-    display: flex;
-    gap: 8px;
+    gap: 12px;
     padding: 10px;
-    background-color: var(--background-dark);
-    border-radius: 8px;
+    border-radius: 10px;
+    background-color: transparent;
+    border: 1px solid var(--border-color);
+    text-align: left;
+}
+.infoBox.clickable {
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.infoBox.clickable:hover {
+    background-color: rgba(30, 41, 59, 0.5);
 }
 
-/* --- [NUEVO] Sección de contacto rediseñada --- */
-.contactSection {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    text-align: center;
+.infoBox .icon {
+    flex-shrink: 0;
+    color: var(--text-secondary);
 }
-.contactSection p {
+
+.infoBox .textContent {
+    flex-grow: 1;
+}
+
+.infoBox .textContent p {
     margin: 0;
-    font-size: 1rem;
-}
-.contactInfo {
-    display: flex;
-    justify-content: center; /* Centra los elementos */
-    align-items: center;
-    gap: 15px;
-    background-color: var(--background-dark);
-    padding: 12px;
-    border-radius: 8px;
-    flex-wrap: wrap; /* Permite que se apilen si no hay espacio */
-}
-.contactInfo span {
-    font-size: 1.5rem;
-    font-weight: bold;
+    font-size: 0.9rem;
     color: var(--text-primary);
 }
 
-/* --- [MODIFICADO] Botón de WhatsApp más legible --- */
+.infoBox .textContent strong {
+    font-weight: 800;
+    font-size: 1.2rem;
+}
+
 .whatsappButton {
     background-color: var(--whatsapp-green);
-    color: white; /* Color de texto blanco y legible */
+    color: white;
     font-weight: bold;
     padding: 10px 20px;
     border-radius: 8px;
     text-decoration: none;
     font-size: 1rem;
     flex-shrink: 0;
+    border: none;
+    cursor: pointer;
 }
 .whatsappButton:hover {
     background-color: #1DA851;
 }
 
-.noContact {
-    font-size: 0.9rem !important;
+.mapWrapper {
+    height: 250px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    margin-top: 10px;
+}
+
+.noMapMessage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
     color: var(--text-secondary);
-    background-color: var(--background-dark);
-    padding: 1rem;
-    border-radius: 8px;
     text-align: center;
+    padding: 1rem;
 }
 
 .footer {
-    margin-top: auto; /* Empuja el footer al final del contenedor flex */
+    margin-top: auto;
     padding-top: 10px;
     font-size: 0.9rem;
     color: var(--text-primary);
     opacity: 0.8;
+    font-weight: bold;
+    text-align: center;
 }
 
 .errorContainer {
-    composes: card;
-    border-top-color: var(--warning-yellow);
+    background-color: var(--background-light);
+    padding: 20px;
+    border-radius: 15px;
+    border: 1px solid var(--border-color);
+    width: 100%;
+    max-width: 450px;
 }
