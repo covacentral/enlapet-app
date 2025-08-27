@@ -43,11 +43,10 @@
     flex-direction: column;
     padding: 15px;
     box-sizing: border-box;
-    gap: 8px; /* Espaciado vertical súper compacto */
-    aspect-ratio: 9 / 16;
-    max-height: 90vh;
+    gap: 5px; /* Reducimos el espaciado vertical aún más */
+    max-height: 95vh; /* Permitimos que use casi toda la altura de la pantalla */
     transition: max-height 0.5s ease-in-out;
-    overflow: hidden; /* Oculta el scroll en estado colapsado */
+    /* Las propiedades 'aspect-ratio' y 'overflow' se han eliminado */
 }
 
 /* Clase para expandir la tarjeta cuando se muestra el mapa */
