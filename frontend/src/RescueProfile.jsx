@@ -1,9 +1,12 @@
 // frontend/src/RescueProfile.jsx
-// Versión 5.0: Añade la funcionalidad para descargar el cartel de búsqueda como imagen PNG.
+// Versión 5.1: Corrige la omisión de importaciones de react-leaflet.
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { toPng } from 'html-to-image';
+// --- [LÍNEAS CORREGIDAS] ---
+// Se reincorporan las importaciones necesarias para el mapa interactivo.
+import { MapContainer, TileLayer, Marker, Circle } from 'react-leaflet';
 import { auth } from './firebase';
 import LoadingComponent from './LoadingComponent';
 import { Phone, MapPin, AlertTriangle, ChevronDown, Download } from 'lucide-react';
@@ -13,7 +16,6 @@ import sharedStyles from './shared.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-// --- [NUEVO] Componente de Botón de Descarga ---
 const DownloadButton = ({ onClick, isLoading }) => (
     <button onClick={onClick} className={styles.downloadButton} disabled={isLoading}>
         <Download size={18} />
@@ -40,11 +42,9 @@ function RescueProfile() {
     const [isMapVisible, setIsMapVisible] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
     
-    // 1. Creamos la referencia para el cartel.
     const cardRef = useRef(null);
 
     const fetchRescueProfile = useCallback(async () => {
-        // ... (lógica de fetch sin cambios)
         setIsLoading(true);
         setError('');
         try {
@@ -63,7 +63,6 @@ function RescueProfile() {
         fetchRescueProfile();
     }, [fetchRescueProfile]);
 
-    // 2. Implementamos la lógica de descarga.
     const handleDownload = useCallback(async () => {
         if (cardRef.current === null) {
           return;
@@ -72,10 +71,9 @@ function RescueProfile() {
         try {
           const dataUrl = await toPng(cardRef.current, { 
               cacheBust: true,
-              backgroundColor: 'transparent' // Clave para los bordes redondeados
+              backgroundColor: 'transparent'
           });
     
-          // Creamos un enlace temporal para iniciar la descarga
           const link = document.createElement('a');
           link.download = `se-busca-${petData?.name || 'mascota'}.png`;
           link.href = dataUrl;
@@ -115,13 +113,11 @@ function RescueProfile() {
 
     return (
         <div className={styles.pageContainer}>
-            {/* 3. Agrupamos los botones de acción en la parte superior */}
             <div className={styles.topActions}>
                 <BackButton />
                 <DownloadButton onClick={handleDownload} isLoading={isDownloading} />
             </div>
 
-            {/* 4. Asignamos la referencia (ref) al div del cartel */}
             <div ref={cardRef} className={`${styles.card} ${isMapVisible ? styles.expanded : ''}`}>
                 <div className={styles.header}><h1>¡SE BUSCA!</h1></div>
                 <img src={petData.petPictureUrl || 'https://placehold.co/300x300/E2E8F0/4A5568?text=🐾'} alt={petData.name} className={styles.picture} />
