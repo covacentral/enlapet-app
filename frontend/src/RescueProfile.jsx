@@ -1,5 +1,5 @@
 // frontend/src/RescueProfile.jsx
-// Versión 5.4: Implementa la solución definitiva para la captura de colores de fondo.
+// Versión 6.0: Implementa la funcionalidad de "Copiar Enlace" y "Compartir" con Web Share API.
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
@@ -7,12 +7,20 @@ import { toPng } from 'html-to-image';
 import { MapContainer, TileLayer, Marker, Circle } from 'react-leaflet';
 import { auth } from './firebase';
 import LoadingComponent from './LoadingComponent';
-import { Phone, MapPin, AlertTriangle, ChevronDown, Download } from 'lucide-react';
+import { Phone, MapPin, AlertTriangle, ChevronDown, Download, Share2, Check } from 'lucide-react';
 
 import styles from './RescueProfile.module.css';
 import sharedStyles from './shared.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+// --- [NUEVO] Componente de Botón de Compartir/Copiar ---
+const ShareButton = ({ onClick, isCopied }) => (
+    <button onClick={onClick} className={`${styles.shareButton} ${isCopied ? styles.copied : ''}`}>
+        {isCopied ? <Check size={18} /> : <Share2 size={18} />}
+        {isCopied ? 'Enlace Copiado' : 'Compartir'}
+    </button>
+);
 
 const DownloadButton = ({ onClick, isLoading }) => (
     <button onClick={onClick} className={styles.downloadButton} disabled={isLoading}>
@@ -39,9 +47,11 @@ function RescueProfile() {
     const [error, setError] = useState('');
     const [isMapVisible, setIsMapVisible] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
+    const [isCopied, setIsCopied] = useState(false); // Estado para feedback de copiado
     
     const cardRef = useRef(null);
 
+    // ... fetchRescueProfile y handleDownload sin cambios ...
     const fetchRescueProfile = useCallback(async () => {
         setIsLoading(true);
         setError('');
@@ -62,44 +72,37 @@ function RescueProfile() {
     }, [fetchRescueProfile]);
 
     const handleDownload = useCallback(async () => {
-        if (cardRef.current === null) {
-          return;
-        }
+        if (cardRef.current === null) return;
         setIsDownloading(true);
-        
         const node = cardRef.current;
-        // Guardamos el estilo en línea original para restaurarlo después.
         const originalStyle = node.style.backgroundColor;
-        
         try {
-          // --- [LÓGICA CORREGIDA Y DEFINITIVA] ---
-          // 1. Obtenemos el color de fondo que está realmente renderizado en la pantalla.
           const computedStyle = window.getComputedStyle(node);
-          // 2. Aplicamos ese color directamente como un estilo en línea al nodo.
-          //    Esto anula temporalmente la variable CSS y le da a la librería un valor explícito.
           node.style.backgroundColor = computedStyle.backgroundColor;
-
-          const dataUrl = await toPng(node, { 
-              cacheBust: true,
-              pixelRatio: 2 // Mantenemos la alta calidad
-          });
-    
+          const dataUrl = await toPng(node, { cacheBust: true, pixelRatio: 2 });
           const link = document.createElement('a');
           link.download = `se-busca-${petData?.name || 'mascota'}.png`;
           link.href = dataUrl;
           link.click();
-
         } catch (err) {
           console.error('oops, something went wrong!', err);
           alert('Hubo un error al generar la imagen.');
         } finally {
-          // 3. (MUY IMPORTANTE) En el bloque finally, restauramos el estilo original
-          //    para que el componente en pantalla no se vea afectado.
           node.style.backgroundColor = originalStyle;
           setIsDownloading(false);
         }
       }, [cardRef, petData]);
 
+    // --- [NUEVA] Lógica para copiar el enlace ---
+    const handleCopyLink = () => {
+        navigator.clipboard.writeText(window.location.href).then(() => {
+            setIsCopied(true);
+            setTimeout(() => setIsCopied(false), 2500); // Muestra "Copiado" por 2.5 segundos
+        }).catch(err => {
+            console.error('Error al copiar el enlace: ', err);
+            alert('No se pudo copiar el enlace.');
+        });
+    };
 
     if (isLoading) return <LoadingComponent text="Cargando aviso de búsqueda..." />;
     if (error) return (
@@ -128,7 +131,11 @@ function RescueProfile() {
         <div className={styles.pageContainer}>
             <div className={styles.topActions}>
                 <BackButton />
-                <DownloadButton onClick={handleDownload} isLoading={isDownloading} />
+                {/* --- [NUEVOS] Botones de Descargar y Compartir --- */}
+                <div className={styles.rightActions}>
+                    <ShareButton onClick={handleCopyLink} isCopied={isCopied} />
+                    <DownloadButton onClick={handleDownload} isLoading={isDownloading} />
+                </div>
             </div>
 
             <div ref={cardRef} className={`${styles.card} ${isMapVisible ? styles.expanded : ''}`}>

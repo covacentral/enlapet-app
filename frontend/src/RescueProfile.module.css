@@ -1,7 +1,6 @@
 /* frontend/src/RescueProfile.module.css */
-/* Versión 5.0: Añade estilos para el botón de descarga. */
+/* Versión 6.0: Añade estilos para el botón de compartir/copiar enlace. */
 
-/* Contenedor de toda la página, incluyendo los botones de acción */
 .pageContainer {
     width: 100%;
     max-width: 450px;
@@ -13,7 +12,6 @@
     gap: 10px; 
 }
 
-/* --- [NUEVO] Contenedor para los botones de la parte superior --- */
 .topActions {
     display: flex;
     justify-content: space-between;
@@ -21,8 +19,14 @@
     align-items: center;
 }
 
-/* Estilos para los botones (Atrás y Descargar) */
-.backButton, .downloadButton {
+/* --- [NUEVO] Contenedor para los botones de la derecha --- */
+.rightActions {
+    display: flex;
+    gap: 10px;
+}
+
+/* Estilos base para todos los botones de acción superior */
+.backButton, .downloadButton, .shareButton {
     background-color: rgba(15, 23, 42, 0.8);
     border: 1px solid var(--border-color);
     border-radius: 20px;
@@ -31,17 +35,24 @@
     cursor: pointer;
     font-weight: bold;
     font-size: 0.9rem;
-    transition: background-color 0.2s;
+    transition: all 0.2s;
     display: flex;
     align-items: center;
     gap: 8px;
 }
-.backButton:hover, .downloadButton:hover {
+.backButton:hover, .downloadButton:hover, .shareButton:hover {
     background-color: var(--border-color);
 }
 .downloadButton:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+}
+
+/* --- [NUEVO] Estilo para el botón cuando el enlace ha sido copiado --- */
+.shareButton.copied {
+    background-color: var(--success-green);
+    border-color: var(--success-green);
+    color: white;
 }
 
 
