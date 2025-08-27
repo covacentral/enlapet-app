@@ -1,5 +1,5 @@
 /* frontend/src/LostAndFoundPage.module.css */
-/* Versión 2.2: Implementa un layout de grid robusto y fluido. */
+/* Versión 2.3: Implementa un layout de grid explícito de dos columnas. */
 
 .pageContainer {
     padding: 0;
@@ -15,10 +15,18 @@
 
 .grid {
     display: grid;
-    /* La clave: crea tantas columnas como quepan, con un ancho mínimo de 180px por tarjeta. */
-    /* Esto se adaptará a 1, 2, 3 o más columnas según el ancho de la pantalla. */
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    /* Por defecto, una columna para móviles */
+    grid-template-columns: 1fr;
     gap: 1.5rem;
+    /* Centra las tarjetas si solo hay una en una fila */
+    justify-items: center; 
+}
+
+/* Cuando la pantalla sea suficientemente ancha, forzamos las dos columnas */
+@media (min-width: 480px) {
+    .grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
 
 /* Contenedor para el botón "Cargar más" */

@@ -1,11 +1,13 @@
 /* frontend/src/components/LostPetCard.module.css */
-/* Estilos para la tarjeta de mascota extraviada que aparece en el carrusel del feed. */
+/* Versión 2.0: Flexibiliza el ancho para adaptarse a layouts de grid. */
 
 .card {
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
-    width: 180px; /* Ancho fijo para consistencia en el carrusel */
+    /* --- [LÍNEAS MODIFICADAS] --- */
+    width: 100%; /* Ahora la tarjeta ocupa el 100% de la columna del grid */
+    max-width: 250px; /* Evita que se estire demasiado en ciertos casos */
     background-color: var(--background-dark);
     border: 1px solid var(--border-color);
     border-top: 4px solid var(--error-red); /* Borde superior rojo para destacar */
