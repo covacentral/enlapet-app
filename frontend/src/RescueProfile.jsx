@@ -35,7 +35,7 @@ const BackButton = () => {
     const handleClick = () => user ? navigate(-1) : navigate('/');
     return (
         <button onClick={handleClick} className={styles.backButton}>
-            &larr; {user ? ''}
+            &larr;
         </button>
     );
 };
