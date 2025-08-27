@@ -1,5 +1,5 @@
 // frontend/src/LostAndFoundPage.jsx
-// (NUEVO) Página dedicada a mostrar todas las mascotas en modo rescate activo.
+// Versión 2.0: Implementa paginación ("cargar más") y elimina el contenedor principal.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import LostPetCard from './components/LostPetCard';
@@ -12,31 +12,53 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 function LostAndFoundPage() {
   const [lostPets, setLostPets] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState(null);
+  const [nextCursor, setNextCursor] = useState(null);
+  const [hasMore, setHasMore] = useState(true);
 
-  const fetchLostPets = useCallback(async () => {
-    setIsLoading(true);
+  const fetchLostPets = useCallback(async (cursor = null) => {
+    if (cursor) {
+      setIsLoadingMore(true);
+    } else {
+      setIsLoading(true);
+    }
     setError(null);
+
     try {
-      // Este es un endpoint público, no requiere autenticación.
-      const response = await fetch(`${API_URL}/api/public/rescue/all`);
+      const url = cursor 
+        ? `${API_URL}/api/public/rescue/all?cursor=${cursor}`
+        : `${API_URL}/api/public/rescue/all`;
+      
+      const response = await fetch(url);
       
       if (!response.ok) {
         throw new Error('No se pudieron cargar las mascotas en búsqueda.');
       }
 
       const data = await response.json();
-      setLostPets(data);
+      
+      setLostPets(prevPets => cursor ? [...prevPets, ...data.pets] : data.pets);
+      setNextCursor(data.nextCursor);
+      setHasMore(!!data.nextCursor);
+
     } catch (err) {
       setError(err.message);
     } finally {
       setIsLoading(false);
+      setIsLoadingMore(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchLostPets();
+    fetchLostPets(null); // Carga inicial
   }, [fetchLostPets]);
+
+  const handleLoadMore = () => {
+    if (hasMore && !isLoadingMore) {
+      fetchLostPets(nextCursor);
+    }
+  };
 
   const renderContent = () => {
     if (isLoading) {
@@ -54,16 +76,30 @@ function LostAndFoundPage() {
       );
     }
     return (
-      <div className={styles.grid}>
-        {lostPets.map(pet => (
-          <LostPetCard key={pet.id} pet={pet} />
-        ))}
-      </div>
+      <>
+        <div className={styles.grid}>
+          {lostPets.map(pet => (
+            <LostPetCard key={pet.id} pet={pet} />
+          ))}
+        </div>
+        {hasMore && (
+            <div className={styles.loadMoreContainer}>
+                <button 
+                    onClick={handleLoadMore} 
+                    className={`${sharedStyles.button} ${sharedStyles.primary}`}
+                    disabled={isLoadingMore}
+                >
+                    {isLoadingMore ? 'Cargando...' : 'Cargar más'}
+                </button>
+            </div>
+        )}
+      </>
     );
   };
 
   return (
-    <div className={styles.container}>
+    // El div contenedor ahora no tiene la clase "container" que lo hacía una tarjeta.
+    <div className={styles.pageContainer}>
       <h2 className={sharedStyles.tabTitle}>Búsquedas Activas</h2>
       <p className={styles.subtitle}>
         Estas son las mascotas de nuestra comunidad que necesitan ayuda para volver a casa. 

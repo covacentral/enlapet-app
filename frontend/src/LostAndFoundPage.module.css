@@ -1,11 +1,9 @@
 /* frontend/src/LostAndFoundPage.module.css */
-/* Estilos para la página dedicada a las mascotas extraviadas. */
+/* Versión 2.0: Elimina el contenedor principal y aplica un layout de grid. */
 
-.container {
-    background-color: var(--background-light);
-    padding: 25px;
-    border-radius: 15px;
-    border: 1px solid var(--border-color);
+/* Estilo para el contenedor de la página, sin bordes ni fondo de tarjeta */
+.pageContainer {
+    padding: 0; /* Eliminamos el padding para dar más espacio */
     text-align: left;
 }
 
@@ -18,7 +16,22 @@
 
 .grid {
     display: grid;
-    /* Usamos el mismo ancho de tarjeta que en el carrusel para consistencia */
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    /* En pantallas pequeñas, una columna */
+    grid-template-columns: 1fr;
     gap: 1.5rem;
+}
+
+/* En pantallas más anchas (ej. 600px+), cambiamos a dos columnas */
+@media (min-width: 600px) {
+    .grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Contenedor para el botón "Cargar más" */
+.loadMoreContainer {
+    text-align: center;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border-color);
 }

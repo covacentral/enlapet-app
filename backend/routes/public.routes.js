@@ -1,5 +1,5 @@
 // backend/routes/public.routes.js
-// VERSIÓN CORREGIDA: Reordena las rutas de rescate para evitar conflictos.
+// VERSIÓN 2.0: Reordena las rutas de rescate para evitar conflictos y soportar paginación.
 
 const { Router } = require('express');
 
@@ -20,10 +20,11 @@ router.get('/public/users/:userId', getUserPublicProfile);
 
 // --- Rutas de Rescate Públicas (ORDEN CORREGIDO) ---
 
-// 1. La ruta específica '/all' debe ir PRIMERO.
+// 1. La ruta específica '/all' para la lista paginada debe ir PRIMERO.
 router.get('/public/rescue/all', getActiveRescuePets);
 
 // 2. La ruta con el parámetro dinámico '/:epid' va DESPUÉS.
+//    Así, Express no confunde "all" con un EPID.
 router.get('/public/rescue/:epid', getRescuePetProfileByEpid);
 
 

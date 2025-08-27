@@ -1,12 +1,9 @@
 // backend/controllers/public.controller.js
-// (NUEVO) Lógica de negocio para todos los endpoints de acceso público.
+// VERSIÓN 2.0: Añade paginación a la función getActiveRescuePets.
 
 const { db } = require('../config/firebase');
 
-/**
- * Obtiene el perfil público de una mascota y los datos de contacto de su responsable.
- * Usado para la vista NFC.
- */
+// --- (getPetPublicProfile y getUserPublicProfile no cambian) ---
 const getPetPublicProfile = async (req, res) => {
     try {
         const { petId } = req.params;
@@ -48,11 +45,6 @@ const getPetPublicProfile = async (req, res) => {
         res.status(500).json({ message: 'Error interno del servidor.' });
     }
 };
-
-/**
- * Obtiene el perfil público de un usuario, incluyendo sus mascotas.
- * Usado para la vista de perfil social de un usuario.
- */
 const getUserPublicProfile = async (req, res) => {
     try {
         const { userId } = req.params;
@@ -89,11 +81,6 @@ const getUserPublicProfile = async (req, res) => {
         res.status(500).json({ message: 'Error interno del servidor.' });
     }
 };
-
-/**
- * Obtiene los datos para el "póster de búsqueda" digital de una mascota extraviada.
- * Busca por EPID para que la URL sea más amigable y compartible.
- */
 const getRescuePetProfileByEpid = async (req, res) => {
     try {
         const { epid } = req.params;
@@ -125,8 +112,6 @@ const getRescuePetProfileByEpid = async (req, res) => {
             name: petData.name,
             breed: petData.breed,
             petPictureUrl: petData.petPictureUrl,
-            // --- LÍNEA CORREGIDA ---
-            // Nos aseguramos de que lastSeen siempre sea un objeto, incluso si está vacío.
             lastSeen: petData.rescueMode.lastSeen || { coordinates: null, address: '', radius: 1000 },
             message: petData.rescueMode.message,
             ownerName: ownerData.name,
@@ -140,20 +125,26 @@ const getRescuePetProfileByEpid = async (req, res) => {
     }
 };
 
-// --- [NUEVA FUNCIÓN] ---
-/**
- * Obtiene una lista de todas las mascotas actualmente en modo rescate.
- * Esta ruta es pública para la página de "Búsquedas Activas".
- */
+// --- [FUNCIÓN MODIFICADA] ---
 const getActiveRescuePets = async (req, res) => {
+    const { cursor } = req.query;
+    const PAGE_SIZE = 10;
+
     try {
-        const snapshot = await db.collection('pets')
+        let query = db.collection('pets')
             .where('rescueMode.isActive', '==', true)
             .orderBy('rescueMode.activatedAt', 'desc')
-            .get();
+            .limit(PAGE_SIZE);
+
+        if (cursor) {
+            // Si hay un cursor, iniciamos la búsqueda a partir de ese valor.
+            query = query.startAfter(cursor);
+        }
+
+        const snapshot = await query.get();
 
         if (snapshot.empty) {
-            return res.status(200).json([]);
+            return res.status(200).json({ pets: [], nextCursor: null });
         }
 
         const rescuePets = snapshot.docs.map(doc => {
@@ -168,8 +159,16 @@ const getActiveRescuePets = async (req, res) => {
                 activatedAt: data.rescueMode.activatedAt
             };
         });
+        
+        // Determinamos el cursor para la siguiente página.
+        const lastDoc = snapshot.docs[snapshot.docs.length - 1];
+        const nextCursor = lastDoc ? lastDoc.data().rescueMode.activatedAt : null;
 
-        res.status(200).json(rescuePets);
+        res.status(200).json({
+            pets: rescuePets,
+            nextCursor: nextCursor
+        });
+
     } catch (error) {
         console.error('Error en getActiveRescuePets:', error);
         res.status(500).json({ message: 'Error interno al obtener las mascotas en búsqueda.' });
@@ -181,5 +180,5 @@ module.exports = {
     getPetPublicProfile,
     getUserPublicProfile,
     getRescuePetProfileByEpid,
-    getActiveRescuePets // <-- Exportamos la nueva función
+    getActiveRescuePets
 };
