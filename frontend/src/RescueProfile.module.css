@@ -1,21 +1,28 @@
 /* frontend/src/RescueProfile.module.css */
-/* Versión 4.0: Implementación final del diseño "Cartel Digital" basado en la imagen de referencia. */
+/* Versión 5.0: Añade estilos para el botón de descarga. */
 
-/* Contenedor de toda la página, incluyendo el botón "Atrás" */
+/* Contenedor de toda la página, incluyendo los botones de acción */
 .pageContainer {
     width: 100%;
-    max-width: 450px; /* Ancho máximo para mantener la proporción en pantallas grandes */
+    max-width: 450px;
     margin: 0 auto;
     padding: 10px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px; /* Espacio entre el botón "Atrás" y la tarjeta */
+    gap: 10px; 
 }
 
-/* Botón "Atrás" posicionado fuera de la tarjeta */
-.backButton {
-    align-self: flex-start; /* Se alinea a la izquierda del pageContainer */
+/* --- [NUEVO] Contenedor para los botones de la parte superior --- */
+.topActions {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    align-items: center;
+}
+
+/* Estilos para los botones (Atrás y Descargar) */
+.backButton, .downloadButton {
     background-color: rgba(15, 23, 42, 0.8);
     border: 1px solid var(--border-color);
     border-radius: 20px;
@@ -25,10 +32,16 @@
     font-weight: bold;
     font-size: 0.9rem;
     transition: background-color 0.2s;
-    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
-.backButton:hover {
+.backButton:hover, .downloadButton:hover {
     background-color: var(--border-color);
+}
+.downloadButton:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 
@@ -43,13 +56,11 @@
     flex-direction: column;
     padding: 15px;
     box-sizing: border-box;
-    gap: 5px; /* Reducimos el espaciado vertical aún más */
-    max-height: 95vh; /* Permitimos que use casi toda la altura de la pantalla */
+    gap: 5px; 
+    max-height: 95vh;
     transition: max-height 0.5s ease-in-out;
-    /* Las propiedades 'aspect-ratio' y 'overflow' se han eliminado */
 }
 
-/* Clase para expandir la tarjeta cuando se muestra el mapa */
 .card.expanded {
     max-height: 120vh;
     aspect-ratio: unset;
