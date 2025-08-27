@@ -18,14 +18,14 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 const ShareButton = ({ onClick, isCopied }) => (
     <button onClick={onClick} className={`${styles.shareButton} ${isCopied ? styles.copied : ''}`}>
         {isCopied ? <Check size={18} /> : <Share2 size={18} />}
-        {isCopied ? 'Enlace Copiado' : 'Compartir'}
+        {isCopied ? 'Copiado' : 'Compartir'}
     </button>
 );
 
 const DownloadButton = ({ onClick, isLoading }) => (
     <button onClick={onClick} className={styles.downloadButton} disabled={isLoading}>
         <Download size={18} />
-        {isLoading ? 'Generando...' : 'Descargar Aviso'}
+        {isLoading ? 'Generando...' : 'Descargar'}
     </button>
 );
 
