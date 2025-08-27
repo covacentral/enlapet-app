@@ -1,5 +1,5 @@
 // frontend/src/RescueProfile.jsx
-// Versión 5.3: Ajusta las opciones de html-to-image para capturar correctamente los colores de fondo.
+// Versión 5.4: Implementa la solución definitiva para la captura de colores de fondo.
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
@@ -66,14 +66,22 @@ function RescueProfile() {
           return;
         }
         setIsDownloading(true);
+        
+        const node = cardRef.current;
+        // Guardamos el estilo en línea original para restaurarlo después.
+        const originalStyle = node.style.backgroundColor;
+        
         try {
-          // --- [OPCIONES CORREGIDAS Y SIMPLIFICADAS] ---
-          const dataUrl = await toPng(cardRef.current, { 
+          // --- [LÓGICA CORREGIDA Y DEFINITIVA] ---
+          // 1. Obtenemos el color de fondo que está realmente renderizado en la pantalla.
+          const computedStyle = window.getComputedStyle(node);
+          // 2. Aplicamos ese color directamente como un estilo en línea al nodo.
+          //    Esto anula temporalmente la variable CSS y le da a la librería un valor explícito.
+          node.style.backgroundColor = computedStyle.backgroundColor;
+
+          const dataUrl = await toPng(node, { 
               cacheBust: true,
-              backgroundColor: 'transparent',
-              // Esta opción renderiza la imagen al doble de su resolución,
-              // lo que mejora la calidad y soluciona problemas de renderizado de estilos.
-              pixelRatio: 2 
+              pixelRatio: 2 // Mantenemos la alta calidad
           });
     
           const link = document.createElement('a');
@@ -85,6 +93,9 @@ function RescueProfile() {
           console.error('oops, something went wrong!', err);
           alert('Hubo un error al generar la imagen.');
         } finally {
+          // 3. (MUY IMPORTANTE) En el bloque finally, restauramos el estilo original
+          //    para que el componente en pantalla no se vea afectado.
+          node.style.backgroundColor = originalStyle;
           setIsDownloading(false);
         }
       }, [cardRef, petData]);
