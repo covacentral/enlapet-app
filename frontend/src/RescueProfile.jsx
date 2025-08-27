@@ -1,5 +1,5 @@
 // frontend/src/RescueProfile.jsx
-// Versión 6.0: Implementa la funcionalidad de "Copiar Enlace" y "Compartir" con Web Share API.
+// Versión 6.1: Corrige el comportamiento del botón "Atrás" para accesos directos.
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
@@ -14,11 +14,10 @@ import sharedStyles from './shared.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-// --- [NUEVO] Componente de Botón de Compartir/Copiar ---
 const ShareButton = ({ onClick, isCopied }) => (
     <button onClick={onClick} className={`${styles.shareButton} ${isCopied ? styles.copied : ''}`}>
         {isCopied ? <Check size={18} /> : <Share2 size={18} />}
-        {isCopied ? 'Copiado' : 'Compartir'}
+        {isCopied ? 'Enlace Copiado' : 'Compartir'}
     </button>
 );
 
@@ -29,10 +28,23 @@ const DownloadButton = ({ onClick, isLoading }) => (
     </button>
 );
 
+// --- [COMPONENTE CORREGIDO] ---
 const BackButton = () => {
     const navigate = useNavigate();
     const user = auth.currentUser;
-    const handleClick = () => user ? navigate(-1) : navigate('/');
+
+    const handleClick = () => {
+        // Comprueba si hay un historial de navegación en la sesión actual.
+        // `window.history.length > 2` es una forma segura de saber si el usuario
+        // navegó desde otra página dentro de nuestra app.
+        if (window.history.length > 2) {
+            navigate(-1); // Si hay historial, simplemente vuelve atrás.
+        } else {
+            // Si no hay historial (acceso directo), decide a dónde ir.
+            navigate(user ? '/dashboard' : '/'); // Al dashboard si está logueado, si no, al inicio.
+        }
+    };
+
     return (
         <button onClick={handleClick} className={styles.backButton}>
             &larr;
@@ -47,11 +59,10 @@ function RescueProfile() {
     const [error, setError] = useState('');
     const [isMapVisible, setIsMapVisible] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
-    const [isCopied, setIsCopied] = useState(false); // Estado para feedback de copiado
+    const [isCopied, setIsCopied] = useState(false);
     
     const cardRef = useRef(null);
 
-    // ... fetchRescueProfile y handleDownload sin cambios ...
     const fetchRescueProfile = useCallback(async () => {
         setIsLoading(true);
         setError('');
@@ -91,13 +102,12 @@ function RescueProfile() {
           node.style.backgroundColor = originalStyle;
           setIsDownloading(false);
         }
-      }, [cardRef, petData]);
+    }, [cardRef, petData]);
 
-    // --- [NUEVA] Lógica para copiar el enlace ---
     const handleCopyLink = () => {
         navigator.clipboard.writeText(window.location.href).then(() => {
             setIsCopied(true);
-            setTimeout(() => setIsCopied(false), 2500); // Muestra "Copiado" por 2.5 segundos
+            setTimeout(() => setIsCopied(false), 2500);
         }).catch(err => {
             console.error('Error al copiar el enlace: ', err);
             alert('No se pudo copiar el enlace.');
@@ -131,7 +141,6 @@ function RescueProfile() {
         <div className={styles.pageContainer}>
             <div className={styles.topActions}>
                 <BackButton />
-                {/* --- [NUEVOS] Botones de Descargar y Compartir --- */}
                 <div className={styles.rightActions}>
                     <ShareButton onClick={handleCopyLink} isCopied={isCopied} />
                     <DownloadButton onClick={handleDownload} isLoading={isDownloading} />
