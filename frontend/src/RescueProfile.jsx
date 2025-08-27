@@ -1,5 +1,5 @@
 // frontend/src/RescueProfile.jsx
-// Versión 5.2: Corrige el problema de los colores en la imagen descargada.
+// Versión 5.3: Ajusta las opciones de html-to-image para capturar correctamente los colores de fondo.
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
@@ -67,34 +67,19 @@ function RescueProfile() {
         }
         setIsDownloading(true);
         try {
-            // --- [OPCIONES MODIFICADAS PARA MEJOR CAPTURA DE ESTILOS] ---
-            const dataUrl = await toPng(cardRef.current, { 
-                cacheBust: true, // Siempre útil para evitar cachés
-                backgroundColor: 'transparent', // Mantiene el fondo transparente
-                skipFonts: true, // Ignora la carga de fuentes que a veces causan problemas
-                // Añadimos una función para asegurar que las variables CSS se resuelvan
-                // antes de la captura. Esto es una medida de precaución.
-                filter: (node) => {
-                    // Si el nodo es un elemento, obtenemos sus estilos computados.
-                    if (node instanceof HTMLElement) {
-                        const computedStyle = window.getComputedStyle(node);
-                        // Aplicamos los valores computados de las propiedades CSS que son relevantes
-                        // para el color, si están definidas como variables.
-                        ['color', 'background-color', 'border-color'].forEach(prop => {
-                            const value = computedStyle.getPropertyValue(prop);
-                            if (value && value.startsWith('var(')) {
-                                node.style.setProperty(prop, value);
-                            }
-                        });
-                    }
-                    return true; // Siempre devolver true para incluir el nodo
-                }
-            });
+          // --- [OPCIONES CORREGIDAS Y SIMPLIFICADAS] ---
+          const dataUrl = await toPng(cardRef.current, { 
+              cacheBust: true,
+              backgroundColor: 'transparent',
+              // Esta opción renderiza la imagen al doble de su resolución,
+              // lo que mejora la calidad y soluciona problemas de renderizado de estilos.
+              pixelRatio: 2 
+          });
     
-            const link = document.createElement('a');
-            link.download = `se-busca-${petData?.name || 'mascota'}.png`;
-            link.href = dataUrl;
-            link.click();
+          const link = document.createElement('a');
+          link.download = `se-busca-${petData?.name || 'mascota'}.png`;
+          link.href = dataUrl;
+          link.click();
 
         } catch (err) {
           console.error('oops, something went wrong!', err);
