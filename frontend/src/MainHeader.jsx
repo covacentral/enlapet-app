@@ -1,38 +1,36 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, NavLink } from 'react-router-dom';
 import { auth, db } from './firebase';
-import { doc, getDoc, collection, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, collection } from 'firebase/firestore';
 import styles from './MainHeader.module.css';
-import DefaultHeaderView from './components/DefaultHeaderView';
+
+// Vistas hijas que antes se renderizaban
 import MissionsHeaderView from './components/MissionsHeaderView';
 import ManagementHeaderView from './components/ManagementHeaderView';
-import { Search, Map, Calendar, Bell, ShoppingCart, Trophy, LayoutGrid, X } from 'lucide-react';
+
+// Iconos necesarios
+import { Search, Map, Calendar, Megaphone, Menu, Trophy, LayoutGrid, X } from 'lucide-react';
 
 const MainHeader = () => {
   const [user, setUser] = useState(null);
-  const [pets, setPets] = useState([]);
   const [userData, setUserData] = useState(null);
+  const [pets, setPets] = useState([]);
   const [currentView, setCurrentView] = useState('default');
   const navigate = useNavigate();
 
+  // LÓGICA DE CARGA DE DATOS ORIGINAL Y FUNCIONAL
   useEffect(() => {
-    const unsubscribeAuth = auth.onAuthStateChanged((currentUser) => {
+    const unsubscribeAuth = auth.onAuthStateChanged(currentUser => {
       if (currentUser) {
         setUser(currentUser);
         const userDocRef = doc(db, 'users', currentUser.uid);
-        
-        const unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
-          if (docSnap.exists()) {
-            setUserData(docSnap.data());
-          } else {
-            setUserData({}); // Si el doc no existe, usar un objeto vacío para evitar errores
-          }
-        });
-
         const petsColRef = collection(db, 'users', currentUser.uid, 'pets');
-        const unsubscribePets = onSnapshot(petsColRef, (snapshot) => {
-          const petsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          setPets(petsData);
+
+        const unsubscribeUser = onSnapshot(userDocRef, docSnap => {
+          setUserData(docSnap.exists() ? docSnap.data() : {});
+        });
+        const unsubscribePets = onSnapshot(petsColRef, snapshot => {
+          setPets(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         });
 
         return () => {
@@ -45,59 +43,76 @@ const MainHeader = () => {
         setPets([]);
       }
     });
-
     return () => unsubscribeAuth();
   }, []);
 
-  const handleNavigate = (path) => {
-    navigate(path);
-  };
+  if (!user) return null;
 
-  // El componente solo se renderiza si tenemos la información mínima necesaria (el usuario de auth)
-  if (!user) {
-    return null;
-  }
+  const isVerifiedVet = userData?.role === 'veterinarian' && userData?.isVerified;
+  const getTopNavLinkClass = ({ isActive }) => isActive ? `${styles.topNavButton} ${styles.active}` : styles.topNavButton;
 
-  // CÓDIGO DEFENSIVO: Se accede a las propiedades de forma segura con '?.'
-  // Esto previene el error si 'userData' es null o si 'role' no existe.
-  const isVerifiedVet = userData?.role === 'veterinarian' && userData?.isVerified === true;
-
-  const renderContent = () => {
+  // RENDERIZADO CONDICIONAL DE LA VISTA INTERNA
+  const renderInnerContent = () => {
     switch (currentView) {
       case 'missions':
-        return <MissionsHeaderView user={user} />;
+        // Se pasan las props correctas ('pets')
+        return <MissionsHeaderView pets={pets} />;
       case 'management':
-        return <ManagementHeaderView user={user} />;
+        return <ManagementHeaderView pets={pets} />;
       default:
+        // El contenido de la vista por defecto ahora vive aquí para mayor control
         return (
-          <DefaultHeaderView
-            user={user}
-            pets={pets}
-            onNavigateToUser={() => handleNavigate(`/user/${user.uid}`)}
-            onNavigateToPet={(petId) => handleNavigate(`/pet/${petId}`)}
-            onAddPet={() => handleNavigate('/add-pet')}
-          />
+          <>
+            {/* 1. BARRA DE NAVEGACIÓN SUPERIOR ORIGINAL (INTACTA) */}
+            <div className={styles.topNavBar}>
+              <button className={styles.topNavButton} title="Buscar (Próximamente)">
+                <Search size={22} />
+              </button>
+              <NavLink to="/dashboard/map" className={getTopNavLinkClass} title="Mapa Comunitario">
+                <Map size={22} />
+              </NavLink>
+              <NavLink to="/dashboard/events" className={getTopNavLinkClass} title="Eventos">
+                <Calendar size={22} />
+              </NavLink>
+              <NavLink to="/dashboard/rescue" className={getTopNavLinkClass} title="Búsquedas Activas">
+                <Megaphone size={22} />
+              </NavLink>
+              <NavLink to="/dashboard/settings" className={getTopNavLinkClass} title="Ajustes y Menú">
+                <Menu size={22} />
+              </NavLink>
+            </div>
+            
+            {/* 2. NUEVO CARRUSEL DE PERFILES */}
+            <div className={styles.profilesCarousel}>
+              <div className={styles.profileBubble} onClick={() => navigate(`/user/${user.uid}`)}>
+                <img src={user.photoURL} alt="Tu Perfil" />
+                <span>Tú</span>
+              </div>
+              {pets.map(pet => (
+                <div key={pet.id} className={styles.profileBubble} onClick={() => navigate(`/pet/${pet.id}`)}>
+                  <img src={pet.petPictureUrl} alt={pet.name} />
+                  <span>{pet.name}</span>
+                </div>
+              ))}
+              <div className={styles.profileBubble} onClick={() => navigate('/add-pet')}>
+                <div className={styles.addPetButton}>+</div>
+                <span>Añadir</span>
+              </div>
+            </div>
+          </>
         );
     }
   };
 
   return (
     <header className={styles.header}>
-      <nav className={styles.navBar}>
-        <button className={styles.navButton} onClick={() => handleNavigate('/search')}><Search /></button>
-        <button className={styles.navButton} onClick={() => handleNavigate('/map')}><Map /></button>
-        <button className={styles.navButton} onClick={() => handleNavigate('/events')}><Calendar /></button>
-        <button className={styles.navButton} onClick={() => handleNavigate('/notifications')}><Bell /></button>
-        <button className={styles.navButton} onClick={() => handleNavigate('/store')}><ShoppingCart /></button>
-      </nav>
-
-      {renderContent()}
-
+      {renderInnerContent()}
+      
+      {/* 3. NUEVA BARRA DE CONTROL INFERIOR CON LÓGICA ORIGINAL */}
       <div className={styles.controlBar}>
         <button className={styles.actionButton} onClick={() => setCurrentView('missions')}>
           <Trophy />
         </button>
-        
         {currentView === 'default' ? (
           <h1 className={styles.brandTitle}>enlapet</h1>
         ) : (
@@ -105,14 +120,14 @@ const MainHeader = () => {
             <X />
           </button>
         )}
-
         <button className={styles.actionButton} onClick={() => setCurrentView('management')}>
           <LayoutGrid />
         </button>
       </div>
 
+      {/* 4. NUEVO BANNER DE ACCIÓN VERIFICADO */}
       {isVerifiedVet && (
-        <div className={styles.verifiedActionBanner} onClick={() => handleNavigate('/vet-dashboard')}>
+        <div className={styles.verifiedActionBanner} onClick={() => navigate('/vet-dashboard')}>
           Panel Veterinario
         </div>
       )}
