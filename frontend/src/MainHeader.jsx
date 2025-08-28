@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, NavLink } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { auth, db } from './firebase';
 import { doc, onSnapshot, collection } from 'firebase/firestore';
 import styles from './MainHeader.module.css';
 
-// Vistas hijas que se renderizan
+// Vistas que el cerebro puede mostrar
+import DefaultHeaderView from './components/DefaultHeaderView';
 import MissionsHeaderView from './components/MissionsHeaderView';
 import ManagementHeaderView from './components/ManagementHeaderView';
 
-// Iconos necesarios
-import { Search, Map, Calendar, Megaphone, Menu, Trophy, LayoutGrid, X } from 'lucide-react';
+// Iconos para los nuevos controles
+import { Trophy, LayoutGrid, X } from 'lucide-react';
 
 const MainHeader = () => {
   const [user, setUser] = useState(null);
@@ -18,6 +19,7 @@ const MainHeader = () => {
   const [currentView, setCurrentView] = useState('default');
   const navigate = useNavigate();
 
+  // Lógica de carga de datos restaurada a su estado original y funcional
   useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged(currentUser => {
       if (currentUser) {
@@ -45,64 +47,36 @@ const MainHeader = () => {
     return () => unsubscribeAuth();
   }, []);
 
-  if (!user) return null;
+  if (!user) {
+    return null; // No mostrar nada si no hay usuario
+  }
 
   const isVerifiedVet = userData?.role === 'veterinarian' && userData?.isVerified;
-  const getTopNavLinkClass = ({ isActive }) => isActive ? `${styles.topNavButton} ${styles.active}` : styles.topNavButton;
 
-  const renderInnerContent = () => {
+  // El cerebro decide qué "cara" mostrar
+  const renderContent = () => {
     switch (currentView) {
       case 'missions':
         return <MissionsHeaderView pets={pets} />;
       case 'management':
         return <ManagementHeaderView pets={pets} />;
       default:
+        // Pasa todos los datos y funciones necesarias a la vista por defecto
         return (
-          <>
-            <div className={styles.topNavBar}>
-              <button className={styles.topNavButton} title="Buscar (Próximamente)">
-                <Search size={22} />
-              </button>
-              <NavLink to="/dashboard/map" className={getTopNavLinkClass} title="Mapa Comunitario">
-                <Map size={22} />
-              </NavLink>
-              <NavLink to="/dashboard/events" className={getTopNavLinkClass} title="Eventos">
-                <Calendar size={22} />
-              </NavLink>
-              <NavLink to="/dashboard/rescue" className={getTopNavLinkClass} title="Búsquedas Activas">
-                <Megaphone size={22} />
-              </NavLink>
-              <NavLink to="/dashboard/settings" className={getTopNavLinkClass} title="Ajustes y Menú">
-                <Menu size={22} />
-              </NavLink>
-            </div>
-            
-            <div className={styles.profilesCarousel}>
-              <div className={styles.profileBubble} onClick={() => navigate(`/user/${user.uid}`)}>
-                <img src={user.photoURL} alt="Tu Perfil" />
-                <span>Tú</span>
-              </div>
-              {pets.map(pet => (
-                <div key={pet.id} className={styles.profileBubble} onClick={() => navigate(`/pet/${pet.id}`)}>
-                  {/* CORRECCIÓN DEFINITIVA: Se usa 'pet.photoURL' en lugar de 'pet.petPictureUrl' */}
-                  <img src={pet.photoURL} alt={pet.name} />
-                  <span>{pet.name}</span>
-                </div>
-              ))}
-              <div className={styles.profileBubble} onClick={() => navigate('/add-pet')}>
-                <div className={styles.addPetButton}>+</div>
-                <span>Añadir</span>
-              </div>
-            </div>
-          </>
+          <DefaultHeaderView
+            user={user}
+            pets={pets}
+            onNavigate={(path) => navigate(path)}
+          />
         );
     }
   };
 
   return (
     <header className={styles.header}>
-      {renderInnerContent()}
+      {renderContent()}
       
+      {/* La nueva barra de control inferior que maneja el cerebro */}
       <div className={styles.controlBar}>
         <button className={styles.actionButton} onClick={() => setCurrentView('missions')}>
           <Trophy />
@@ -119,6 +93,7 @@ const MainHeader = () => {
         </button>
       </div>
 
+      {/* El nuevo banner para veterinarios */}
       {isVerifiedVet && (
         <div className={styles.verifiedActionBanner} onClick={() => navigate('/vet-dashboard')}>
           Panel Veterinario
