@@ -1,90 +1,90 @@
-// frontend/src/MainHeader.jsx
-// Versión 2.6: Limpia el componente principal, que ahora delega la barra de navegación superior a DefaultHeaderView.
-
-import React, { useState, useRef, useEffect } from 'react';
-import { Trophy, LayoutGrid, X } from 'lucide-react';
-
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { auth, db } from './firebase';
+import { doc, getDoc, collection, onSnapshot } from 'firebase/firestore';
 import styles from './MainHeader.module.css';
-
-// Importamos los componentes de las vistas y el botón
-import CornerButton from './components/CornerButton';
 import DefaultHeaderView from './components/DefaultHeaderView';
-import ManagementHeaderView from './components/ManagementHeaderView';
-import MissionsHeaderView from './components/MissionsHeaderView';
+import { Search, Map, Calendar, Bell, ShoppingCart, Trophy, LayoutGrid } from 'lucide-react';
 
-function MainHeader({ userProfile, pets, onAcceptMission, onOpenRescueModal }) {
-  const [viewMode, setViewMode] = useState('default');
-  const [lastViewMode, setLastViewMode] = useState('default');
-  
-  const [minHeight, setMinHeight] = useState('auto');
-  const defaultRef = useRef(null);
-  const managementRef = useRef(null);
-  const missionsRef = useRef(null);
+const MainHeader = () => {
+  const [user, setUser] = useState(null);
+  const [pets, setPets] = useState([]);
+  const [userData, setUserData] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const defaultHeight = defaultRef.current?.offsetHeight || 0;
-    const managementHeight = managementRef.current?.offsetHeight || 0;
-    const missionsHeight = missionsRef.current?.offsetHeight || 0;
-    
-    let targetHeight = 0;
-    if (viewMode === 'default') targetHeight = defaultHeight;
-    else if (viewMode === 'management') targetHeight = managementHeight;
-    else if (viewMode === 'missions') targetHeight = missionsHeight;
-    
-    if (targetHeight > 0) {
-      setMinHeight(`${targetHeight}px`);
-    }
-  }, [viewMode, userProfile, pets]);
+    const unsubscribeAuth = auth.onAuthStateChanged(async (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+        const userDocRef = doc(db, 'users', currentUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          setUserData(userDocSnap.data());
+        }
 
-  const handleToggle = (targetMode) => {
-    if (viewMode === targetMode) {
-      setViewMode(lastViewMode === targetMode ? 'default' : lastViewMode);
-    } else {
-      setLastViewMode(viewMode);
-      setViewMode(targetMode);
-    }
+        const petsColRef = collection(db, 'users', currentUser.uid, 'pets');
+        const unsubscribePets = onSnapshot(petsColRef, (snapshot) => {
+          const petsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setPets(petsData);
+        });
+        return () => unsubscribePets();
+      } else {
+        setUser(null);
+        setUserData(null);
+        setPets([]);
+      }
+    });
+
+    return () => unsubscribeAuth();
+  }, []);
+
+  const handleNavigation = (path) => {
+    navigate(path);
   };
 
-  const handleToggleManagement = () => handleToggle('management');
-  const handleToggleMissions = () => handleToggle('missions');
+  if (!user || !userData) {
+    return null; // O un componente de carga esqueleto
+  }
 
-  const ManagementIcon = viewMode === 'management' ? X : LayoutGrid;
-  const MissionsIcon = viewMode === 'missions' ? X : Trophy;
+  const isVerifiedVet = userData.role === 'veterinarian' && userData.isVerified;
 
   return (
-    <header 
-      className={styles.header}
-      style={{ minHeight, transition: 'min-height 0.4s ease-in-out' }}
-    >
-      {/* Contenedor para las vistas intercambiables */}
-      <div className={styles.mainHeaderContent}>
-        <div ref={defaultRef} className={`${styles.viewWrapper} ${viewMode !== 'default' ? styles.hidden : ''}`}>
-          <DefaultHeaderView userProfile={userProfile} pets={pets} />
-        </div>
+    <header className={styles.header}>
+      {/* Barra de Navegación Superior (Sin Cambios) */}
+      <nav className={styles.navBar}>
+        <button className={styles.navButton} onClick={() => handleNavigation('/search')}><Search /></button>
+        <button className={styles.navButton} onClick={() => handleNavigation('/map')}><Map /></button>
+        <button className={styles.navButton} onClick={() => handleNavigation('/events')}><Calendar /></button>
+        <button className={styles.navButton} onClick={() => handleNavigation('/notifications')}><Bell /></button>
+        <button className={styles.navButton} onClick={() => handleNavigation('/store')}><ShoppingCart /></button>
+      </nav>
 
-        <div ref={managementRef} className={`${styles.viewWrapper} ${viewMode !== 'management' ? styles.hidden : ''}`}>
-          <ManagementHeaderView pets={pets} onOpenRescueModal={onOpenRescueModal} />
-        </div>
-        
-        <div ref={missionsRef} className={`${styles.viewWrapper} ${viewMode !== 'missions' ? styles.hidden : ''}`}>
-          <MissionsHeaderView pets={pets} onAcceptMission={onAcceptMission} />
-        </div>
+      {/* Carrusel de Perfiles (Renderizado por DefaultHeaderView) */}
+      <DefaultHeaderView
+        user={user}
+        pets={pets}
+        onAddPet={() => handleNavigation('/add-pet')}
+      />
+
+      {/* Nueva Barra de Control Inferior */}
+      <div className={styles.controlBar}>
+        <button className={styles.actionButton} onClick={() => handleNavigation('/missions')}>
+          <Trophy />
+        </button>
+        <h1 className={styles.brandTitle}>enlapet</h1>
+        <button className={styles.actionButton} onClick={() => handleNavigation('/management')}>
+          <LayoutGrid />
+        </button>
       </div>
-      
-      <CornerButton 
-        position="bottomRight"
-        onClick={handleToggleManagement}
-        iconComponent={<ManagementIcon size={28} />}
-        aria-label="Toggle Management View"
-      />
-      <CornerButton 
-        position="bottomLeft"
-        onClick={handleToggleMissions}
-        iconComponent={<MissionsIcon size={28} />}
-        aria-label="Toggle Missions View"
-      />
+
+      {/* Nuevo Banner de Acción para Veterinarios Verificados */}
+      {isVerifiedVet && (
+        <div className={styles.verifiedActionBanner} onClick={() => handleNavigation('/vet-dashboard')}>
+          Panel Veterinario
+        </div>
+      )}
     </header>
   );
-}
+};
 
 export default MainHeader;
