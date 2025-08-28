@@ -1,31 +1,98 @@
+// frontend/src/components/DefaultHeaderView.jsx
+// Versión 1.2: Se integra la barra de navegación superior y se reestructura el layout.
+
 import React from 'react';
+import { Link, NavLink } from 'react-router-dom';
+import { auth } from '../firebase';
+import { Plus, Stethoscope, Search, Map, Calendar, Megaphone, Menu } from 'lucide-react';
+
 import styles from '../MainHeader.module.css';
+import sharedStyles from '../shared.module.css';
 
-// Este es ahora un componente puramente presentacional. No tiene lógica propia.
-const DefaultHeaderView = ({ user, pets, onNavigateToUser, onNavigateToPet, onAddPet }) => {
+const PetBubble = ({ pet }) => (
+  <Link to={`/dashboard/pet/${pet.id}`} className={styles.petBubble} title={pet.name}>
+    {pet.petPictureUrl ? <img src={pet.petPictureUrl} alt={pet.name} /> : <span>🐾</span>}
+  </Link>
+);
+
+const AddPetBubble = () => (
+    <Link to="/dashboard/pets" className={styles.addPetBubble} title="Añadir o gestionar mascotas">
+        <Plus size={32} color="var(--text-secondary)" />
+    </Link>
+);
+
+function DefaultHeaderView({ userProfile, pets }) {
+  if (!userProfile) {
+    return null;
+  }
+  
+  const currentUserId = auth.currentUser?.uid;
+  const isVerifiedVet = userProfile.verification?.status === 'verified' && userProfile.verification?.type === 'vet';
+
+  const handleSearchClick = () => {
+    alert('Próximamente: Búsqueda de usuarios, mascotas y perfiles verificados.');
+  };
+
+  const getTopNavLinkClass = ({ isActive }) => {
+    return isActive ? `${styles.topNavButton} ${styles.active}` : styles.topNavButton;
+  };
+
   return (
-    <div className={styles.profilesCarousel}>
-      {/* Burbuja del Perfil de Usuario */}
-      <div className={styles.profileBubble} onClick={onNavigateToUser}>
-        <img src={user?.photoURL} alt="Tu Perfil" />
-        <span>Tú</span>
+    // Usamos un Fragment para que este componente no imponga un div extra. El layout lo manejan las clases de los elementos hijos.
+    <>
+      <div className={styles.userProfileSection}>
+          {/* La barra de navegación ahora vive aquí y se posiciona con 'order: -1' desde el CSS */}
+          <div className={styles.topNavBar}>
+              <button onClick={handleSearchClick} className={styles.topNavButton} title="Buscar (Próximamente)">
+                  <Search size={22} />
+              </button>
+              <NavLink to="/dashboard/map" className={getTopNavLinkClass} title="Mapa Comunitario">
+                  <Map size={22} />
+              </NavLink>
+              <NavLink to="/dashboard/events" className={getTopNavLinkClass} title="Eventos">
+                  <Calendar size={22} />
+              </NavLink>
+              <NavLink to="/dashboard/rescue" className={getTopNavLinkClass} title="Búsquedas Activas">
+                  <Megaphone size={22} />
+              </NavLink>
+              <NavLink to="/dashboard/settings" className={getTopNavLinkClass} title="Ajustes y Menú">
+                  <Menu size={22} />
+              </NavLink>
+          </div>
+
+        <Link to={`/dashboard/user/${currentUserId}`} className={styles.userProfileLink}>
+            <h2 className={styles.userName}>{userProfile.name}</h2>
+            <div className={styles.profilePictureContainer}>
+              {userProfile.profilePictureUrl ? (
+                <img src={userProfile.profilePictureUrl} alt="Perfil" className={styles.profilePicture} />
+              ) : (
+                <div className={styles.profilePicturePlaceholder}>👤</div>
+              )}
+            </div>
+            <p className={styles.profileBio}>{userProfile.bio || 'Sin biografía.'}</p>
+        </Link>
+        
+        {isVerifiedVet && (
+            <Link to="/dashboard/vet-panel" className={`${sharedStyles.button} ${sharedStyles.primary}`} style={{marginTop: '15px', textDecoration: 'none'}}>
+                <Stethoscope size={18} />
+                Panel Veterinario
+            </Link>
+        )}
       </div>
 
-      {/* Burbujas de las Mascotas */}
-      {pets.map((pet) => (
-        <div key={pet.id} className={styles.profileBubble} onClick={() => onNavigateToPet(pet.id)}>
-          <img src={pet.photoURL} alt={pet.name} />
-          <span>{pet.name}</span>
+      <div className={styles.userPetsSection}>
+        <h1 className={styles.brandTitle}>enlapet</h1>
+        <div className={styles.petBubblesContainer}>
+          {pets && pets.length > 0 ? (
+            pets.map(pet => <PetBubble key={pet.id} pet={pet} />)
+          ) : (
+            <p className={styles.noPetsHeader}>Añade tu primera mascota</p>
+          )}
+          <AddPetBubble />
         </div>
-      ))}
-
-      {/* Botón para Añadir Mascota */}
-      <div className={styles.profileBubble} onClick={onAddPet}>
-        <div className={styles.addPetButton}>+</div>
-        <span>Añadir</span>
       </div>
-    </div>
+    </>
   );
-};
+}
 
 export default DefaultHeaderView;
