@@ -10,25 +10,23 @@ import MissionsHeaderView from './components/MissionsHeaderView';
 import ManagementHeaderView from './components/ManagementHeaderView';
 
 // Iconos para los nuevos controles
-import { Trophy, LayoutGrid, X } from 'lucide-react';
+import { Trophy, LayoutGrid, X, Stethoscope } from 'lucide-react';
 
 const MainHeader = () => {
-  const [user, setUser] = useState(null);
-  const [userData, setUserData] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
   const [pets, setPets] = useState([]);
   const [currentView, setCurrentView] = useState('default');
   const navigate = useNavigate();
 
-  // Lógica de carga de datos restaurada a su estado original y funcional
+  // Lógica de carga de datos original y funcional
   useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged(currentUser => {
       if (currentUser) {
-        setUser(currentUser);
         const userDocRef = doc(db, 'users', currentUser.uid);
         const petsColRef = collection(db, 'users', currentUser.uid, 'pets');
 
         const unsubscribeUser = onSnapshot(userDocRef, docSnap => {
-          setUserData(docSnap.exists() ? docSnap.data() : {});
+          setUserProfile(docSnap.exists() ? docSnap.data() : null);
         });
         const unsubscribePets = onSnapshot(petsColRef, snapshot => {
           setPets(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -39,21 +37,21 @@ const MainHeader = () => {
           unsubscribePets();
         };
       } else {
-        setUser(null);
-        setUserData(null);
+        setUserProfile(null);
         setPets([]);
       }
     });
     return () => unsubscribeAuth();
   }, []);
 
-  if (!user) {
-    return null; // No mostrar nada si no hay usuario
+  if (!userProfile) {
+    // Muestra un esqueleto de carga o nada mientras se obtienen los datos del perfil
+    return <header className={`${styles.header} ${styles.loading}`}></header>;
   }
 
-  const isVerifiedVet = userData?.role === 'veterinarian' && userData?.isVerified;
+  const isVerifiedVet = userProfile.verification?.status === 'verified' && userProfile.verification?.type === 'vet';
+  const currentUserId = auth.currentUser?.uid;
 
-  // El cerebro decide qué "cara" mostrar
   const renderContent = () => {
     switch (currentView) {
       case 'missions':
@@ -61,12 +59,12 @@ const MainHeader = () => {
       case 'management':
         return <ManagementHeaderView pets={pets} />;
       default:
-        // Pasa todos los datos y funciones necesarias a la vista por defecto
+        // Pasa los datos correctos a la vista por defecto
         return (
           <DefaultHeaderView
-            user={user}
+            userProfile={userProfile}
             pets={pets}
-            onNavigate={(path) => navigate(path)}
+            currentUserId={currentUserId}
           />
         );
     }
@@ -76,27 +74,28 @@ const MainHeader = () => {
     <header className={styles.header}>
       {renderContent()}
       
-      {/* La nueva barra de control inferior que maneja el cerebro */}
+      {/* 3. NUEVA BARRA DE CONTROL INFERIOR CON LÓGICA ORIGINAL */}
       <div className={styles.controlBar}>
-        <button className={styles.actionButton} onClick={() => setCurrentView('missions')}>
+        <button className={styles.actionButton} onClick={() => setCurrentView('missions')} title="Misiones">
           <Trophy />
         </button>
         {currentView === 'default' ? (
-          <h1 className={styles.brandTitle}>enlapet</h1>
+          <h1 className={styles.brandTitle} onClick={() => window.scrollTo(0, 0)}>enlapet</h1>
         ) : (
-          <button className={styles.closeButton} onClick={() => setCurrentView('default')}>
+          <button className={styles.closeButton} onClick={() => setCurrentView('default')} title="Cerrar">
             <X />
           </button>
         )}
-        <button className={styles.actionButton} onClick={() => setCurrentView('management')}>
+        <button className={styles.actionButton} onClick={() => setCurrentView('management')} title="Gestión">
           <LayoutGrid />
         </button>
       </div>
 
-      {/* El nuevo banner para veterinarios */}
-      {isVerifiedVet && (
-        <div className={styles.verifiedActionBanner} onClick={() => navigate('/vet-dashboard')}>
-          Panel Veterinario
+      {/* 4. NUEVO BANNER DE ACCIÓN VERIFICADO */}
+      {isVerifiedVet && currentView === 'default' && (
+        <div className={styles.verifiedActionBanner} onClick={() => navigate('/dashboard/vet-panel')}>
+          <Stethoscope size={18} />
+          <span>Panel Veterinario</span>
         </div>
       )}
     </header>
