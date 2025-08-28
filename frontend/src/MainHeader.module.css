@@ -1,17 +1,17 @@
 /* ============================================= */
-/* Estructura Principal del MainHeader           */
+/* Estructura Principal del MainHeader (Corregida) */
 /* ============================================= */
 .header {
   background: linear-gradient(180deg, #8E2DE2 0%, #4A00E0 100%);
   color: white;
   padding: 12px 16px;
-  border-bottom-left-radius: 24px;
-  border-bottom-right-radius: 24px;
+  border-radius: 24px; /* CORREGIDO: Redondeo en todas las esquinas */
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  position: relative; /* Clave para el posicionamiento de elementos flotantes */
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 16px; /* Espacio entre la barra superior y el carrusel */
+  gap: 16px;
+  margin-bottom: 16px; /* CORREGIDO: Espaciado inferior restaurado */
 }
 
 /* ============================================= */
@@ -39,20 +39,20 @@
 }
 
 /* ============================================= */
-/* Carrusel de Perfiles (Nuevo Diseño)           */
+/* Carrusel de Perfiles                          */
 /* ============================================= */
 .profilesCarousel {
   display: flex;
   align-items: flex-start;
   gap: 16px;
   overflow-x: auto;
-  padding-bottom: 12px; /* Espacio para la barra de scroll */
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE y Edge */
+  padding-bottom: 12px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .profilesCarousel::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, y Opera */
+  display: none;
 }
 
 .profileBubble {
@@ -62,8 +62,8 @@
   gap: 6px;
   cursor: pointer;
   text-align: center;
-  flex-shrink: 0; /* Evita que las burbujas se encojan */
-  width: 64px; /* Ancho fijo para consistencia */
+  flex-shrink: 0;
+  width: 64px;
 }
 
 .profileBubble img {
@@ -99,27 +99,52 @@
 }
 
 /* ============================================= */
-/* Barra de Control Inferior y Título (Nuevo)    */
+/* Barra de Control Inferior (Corregida)         */
 /* ============================================= */
 .controlBar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 8px; /* Pequeño padding para no pegar los botones a los bordes */
-  margin-top: 8px; /* Espacio respecto al carrusel */
+  padding: 0 8px;
+  margin-top: 8px;
 }
 
+/* Título de la marca "enlapet" (Corregido) */
 .brandTitle {
-  font-family: 'Poppins', sans-serif; /* Asumiendo que Poppins está disponible */
-  font-weight: 700;
-  font-size: 24px;
+  /* CORREGIDO: Se eliminaron los estilos de fuente y tamaño no solicitados */
   color: #ffffff;
   text-align: center;
   flex-grow: 1;
+  /* Heredará el estilo del h1 globalmente definido, como era originalmente */
 }
 
+/* Botón de Cierre (Nuevo) */
+.closeButton {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.closeButton:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.closeButton svg {
+  width: 24px;
+  height: 24px;
+}
+
+
 /* ============================================= */
-/* Botones de Acción Flotantes (FABs) (Nuevo)    */
+/* Botones de Acción Flotantes (FABs)            */
 /* ============================================= */
 .actionButton {
   background-color: white;
@@ -147,15 +172,15 @@
 }
 
 /* ============================================= */
-/* Banner de Acción Verificado (Nuevo)           */
+/* Banner de Acción Verificado                   */
 /* ============================================= */
 .verifiedActionBanner {
-  background-color: #FFD700; /* Un color dorado para destacar */
+  background-color: #FFD700;
   color: #2c2c2c;
   font-weight: 600;
   text-align: center;
   padding: 12px 16px;
-  margin: 12px -16px -12px -16px; /* Se expande para llenar el ancho del padding del header */
+  margin: 12px -16px -24px -16px; /* Ajuste para que se alinee con el borde inferior redondeado */
   border-bottom-left-radius: 24px;
   border-bottom-right-radius: 24px;
   cursor: pointer;
