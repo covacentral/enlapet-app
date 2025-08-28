@@ -3,13 +3,16 @@ import { NavLink } from 'react-router-dom';
 import styles from '../MainHeader.module.css';
 import { Search, Map, Calendar, Megaphone, Menu } from 'lucide-react';
 
+// URL para una imagen de respaldo genérica
+const FALLBACK_IMAGE_URL = 'https://placehold.co/100x100/E2E8F0/4A5568?text=🐾';
+
 const DefaultHeaderView = ({ user, pets, onNavigate }) => {
   const getTopNavLinkClass = ({ isActive }) =>
     isActive ? `${styles.topNavButton} ${styles.active}` : styles.topNavButton;
 
   return (
     <>
-      {/* 1. Barra de navegación superior (original e intacta) */}
+      {/* 1. Barra de navegación superior (sin cambios) */}
       <div className={styles.topNavBar}>
         <button className={styles.topNavButton} title="Buscar (Próximamente)">
           <Search size={22} />
@@ -28,23 +31,33 @@ const DefaultHeaderView = ({ user, pets, onNavigate }) => {
         </NavLink>
       </div>
 
-      {/* 2. El nuevo carrusel de perfiles */}
+      {/* 2. El carrusel de perfiles (versión a prueba de errores) */}
       <div className={styles.profilesCarousel}>
-        {/* Burbuja de usuario funcional */}
-        <div className={styles.profileBubble} onClick={() => onNavigate(`/user/${user.uid}`)}>
-          <img src={user.photoURL} alt="Tu Perfil" />
-          <span>Tú</span>
-        </div>
-
-        {/* Burbujas de mascotas funcionales */}
-        {pets.map(pet => (
-          <div key={pet.id} className={styles.profileBubble} onClick={() => onNavigate(`/pet/${pet.id}`)}>
-            <img src={pet.photoURL} alt={pet.name} />
-            <span>{pet.name}</span>
+        
+        {/* Renderizado seguro de la burbuja del usuario */}
+        {user && (
+          <div className={styles.profileBubble} onClick={() => onNavigate(`/user/${user.uid}`)}>
+            <img src={user.photoURL || FALLBACK_IMAGE_URL} alt="Tu Perfil" />
+            <span>Tú</span>
           </div>
-        ))}
+        )}
 
-        {/* Botón de añadir funcional */}
+        {/* Renderizado seguro de las burbujas de mascotas */}
+        {/* Se verifica que 'pets' sea un array antes de intentar mapearlo */}
+        {Array.isArray(pets) && pets.map(pet => {
+          // Se verifica que el objeto 'pet' y su 'id' existan antes de renderizar
+          if (!pet || !pet.id) return null;
+          
+          return (
+            <div key={pet.id} className={styles.profileBubble} onClick={() => onNavigate(`/pet/${pet.id}`)}>
+              {/* Se usa la imagen de la mascota o la de respaldo si no existe */}
+              <img src={pet.photoURL || FALLBACK_IMAGE_URL} alt={pet.name || 'Mascota'} />
+              <span>{pet.name || 'Sin nombre'}</span>
+            </div>
+          );
+        })}
+
+        {/* Botón de añadir (siempre presente) */}
         <div className={styles.profileBubble} onClick={() => onNavigate('/add-pet')}>
           <div className={styles.addPetButton}>+</div>
           <span>Añadir</span>
