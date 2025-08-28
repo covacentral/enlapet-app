@@ -4,7 +4,7 @@ import { auth, db } from './firebase';
 import { doc, onSnapshot, collection } from 'firebase/firestore';
 import styles from './MainHeader.module.css';
 
-// Vistas hijas que antes se renderizaban
+// Vistas hijas que se renderizan
 import MissionsHeaderView from './components/MissionsHeaderView';
 import ManagementHeaderView from './components/ManagementHeaderView';
 
@@ -18,7 +18,6 @@ const MainHeader = () => {
   const [currentView, setCurrentView] = useState('default');
   const navigate = useNavigate();
 
-  // LÓGICA DE CARGA DE DATOS ORIGINAL Y FUNCIONAL
   useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged(currentUser => {
       if (currentUser) {
@@ -51,19 +50,15 @@ const MainHeader = () => {
   const isVerifiedVet = userData?.role === 'veterinarian' && userData?.isVerified;
   const getTopNavLinkClass = ({ isActive }) => isActive ? `${styles.topNavButton} ${styles.active}` : styles.topNavButton;
 
-  // RENDERIZADO CONDICIONAL DE LA VISTA INTERNA
   const renderInnerContent = () => {
     switch (currentView) {
       case 'missions':
-        // Se pasan las props correctas ('pets')
         return <MissionsHeaderView pets={pets} />;
       case 'management':
         return <ManagementHeaderView pets={pets} />;
       default:
-        // El contenido de la vista por defecto ahora vive aquí para mayor control
         return (
           <>
-            {/* 1. BARRA DE NAVEGACIÓN SUPERIOR ORIGINAL (INTACTA) */}
             <div className={styles.topNavBar}>
               <button className={styles.topNavButton} title="Buscar (Próximamente)">
                 <Search size={22} />
@@ -82,7 +77,6 @@ const MainHeader = () => {
               </NavLink>
             </div>
             
-            {/* 2. NUEVO CARRUSEL DE PERFILES */}
             <div className={styles.profilesCarousel}>
               <div className={styles.profileBubble} onClick={() => navigate(`/user/${user.uid}`)}>
                 <img src={user.photoURL} alt="Tu Perfil" />
@@ -90,7 +84,8 @@ const MainHeader = () => {
               </div>
               {pets.map(pet => (
                 <div key={pet.id} className={styles.profileBubble} onClick={() => navigate(`/pet/${pet.id}`)}>
-                  <img src={pet.petPictureUrl} alt={pet.name} />
+                  {/* CORRECCIÓN DEFINITIVA: Se usa 'pet.photoURL' en lugar de 'pet.petPictureUrl' */}
+                  <img src={pet.photoURL} alt={pet.name} />
                   <span>{pet.name}</span>
                 </div>
               ))}
@@ -108,7 +103,6 @@ const MainHeader = () => {
     <header className={styles.header}>
       {renderInnerContent()}
       
-      {/* 3. NUEVA BARRA DE CONTROL INFERIOR CON LÓGICA ORIGINAL */}
       <div className={styles.controlBar}>
         <button className={styles.actionButton} onClick={() => setCurrentView('missions')}>
           <Trophy />
@@ -125,7 +119,6 @@ const MainHeader = () => {
         </button>
       </div>
 
-      {/* 4. NUEVO BANNER DE ACCIÓN VERIFICADO */}
       {isVerifiedVet && (
         <div className={styles.verifiedActionBanner} onClick={() => navigate('/vet-dashboard')}>
           Panel Veterinario
