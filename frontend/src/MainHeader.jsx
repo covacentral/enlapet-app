@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth, firestore } from './firebase'; // CORREGIDO: 'db' cambiado a 'firestore'
+import { auth, db } from './firebase'; // CORREGIDO: Importando 'db' que ahora sí existe
 import { doc, getDoc, collection, onSnapshot } from 'firebase/firestore';
 import styles from './MainHeader.module.css';
 import DefaultHeaderView from './components/DefaultHeaderView';
@@ -16,13 +16,13 @@ const MainHeader = () => {
     const unsubscribeAuth = auth.onAuthStateChanged(async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
-        const userDocRef = doc(firestore, 'users', currentUser.uid); // CORREGIDO: 'db' cambiado a 'firestore'
+        const userDocRef = doc(db, 'users', currentUser.uid); // Usando la importación correcta 'db'
         const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists()) {
           setUserData(userDocSnap.data());
         }
 
-        const petsColRef = collection(firestore, 'users', currentUser.uid, 'pets'); // CORREGIDO: 'db' cambiado a 'firestore'
+        const petsColRef = collection(db, 'users', currentUser.uid, 'pets'); // Usando la importación correcta 'db'
         const unsubscribePets = onSnapshot(petsColRef, (snapshot) => {
           const petsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
           setPets(petsData);
