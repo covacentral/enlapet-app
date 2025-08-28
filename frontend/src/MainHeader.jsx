@@ -12,11 +12,11 @@ const MainHeader = () => {
   const [user, setUser] = useState(null);
   const [pets, setPets] = useState([]);
   const [userData, setUserData] = useState(null);
-  const [currentView, setCurrentView] = useState('default'); // Lógica de vistas restaurada
+  const [currentView, setCurrentView] = useState('default');
   const navigate = useNavigate();
 
   useEffect(() => {
-    const unsubscribeAuth = auth.onAuthStateChanged(async (currentUser) => {
+    const unsubscribeAuth = auth.onAuthStateChanged((currentUser) => {
       if (currentUser) {
         setUser(currentUser);
         const userDocRef = doc(db, 'users', currentUser.uid);
@@ -24,6 +24,8 @@ const MainHeader = () => {
         const unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
           if (docSnap.exists()) {
             setUserData(docSnap.data());
+          } else {
+            setUserData({}); // Si el doc no existe, usar un objeto vacío para evitar errores
           }
         });
 
@@ -47,15 +49,18 @@ const MainHeader = () => {
     return () => unsubscribeAuth();
   }, []);
 
-  const handleNavigation = (path) => {
+  const handleNavigate = (path) => {
     navigate(path);
   };
 
-  if (!user || !userData) {
+  // El componente solo se renderiza si tenemos la información mínima necesaria (el usuario de auth)
+  if (!user) {
     return null;
   }
 
-  const isVerifiedVet = userData.role === 'veterinarian' && userData.isVerified;
+  // CÓDIGO DEFENSIVO: Se accede a las propiedades de forma segura con '?.'
+  // Esto previene el error si 'userData' es null o si 'role' no existe.
+  const isVerifiedVet = userData?.role === 'veterinarian' && userData?.isVerified === true;
 
   const renderContent = () => {
     switch (currentView) {
@@ -68,7 +73,9 @@ const MainHeader = () => {
           <DefaultHeaderView
             user={user}
             pets={pets}
-            onAddPet={() => handleNavigation('/add-pet')}
+            onNavigateToUser={() => handleNavigate(`/user/${user.uid}`)}
+            onNavigateToPet={(petId) => handleNavigate(`/pet/${petId}`)}
+            onAddPet={() => handleNavigate('/add-pet')}
           />
         );
     }
@@ -76,19 +83,16 @@ const MainHeader = () => {
 
   return (
     <header className={styles.header}>
-      {/* Barra de Navegación Superior (Funcionalidad Correcta) */}
       <nav className={styles.navBar}>
-        <button className={styles.navButton} onClick={() => handleNavigation('/search')}><Search /></button>
-        <button className={styles.navButton} onClick={() => handleNavigation('/map')}><Map /></button>
-        <button className={styles.navButton} onClick={() => handleNavigation('/events')}><Calendar /></button>
-        <button className={styles.navButton} onClick={() => handleNavigation('/notifications')}><Bell /></button>
-        <button className={styles.navButton} onClick={() => handleNavigation('/store')}><ShoppingCart /></button>
+        <button className={styles.navButton} onClick={() => handleNavigate('/search')}><Search /></button>
+        <button className={styles.navButton} onClick={() => handleNavigate('/map')}><Map /></button>
+        <button className={styles.navButton} onClick={() => handleNavigate('/events')}><Calendar /></button>
+        <button className={styles.navButton} onClick={() => handleNavigate('/notifications')}><Bell /></button>
+        <button className={styles.navButton} onClick={() => handleNavigate('/store')}><ShoppingCart /></button>
       </nav>
 
-      {/* Contenido Dinámico basado en la Vista */}
       {renderContent()}
 
-      {/* Nueva Barra de Control Inferior (Funcionalidad Correcta) */}
       <div className={styles.controlBar}>
         <button className={styles.actionButton} onClick={() => setCurrentView('missions')}>
           <Trophy />
@@ -107,9 +111,8 @@ const MainHeader = () => {
         </button>
       </div>
 
-      {/* Banner de Acción para Veterinarios Verificados */}
       {isVerifiedVet && (
-        <div className={styles.verifiedActionBanner} onClick={() => handleNavigation('/vet-dashboard')}>
+        <div className={styles.verifiedActionBanner} onClick={() => handleNavigate('/vet-dashboard')}>
           Panel Veterinario
         </div>
       )}
