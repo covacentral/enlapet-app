@@ -1,0 +1,62 @@
+/* frontend/src/components/CornerButton.module.css */
+/* Versión 1.1: Reduce el tamaño del botón para un diseño más elegante. */
+
+.cornerButton {
+    position: absolute;
+    /* --- VALORES MODIFICADOS --- */
+    width: 64px;  /* Reducido de 80px */
+    height: 64px; /* Reducido de 80px */
+    background-color: rgba(0, 187, 167, 0.15);
+    color: var(--primary-accent);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.3s ease;
+    z-index: 10;
+}
+
+.cornerButton:hover {
+    background-color: var(--primary-accent);
+    color: var(--brand-cream);
+}
+
+.bottomRight {
+    bottom: 0;
+    right: 0;
+    clip-path: polygon(100% 0, 100% 100%, 0 100%);
+    /* --- VALORES MODIFICADOS --- */
+    /* Se ajusta el padding para centrar el ícono en el nuevo tamaño */
+    padding: 0 0 12px 12px; 
+    justify-content: flex-end;
+    align-items: flex-end;
+}
+
+/* Las otras posiciones se mantienen por si se usan en el futuro */
+.bottomLeft {
+    bottom: 0;
+    left: 0;
+    clip-path: polygon(0 0, 100% 100%, 0 100%);
+    padding: 0 12px 12px 0;
+    justify-content: flex-start;
+    align-items: flex-end;
+}
+
+.topRight {
+    top: 0;
+    right: 0;
+    clip-path: polygon(100% 100%, 0 0, 100% 0);
+    padding: 12px 0 0 12px;
+    justify-content: flex-end;
+    align-items: flex-start;
+}
+
+.topLeft {
+    top: 0;
+    left: 0;
+    clip-path: polygon(0 100%, 0 0, 100% 0);
+    padding: 12px 12px 0 0;
+    justify-content: flex-start;
+    align-items: flex-start;
+}
