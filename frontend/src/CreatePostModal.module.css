@@ -1,137 +1,137 @@
 /* frontend/src/CreatePostModal.module.css */
-/* Estilos específicos para el modal de creación de "Momentos". */
+/* Versión 1.3: Se añade scroll interno para el contenido del modal. */
 
-.content {
-    background-color: var(--background-light);
-    border: 1px solid var(--border-color);
-    border-radius: 15px;
-    width: 90%;
-    max-width: 550px;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  }
-  
-  .form {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-  }
-  
-  .body {
-    padding: 16px;
-  }
-  
-  .imageUploadArea {
-    width: 100%;
-    height: 300px;
-    background-color: var(--background-dark);
-    border-radius: 8px;
-    border: 2px dashed var(--border-color);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: border-color 0.2s;
-    margin-bottom: 16px;
-    overflow: hidden;
-  }
-  
-  .imageUploadArea:hover {
-    border-color: var(--primary-accent);
-  }
-  
-  .uploadPromptContent {
-    text-align: center;
-    color: var(--text-secondary);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-  }
-  
-  .imagePreview {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-  
-  /* --- Selector de Autor --- */
-  .authorSelectorContainer {
-    padding: 16px 0 16px 16px;
-    border-bottom: 1px solid var(--border-color);
-    overflow-x: auto;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-  }
-  
-  .authorSelectorContainer::-webkit-scrollbar {
-    display: none;
-  }
-  
-  .authorSelectorScroll {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-  }
-  
-  .authorBubble {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    text-decoration: none;
-    color: var(--text-secondary);
-    transition: color 0.2s;
-  }
-  
-  .authorBubble:hover {
-    color: var(--text-primary);
-  }
-  
-  .authorBubbleImage {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    border: 3px solid transparent;
-    padding: 2px;
-    transition: border-color 0.2s;
-  }
-  
-  .authorBubbleImage img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 50%;
-  }
-  
-  .authorBubble.selected .authorBubbleImage {
-    border-color: var(--primary-accent);
-  }
-  
-  .authorBubbleName {
-    font-size: 0.8rem;
-    font-weight: bold;
-    white-space: nowrap;
-  }
-
-  /* --- [NUEVO] Estilos para el banner de misión --- */
-.missionTagInfo {
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
   display: flex;
+  justify-content: center;
   align-items: center;
-  gap: 8px;
-  background-color: var(--background-dark);
-  border: 1px solid var(--border-color);
-  border-left: 3px solid var(--primary-accent);
-  border-radius: 6px;
-  padding: 10px 12px;
-  font-size: 0.9rem;
-  color: var(--text-secondary);
+  z-index: 1000;
 }
 
-.missionTagInfo strong {
+.modalContent {
+  background-color: var(--background-light);
+  padding: 2rem;
+  border-radius: 15px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  
+  /* --- CAMBIOS APLICADOS AQUÍ --- */
+  max-height: 90vh; /* 1. Se limita la altura máxima al 90% de la altura de la pantalla */
+  overflow-y: auto; /* 2. Se añade un scroll vertical SÓLO si el contenido se desborda */
+  display: flex;
+  flex-direction: column;
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  flex-shrink: 0; /* Evita que el header se encoja */
+}
+
+.modalTitle {
   color: var(--text-primary);
-  font-weight: bold;
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 1.5rem;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* --- [NUEVO] Contenedor para el contenido que debe hacer scroll --- */
+.scrollableContent {
+  overflow-y: auto; /* Mueve el scroll aquí si es necesario para el header fijo */
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding-right: 10px; /* Espacio para la barra de scroll */
+  margin-right: -10px;
+}
+
+
+.textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background-color: var(--background-dark);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 1rem;
+  resize: vertical;
+}
+
+.imagePreviewContainer {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.imagePreview {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.fileInputLabel {
+  display: inline-block;
+  padding: 0.75rem 1.25rem;
+  background-color: var(--primary-accent-dark);
+  color: var(--brand-cream);
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: center;
+}
+
+.fileInput {
+  display: none;
+}
+
+.missionInfo {
+  background-color: var(--background-dark);
+  padding: 1rem;
+  border-radius: 8px;
+  border-left: 4px solid var(--primary-accent);
+}
+
+.missionTitle {
+  margin: 0 0 0.5rem;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.missionObjective {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  flex-shrink: 0; /* Evita que las acciones se encojan */
 }
