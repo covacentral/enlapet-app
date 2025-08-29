@@ -1,13 +1,12 @@
 // frontend/src/MainHeader.jsx
-// Versión 2.6: Limpia el componente principal, que ahora delega la barra de navegación superior a DefaultHeaderView.
+// Versión 2.7: Reemplaza los CornerButton por una barra de control inferior con botones de acción circulares.
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Trophy, LayoutGrid, X } from 'lucide-react';
 
 import styles from './MainHeader.module.css';
 
-// Importamos los componentes de las vistas y el botón
-import CornerButton from './components/CornerButton';
+// Importamos solo los componentes de las vistas. CornerButton ha sido eliminado.
 import DefaultHeaderView from './components/DefaultHeaderView';
 import ManagementHeaderView from './components/ManagementHeaderView';
 import MissionsHeaderView from './components/MissionsHeaderView';
@@ -22,14 +21,12 @@ function MainHeader({ userProfile, pets, onAcceptMission, onOpenRescueModal }) {
   const missionsRef = useRef(null);
 
   useEffect(() => {
-    const defaultHeight = defaultRef.current?.offsetHeight || 0;
-    const managementHeight = managementRef.current?.offsetHeight || 0;
-    const missionsHeight = missionsRef.current?.offsetHeight || 0;
-    
-    let targetHeight = 0;
-    if (viewMode === 'default') targetHeight = defaultHeight;
-    else if (viewMode === 'management') targetHeight = managementHeight;
-    else if (viewMode === 'missions') targetHeight = missionsHeight;
+    const refs = {
+      default: defaultRef,
+      management: managementRef,
+      missions: missionsRef,
+    };
+    const targetHeight = refs[viewMode]?.current?.offsetHeight || 0;
     
     if (targetHeight > 0) {
       setMinHeight(`${targetHeight}px`);
@@ -37,12 +34,14 @@ function MainHeader({ userProfile, pets, onAcceptMission, onOpenRescueModal }) {
   }, [viewMode, userProfile, pets]);
 
   const handleToggle = (targetMode) => {
-    if (viewMode === targetMode) {
-      setViewMode(lastViewMode === targetMode ? 'default' : lastViewMode);
-    } else {
-      setLastViewMode(viewMode);
-      setViewMode(targetMode);
-    }
+    setViewMode(currentMode => {
+      if (currentMode === targetMode) {
+        setLastViewMode(currentMode);
+        return 'default';
+      }
+      setLastViewMode(currentMode);
+      return targetMode;
+    });
   };
 
   const handleToggleManagement = () => handleToggle('management');
@@ -56,7 +55,6 @@ function MainHeader({ userProfile, pets, onAcceptMission, onOpenRescueModal }) {
       className={styles.header}
       style={{ minHeight, transition: 'min-height 0.4s ease-in-out' }}
     >
-      {/* Contenedor para las vistas intercambiables */}
       <div className={styles.mainHeaderContent}>
         <div ref={defaultRef} className={`${styles.viewWrapper} ${viewMode !== 'default' ? styles.hidden : ''}`}>
           <DefaultHeaderView userProfile={userProfile} pets={pets} />
@@ -71,18 +69,28 @@ function MainHeader({ userProfile, pets, onAcceptMission, onOpenRescueModal }) {
         </div>
       </div>
       
-      <CornerButton 
-        position="bottomRight"
-        onClick={handleToggleManagement}
-        iconComponent={<ManagementIcon size={28} />}
-        aria-label="Toggle Management View"
-      />
-      <CornerButton 
-        position="bottomLeft"
-        onClick={handleToggleMissions}
-        iconComponent={<MissionsIcon size={28} />}
-        aria-label="Toggle Missions View"
-      />
+      {/* ----- INICIO DE LA MODIFICACIÓN ----- */}
+      {/* Se eliminan los CornerButton y se reemplazan por la nueva barra de control. */}
+      <div className={styles.bottomControlBar}>
+        <button 
+          className={styles.actionButton}
+          onClick={handleToggleMissions}
+          aria-label="Alternar vista de misiones"
+        >
+          <MissionsIcon size={26} />
+        </button>
+
+        <h1 className={styles.brandTitle}>enlapet</h1>
+
+        <button 
+          className={styles.actionButton}
+          onClick={handleToggleManagement}
+          aria-label="Alternar vista de gestión"
+        >
+          <ManagementIcon size={26} />
+        </button>
+      </div>
+      {/* ----- FIN DE LA MODIFICACIÓN ----- */}
     </header>
   );
 }
