@@ -1,5 +1,5 @@
 // frontend/src/ProfileLayout.jsx
-// Versión 4.9: Integra la página de notificaciones y el conteo de no leídos.
+// Versión 5.0: Añade la ruta faltante para el Panel de Veterinario.
 
 import { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
@@ -28,8 +28,9 @@ import MainHeader from './MainHeader.jsx';
 import PostDetailModal from './PostDetailModal.jsx';
 import LostAndFoundPage from './LostAndFoundPage.jsx';
 import RescueModeModal from './components/RescueModeModal.jsx';
-// --- 1. Importamos la página de Notificaciones ---
 import NotificationsPage from './NotificationsPage.jsx';
+// --- 1. IMPORTAMOS el componente del panel de veterinario ---
+import VetDashboardPage from './VetDashboardPage.jsx';
 
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -45,7 +46,6 @@ function ProfileLayout({ user }) {
   const [isRescueModalOpen, setIsRescueModalOpen] = useState(false);
   const [petForRescue, setPetForRescue] = useState(null);
   
-  // --- 2. Nuevo estado para el conteo de notificaciones ---
   const [unreadCount, setUnreadCount] = useState(0);
 
   const fetchCoreData = useCallback(async () => {
@@ -69,7 +69,6 @@ function ProfileLayout({ user }) {
     }
   }, [user]);
 
-  // --- 3. Nueva función para obtener el conteo de no leídos ---
   const fetchUnreadCount = useCallback(async () => {
     if (!user) return;
     try {
@@ -82,12 +81,10 @@ function ProfileLayout({ user }) {
             setUnreadCount(data.count);
         }
     } catch (error) {
-        // No mostramos un error al usuario por esto, es una tarea de fondo.
         console.error("Error fetching unread count:", error);
     }
   }, [user]);
 
-  // --- 4. useEffect para cargar datos y actualizar el conteo periódicamente ---
   useEffect(() => {
     setLoading(true);
     Promise.all([
@@ -95,12 +92,10 @@ function ProfileLayout({ user }) {
         fetchUnreadCount()
     ]).finally(() => setLoading(false));
 
-    // Refresca el conteo de notificaciones cada 60 segundos
     const interval = setInterval(fetchUnreadCount, 60000); 
     return () => clearInterval(interval);
   }, [fetchCoreData, fetchUnreadCount]);
 
-  // --- 5. Nueva función para marcar notificaciones como leídas ---
   const handleMarkAsRead = async () => {
     if (unreadCount === 0) return;
     try {
@@ -109,7 +104,7 @@ function ProfileLayout({ user }) {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${idToken}` }
         });
-        setUnreadCount(0); // Actualizamos el estado local inmediatamente
+        setUnreadCount(0);
     } catch (error) {
         console.error("Error marking notifications as read:", error);
     }
@@ -180,9 +175,10 @@ function ProfileLayout({ user }) {
           <Route path="store/product/:productId" element={<ProductPage />} />
           <Route path="checkout" element={<CheckoutPage />} />
           <Route path="order-confirmation" element={<OrderConfirmationPage />} />
-          
-          {/* --- 6. Añadimos la nueva ruta para la página de notificaciones --- */}
           <Route path="notifications" element={<NotificationsPage onMarkAsRead={handleMarkAsRead} />} />
+          
+          {/* --- 2. AÑADIMOS la ruta faltante para el panel --- */}
+          <Route path="vet-panel" element={<VetDashboardPage userProfile={userProfile} />} />
         </Routes>
       </main>
 
@@ -190,7 +186,6 @@ function ProfileLayout({ user }) {
         <Route path="notifications/post/:postId" element={<PostDetailModal />} />
       </Routes>
 
-      {/* --- 7. Pasamos el conteo de notificaciones a la barra de navegación --- */}
       <BottomNavBar onOpenCreatePost={handleOpenCreatePost} notificationCount={unreadCount} />
     </div>
   );
