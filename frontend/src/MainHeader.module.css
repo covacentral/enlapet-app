@@ -26,7 +26,10 @@
   display: flex;
   justify-content: space-around;
   align-items: center;
-  padding: 12px;
+  padding-top: 6px;
+  padding-bottom: 0px;
+  padding-left: 0px;
+  padding-right: 0px;
 }
 
 .topNavButton {
