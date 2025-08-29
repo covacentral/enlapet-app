@@ -19,7 +19,7 @@
   }
   
   .navIcon {
-    color: var(--gray-dark);
+    color: var(--white); /* CORRECCIÓN: Color de íconos blanco */
     cursor: pointer;
     transition: color 0.2s ease, transform 0.2s ease;
     background: none;
@@ -28,7 +28,7 @@
   }
   
   .navIcon:hover {
-    color: var(--primary-color);
+    color: var(--primary-color-light); /* Mantener hover light para contraste */
     transform: scale(1.1);
   }
   
@@ -51,23 +51,24 @@
     width: 65px;
     height: 65px;
     border-radius: 50%;
-    border: 2px solid var(--primary-color-light);
+    border: 3px solid var(--white); /* CORRECCIÓN: Borde blanco para visibilidad */
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     overflow: hidden; /* Asegura que la imagen no se salga del borde */
+    flex-shrink: 0; /* CORRECCIÓN: Asegura que las burbujas no se encojan */
+    background-color: var(--gray-medium); /* CORRECCIÓN: Fondo para burbujas sin imagen */
   }
   
   .profileBubble:hover {
     transform: scale(1.05);
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.3); /* CORRECCIÓN: Sombra blanca */
   }
   
   .userBubble {
-    border-color: var(--primary-color);
-    border-width: 3px;
+    border-color: var(--primary-color); /* Mantener borde primary para el usuario */
   }
   
   .bubbleImage {

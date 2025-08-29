@@ -1,11 +1,11 @@
 .header {
-  background: var(--white);
-  padding: 20px 20px 10px 20px; /* Reducido el padding inferior */
+  background: var(--primary-color); /* CORRECCIÓN: Fondo primary-color original */
+  padding: 20px 20px 10px 20px;
   border-radius: 0 0 30px 30px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
-  justify-content: space-between; /* Clave para el nuevo layout */
+  justify-content: space-between;
   position: relative;
   z-index: 10;
 }
@@ -15,19 +15,19 @@
   transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
 }
 
-/* --- Nuevos Estilos para la Barra de Control --- */
+/* --- Barra de Control Inferior --- */
 
 .bottomControlBar {
   display: flex;
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  margin-top: 15px; /* Espacio entre el carrusel y la barra */
+  margin-top: 15px;
   position: relative;
 }
 
 .actionButton {
-  background-color: var(--primary-color-light);
+  background-color: var(--white); /* CORRECCIÓN: Fondo blanco para los botones */
   color: var(--primary-color);
   border: none;
   border-radius: 50%;
@@ -43,7 +43,7 @@
 
 .actionButton:hover {
   transform: scale(1.1);
-  background-color: var(--primary-color);
+  background-color: var(--primary-color-light);
   color: var(--white);
 }
 
@@ -51,15 +51,15 @@
   font-family: 'cocogoose', sans-serif;
   font-weight: 800;
   font-size: 2.2rem;
-  color: var(--primary-color-light);
+  color: var(--white); /* CORRECCIÓN: Color de fuente blanco */
   position: absolute;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  pointer-events: none; /* Para que no interfiera con los clicks */
+  pointer-events: none;
 }
 
-/* --- Nuevo Estilo para el Banner de Profesional --- */
+/* --- Banner de Profesional --- */
 
 .vetPanelButton {
   background: var(--secondary-color);
@@ -69,8 +69,8 @@
   text-align: center;
   font-weight: bold;
   padding: 15px 20px;
-  margin: 15px -20px -10px -20px; /* Se expande para ocupar el padding */
-  border-radius: 0 0 30px 30px; /* Coincide con el borde del header */
+  margin: 15px -20px -10px -20px;
+  border-radius: 0 0 30px 30px;
   transition: background-color 0.2s ease;
 }
 
@@ -78,8 +78,7 @@
   background: var(--secondary-color-dark);
 }
 
-
-/* --- Clases para transiciones de vistas --- */
+/* --- Clases para transiciones --- */
 
 .fadeIn {
   opacity: 1;
@@ -90,7 +89,7 @@
   opacity: 0;
   transform: translateY(-10px);
   position: absolute;
-  top: 20px; 
+  top: 20px;
   left: 20px;
   right: 20px;
 }
