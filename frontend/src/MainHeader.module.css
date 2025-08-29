@@ -1,11 +1,11 @@
 /* frontend/src/MainHeader.module.css */
-/* Versión 1.9: Restaura los estilos para ManagementHeaderView para corregir el bug visual. */
+/* Versión 2.0: Añade estilos para el banner de usuario verificado. */
 
 .header {
   display: flex;
   flex-direction: column;
   background-color: var(--background-light);
-  padding: 25px;
+  padding: 25px 25px 0 25px; /* Reducimos el padding inferior para que el banner se pegue */
   border-radius: 15px;
   margin-bottom: 20px;
   position: relative; 
@@ -17,11 +17,10 @@
   width: 100%;
 }
 
-/* ----- ESTILOS RESTAURADOS PARA MANAGEMENT VIEW ----- */
 .managementViewContainer {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem; /* 24px */
+  gap: 1.5rem;
   width: 100%;
 }
 
@@ -64,10 +63,7 @@
 .cardCarousel::-webkit-scrollbar {
   display: none;
 }
-/* ----- FIN DE ESTILOS RESTAURADOS ----- */
 
-
-/* ----- ESTILOS DE LA NUEVA BARRA DE CONTROL (SE MANTIENEN) ----- */
 .bottomControlBar {
   display: flex;
   justify-content: space-between;
@@ -76,6 +72,7 @@
   padding-top: 20px;
   margin-top: 20px;
   border-top: 1px solid var(--border-color);
+  padding-bottom: 15px; /* Añadimos padding para separar del banner */
 }
 
 .actionButton {
@@ -98,8 +95,6 @@
   background-color: var(--primary-accent);
   color: var(--brand-cream);
 }
-/* ----- FIN DE ESTILOS DE LA BARRA DE CONTROL ----- */
-
 
 .userPetsSection {
   display: flex;
@@ -217,4 +212,25 @@
 .topNavButton.active {
   background-color: var(--primary-accent);
   color: var(--brand-cream);
+}
+
+/* ----- [NUEVO] ESTILO PARA EL BANNER DE VERIFICADO ----- */
+.verifiedUserBanner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background-color: var(--primary-accent);
+  color: var(--brand-cream);
+  text-decoration: none;
+  font-weight: bold;
+  padding: 15px 20px;
+  /* Margen negativo para que ocupe el padding del padre */
+  margin: 0 -25px 0 -25px; 
+  border-radius: 0 0 15px 15px; /* Redondea solo las esquinas inferiores */
+  transition: background-color 0.2s ease;
+}
+
+.verifiedUserBanner:hover {
+  background-color: var(--primary-accent-hover);
 }

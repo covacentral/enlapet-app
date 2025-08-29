@@ -1,10 +1,10 @@
 // frontend/src/components/DefaultHeaderView.jsx
-// Versión modificada para cambiar el perfil de usuario a una burbuja.
+// Versión 2.1: Se elimina el botón de Panel Veterinario.
 
 import React from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { auth } from '../firebase';
-import { Plus, Stethoscope, Search, Map, Calendar, Megaphone, Menu } from 'lucide-react';
+import { Plus, Search, Map, Calendar, Megaphone, Menu } from 'lucide-react'; // Se elimina Stethoscope
 
 import styles from '../MainHeader.module.css';
 import sharedStyles from '../shared.module.css';
@@ -27,7 +27,9 @@ function DefaultHeaderView({ userProfile, pets }) {
   }
   
   const currentUserId = auth.currentUser?.uid;
-  const isVerifiedVet = userProfile.verification?.status === 'verified' && userProfile.verification?.type === 'vet';
+  // ----- INICIO DE LA MODIFICACIÓN: Lógica eliminada -----
+  // La constante isVerifiedVet ha sido eliminada de aquí.
+  // ----- FIN DE LA MODIFICACIÓN -----
 
   const handleSearchClick = () => {
     alert('Próximamente: Búsqueda de usuarios, mascotas y perfiles verificados.');
@@ -57,22 +59,15 @@ function DefaultHeaderView({ userProfile, pets }) {
                   <Menu size={22} />
               </NavLink>
           </div>
-
-        {/* ----- CAMBIO 1: ELIMINACIÓN DEL PERFIL GRANDE ----- */}
-        {/* El bloque <Link> que contenía el h2, img y p del perfil ha sido eliminado de aquí. */}
         
-        {isVerifiedVet && (
-            <Link to="/dashboard/vet-panel" className={`${sharedStyles.button} ${sharedStyles.primary}`} style={{marginTop: '15px', textDecoration: 'none'}}>
-                <Stethoscope size={18} />
-                Panel Veterinario
-            </Link>
-        )}
+        {/* ----- INICIO DE LA MODIFICACIÓN: JSX eliminado ----- */}
+        {/* El Link al vet-panel que estaba aquí ha sido completamente eliminado. */}
+        {/* ----- FIN DE LA MODIFICACIÓN ----- */}
       </div>
 
       <div className={styles.userPetsSection}>
+        {/* El h1 de enlapet ya fue eliminado en un paso anterior. */}
         <div className={styles.petBubblesContainer}>
-
-          {/* ----- CAMBIO 2: ADICIÓN DE LA BURBUJA DE USUARIO ----- */}
           <Link to={`/dashboard/user/${currentUserId}`} className={`${styles.petBubble} ${styles.userBubble}`} title={userProfile.name}>
             {userProfile.profilePictureUrl ? (
               <img src={userProfile.profilePictureUrl} alt="Tu Perfil" />

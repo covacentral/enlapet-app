@@ -1,12 +1,12 @@
 // frontend/src/MainHeader.jsx
-// Versión 2.7: Reemplaza los CornerButton por una barra de control inferior con botones de acción circulares.
+// Versión 2.8: Integra el banner para usuarios verificados en la parte inferior.
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Trophy, LayoutGrid, X } from 'lucide-react';
+import { Link } from 'react-router-dom'; // Importamos Link
+import { Trophy, LayoutGrid, X, Stethoscope } from 'lucide-react'; // Importamos Stethoscope
 
 import styles from './MainHeader.module.css';
 
-// Importamos solo los componentes de las vistas. CornerButton ha sido eliminado.
 import DefaultHeaderView from './components/DefaultHeaderView';
 import ManagementHeaderView from './components/ManagementHeaderView';
 import MissionsHeaderView from './components/MissionsHeaderView';
@@ -32,6 +32,11 @@ function MainHeader({ userProfile, pets, onAcceptMission, onOpenRescueModal }) {
       setMinHeight(`${targetHeight}px`);
     }
   }, [viewMode, userProfile, pets]);
+
+  // ----- INICIO DE LA MODIFICACIÓN: Lógica movida aquí -----
+  // Usamos optional chaining (?.) para seguridad mientras carga el perfil.
+  const isVerifiedVet = userProfile?.verification?.status === 'verified' && userProfile?.verification?.type === 'vet';
+  // ----- FIN DE LA MODIFICACIÓN -----
 
   const handleToggle = (targetMode) => {
     setViewMode(currentMode => {
@@ -69,8 +74,6 @@ function MainHeader({ userProfile, pets, onAcceptMission, onOpenRescueModal }) {
         </div>
       </div>
       
-      {/* ----- INICIO DE LA MODIFICACIÓN ----- */}
-      {/* Se eliminan los CornerButton y se reemplazan por la nueva barra de control. */}
       <div className={styles.bottomControlBar}>
         <button 
           className={styles.actionButton}
@@ -90,6 +93,14 @@ function MainHeader({ userProfile, pets, onAcceptMission, onOpenRescueModal }) {
           <ManagementIcon size={26} />
         </button>
       </div>
+      
+      {/* ----- INICIO DE LA MODIFICACIÓN: JSX del banner añadido ----- */}
+      {isVerifiedVet && (
+        <Link to="/dashboard/vet-panel" className={styles.verifiedUserBanner}>
+            <Stethoscope size={18} />
+            Panel Veterinario
+        </Link>
+      )}
       {/* ----- FIN DE LA MODIFICACIÓN ----- */}
     </header>
   );
