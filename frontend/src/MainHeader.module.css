@@ -26,6 +26,7 @@
   display: flex;
   justify-content: space-around;
   align-items: center;
+  padding: 12px;
 }
 
 .topNavButton {
@@ -60,7 +61,7 @@
   align-items: flex-start;
   gap: 16px;
   overflow-x: auto;
-  padding-bottom: 12px;
+  padding-bottom: 0px;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
