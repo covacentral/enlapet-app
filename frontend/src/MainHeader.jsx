@@ -1,101 +1,77 @@
-import React, { useState, useEffect } from 'react';
+// frontend/src/MainHeader.jsx
+// Versión Final: Aplica el nuevo diseño visual sobre la arquitectura funcional original.
+
+import React, { useState, useRef, useEffect } from 'react';
+import { Trophy, LayoutGrid, X, Stethoscope } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { auth, db } from './firebase';
-import { doc, onSnapshot, collection } from 'firebase/firestore';
+import { auth } from './firebase';
+
 import styles from './MainHeader.module.css';
 
-// Vistas que el cerebro puede mostrar
+// Importamos los componentes de las vistas
 import DefaultHeaderView from './components/DefaultHeaderView';
-import MissionsHeaderView from './components/MissionsHeaderView';
 import ManagementHeaderView from './components/ManagementHeaderView';
+import MissionsHeaderView from './components/MissionsHeaderView';
 
-// Iconos para los nuevos controles
-import { Trophy, LayoutGrid, X, Stethoscope } from 'lucide-react';
-
-const MainHeader = () => {
-  const [userProfile, setUserProfile] = useState(null);
-  const [pets, setPets] = useState([]);
-  const [currentView, setCurrentView] = useState('default');
+function MainHeader({ userProfile, pets, onAcceptMission, onOpenRescueModal }) {
+  const [viewMode, setViewMode] = useState('default');
+  const [minHeight, setMinHeight] = useState('auto');
+  const viewContainerRef = useRef(null);
   const navigate = useNavigate();
 
-  // Lógica de carga de datos original y funcional. No se toca.
+  // Calcula la altura del contenedor para una transición suave
   useEffect(() => {
-    const unsubscribeAuth = auth.onAuthStateChanged(currentUser => {
-      if (currentUser) {
-        const userDocRef = doc(db, 'users', currentUser.uid);
-        const petsColRef = collection(db, 'users', currentUser.uid, 'pets');
-
-        const unsubscribeUser = onSnapshot(userDocRef, docSnap => {
-          setUserProfile(docSnap.exists() ? docSnap.data() : null);
-        });
-        const unsubscribePets = onSnapshot(petsColRef, snapshot => {
-          setPets(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        });
-
-        return () => {
-          unsubscribeUser();
-          unsubscribePets();
-        };
-      } else {
-        setUserProfile(null);
-        setPets([]);
+    if (viewContainerRef.current) {
+      const currentViewElement = viewContainerRef.current.querySelector(`.${styles.viewWrapper}:not(.${styles.hidden})`);
+      if (currentViewElement) {
+        setMinHeight(`${currentViewElement.offsetHeight}px`);
       }
-    });
-    return () => unsubscribeAuth();
-  }, []);
-
-  if (!userProfile) {
-    return <header className={`${styles.header} ${styles.loading}`}></header>;
-  }
-
-  const isVerifiedVet = userProfile.verification?.status === 'verified' && userProfile.verification?.type === 'vet';
-  const currentUserId = auth.currentUser?.uid;
-
-  const renderContent = () => {
-    switch (currentView) {
-      case 'missions':
-        return <MissionsHeaderView pets={pets} />;
-      case 'management':
-        return <ManagementHeaderView pets={pets} />;
-      default:
-        return (
-          <DefaultHeaderView
-            userProfile={userProfile}
-            pets={pets}
-            currentUserId={currentUserId}
-          />
-        );
     }
+  }, [viewMode, userProfile, pets]);
+
+  const handleViewChange = (targetMode) => {
+    setViewMode(prevMode => (prevMode === targetMode ? 'default' : targetMode));
   };
+  
+  const isVerifiedVet = userProfile?.verification?.status === 'verified' && userProfile.verification?.type === 'vet';
 
   return (
-    <header className={styles.header}>
-      {renderContent()}
-      
-      {/* NUEVA BARRA DE CONTROL INFERIOR (se muestra solo en la vista default) */}
-      {currentView === 'default' && (
-        <div className={styles.controlBar}>
-          <button className={styles.actionButton} onClick={() => setCurrentView('missions')} title="Misiones">
-            <Trophy />
-          </button>
-          <h1 className={styles.brandTitle}>enlapet</h1>
-          <button className={styles.actionButton} onClick={() => setCurrentView('management')} title="Gestión">
-            <LayoutGrid />
-          </button>
+    <header 
+      className={styles.header}
+      style={{ minHeight: viewMode === 'default' ? 'auto' : minHeight }} // Altura dinámica solo para vistas no default
+    >
+      {/* Contenedor para las vistas intercambiables */}
+      <div ref={viewContainerRef} className={styles.mainHeaderContent}>
+        <div className={`${styles.viewWrapper} ${viewMode !== 'default' ? styles.hidden : ''}`}>
+          <DefaultHeaderView userProfile={userProfile} pets={pets} />
         </div>
-      )}
-
-      {/* Botón para cerrar las otras vistas */}
-      {currentView !== 'default' && (
-         <div className={styles.controlBar}>
-            <button className={styles.closeButton} onClick={() => setCurrentView('default')} title="Cerrar">
-              <X />
-            </button>
-         </div>
-      )}
+        <div className={`${styles.viewWrapper} ${viewMode !== 'management' ? styles.hidden : ''}`}>
+          <ManagementHeaderView pets={pets} onOpenRescueModal={onOpenRescueModal} />
+        </div>
+        <div className={`${styles.viewWrapper} ${viewMode !== 'missions' ? styles.hidden : ''}`}>
+          <MissionsHeaderView pets={pets} onAcceptMission={onAcceptMission} />
+        </div>
+      </div>
       
-      {/* NUEVO BANNER DE ACCIÓN VERIFICADO */}
-      {isVerifiedVet && currentView === 'default' && (
+      {/* 3. NUEVA BARRA DE CONTROL INFERIOR */}
+      <div className={styles.controlBar}>
+        <button className={styles.actionButton} onClick={() => handleViewChange('missions')} title="Misiones">
+          <Trophy />
+        </button>
+        {viewMode === 'default' ? (
+          <h1 className={styles.brandTitle}>enlapet</h1>
+        ) : (
+          <button className={styles.closeButton} onClick={() => setViewMode('default')} title="Cerrar">
+            <X />
+          </button>
+        )}
+        <button className={styles.actionButton} onClick={() => handleViewChange('management')} title="Gestión">
+          <LayoutGrid />
+        </button>
+      </div>
+
+      {/* 4. NUEVO BANNER DE ACCIÓN VERIFICADO */}
+      {isVerifiedVet && viewMode === 'default' && (
         <div className={styles.verifiedActionBanner} onClick={() => navigate('/dashboard/vet-panel')}>
           <Stethoscope size={18} />
           <span>Panel Veterinario</span>
@@ -103,6 +79,6 @@ const MainHeader = () => {
       )}
     </header>
   );
-};
+}
 
 export default MainHeader;

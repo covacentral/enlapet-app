@@ -1,12 +1,16 @@
+// frontend/src/components/DefaultHeaderView.jsx
+// Versión Final: Muestra el nuevo diseño del carrusel y mantiene la barra de navegación original.
+
 import React from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import styles from '../MainHeader.module.css';
-import { Search, Map, Calendar, Megaphone, Menu, Plus } from 'lucide-react';
+import { auth } from '../firebase';
+import { Plus, Search, Map, Calendar, Megaphone, Menu } from 'lucide-react';
 
-// Componentes internos para mantener el código limpio, usando la lógica original
+import styles from '../MainHeader.module.css';
+
 const PetBubble = ({ pet }) => (
   <Link to={`/dashboard/pet/${pet.id}`} className={styles.petBubble} title={pet.name}>
-    <img src={pet.petPictureUrl} alt={pet.name} />
+    {pet.petPictureUrl ? <img src={pet.petPictureUrl} alt={pet.name} /> : <span>🐾</span>}
   </Link>
 );
 
@@ -16,7 +20,9 @@ const AddPetBubble = () => (
     </Link>
 );
 
-function DefaultHeaderView({ userProfile, pets, currentUserId }) {
+function DefaultHeaderView({ userProfile, pets }) {
+  const currentUserId = auth.currentUser?.uid;
+
   const handleSearchClick = () => {
     alert('Próximamente: Búsqueda de usuarios, mascotas y perfiles verificados.');
   };
@@ -49,10 +55,12 @@ function DefaultHeaderView({ userProfile, pets, currentUserId }) {
       {/* 2. NUEVO CARRUSEL DE PERFILES */}
       <div className={styles.petBubblesContainer}>
         {/* Burbuja del Usuario (Nuevo) */}
-        <Link to={`/dashboard/user/${currentUserId}`} className={styles.petBubble} title="Tu Perfil">
-          <img src={userProfile.profilePictureUrl} alt="Tu Perfil" />
-        </Link>
-
+        {userProfile && (
+            <Link to={`/dashboard/user/${currentUserId}`} className={styles.petBubble} title="Tu Perfil">
+              <img src={userProfile.profilePictureUrl} alt="Tu Perfil" />
+            </Link>
+        )}
+        
         {/* Burbujas de Mascotas (Lógica Original) */}
         {pets && pets.map(pet => <PetBubble key={pet.id} pet={pet} />)}
         
