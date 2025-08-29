@@ -1,74 +1,42 @@
-// frontend/src/components/DefaultHeaderView.jsx
-// Versión Final: Muestra el nuevo diseño del carrusel y mantiene la barra de navegación original.
-
 import React from 'react';
-import { Link, NavLink } from 'react-router-dom';
-import { auth } from '../firebase';
-import { Plus, Search, Map, Calendar, Megaphone, Menu } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import styles from './DefaultHeaderView.module.css';
+import { Compass, Calendar, Search, Menu, Plus } from 'lucide-react';
 
-import styles from '../MainHeader.module.css';
-
-const PetBubble = ({ pet }) => (
-  <Link to={`/dashboard/pet/${pet.id}`} className={styles.petBubble} title={pet.name}>
-    {pet.petPictureUrl ? <img src={pet.petPictureUrl} alt={pet.name} /> : <span>🐾</span>}
-  </Link>
-);
-
-const AddPetBubble = () => (
-    <Link to="/dashboard/pets" className={styles.addPetBubble} title="Añadir o gestionar mascotas">
-        <Plus size={32} color="var(--text-secondary)" />
-    </Link>
-);
-
-function DefaultHeaderView({ userProfile, pets }) {
-  const currentUserId = auth.currentUser?.uid;
-
-  const handleSearchClick = () => {
-    alert('Próximamente: Búsqueda de usuarios, mascotas y perfiles verificados.');
-  };
-
-  const getTopNavLinkClass = ({ isActive }) => {
-    return isActive ? `${styles.topNavButton} ${styles.active}` : styles.topNavButton;
-  };
+const DefaultHeaderView = ({ userProfile, pets }) => {
+  if (!userProfile) {
+    return <div>Cargando perfil...</div>;
+  }
 
   return (
-    <>
-      {/* 1. BARRA DE NAVEGACIÓN SUPERIOR (ORIGINAL, FUNCIONAL E INTOCADA) */}
+    <div className={styles.defaultViewContainer}>
       <div className={styles.topNavBar}>
-        <button onClick={handleSearchClick} className={styles.topNavButton} title="Buscar (Próximamente)">
-          <Search size={22} />
-        </button>
-        <NavLink to="/dashboard/map" className={getTopNavLinkClass} title="Mapa Comunitario">
-          <Map size={22} />
-        </NavLink>
-        <NavLink to="/dashboard/events" className={getTopNavLinkClass} title="Eventos">
-          <Calendar size={22} />
-        </NavLink>
-        <NavLink to="/dashboard/rescue" className={getTopNavLinkClass} title="Búsquedas Activas">
-          <Megaphone size={22} />
-        </NavLink>
-        <NavLink to="/dashboard/settings" className={getTopNavLinkClass} title="Ajustes y Menú">
-          <Menu size={22} />
-        </NavLink>
+        <Link to="/dashboard/map" className={styles.navIcon}><Compass /></Link>
+        <Link to="/dashboard/events" className={styles.navIcon}><Calendar /></Link>
+        <Link to="/dashboard/lost-and-found" className={styles.navIcon}><Search /></Link>
+        <button className={styles.navIcon}><Menu /></button>
       </div>
 
-      {/* 2. NUEVO CARRUSEL DE PERFILES */}
-      <div className={styles.petBubblesContainer}>
-        {/* Burbuja del Usuario (Nuevo) */}
-        {userProfile && (
-            <Link to={`/dashboard/user/${currentUserId}`} className={styles.petBubble} title="Tu Perfil">
-              <img src={userProfile.profilePictureUrl} alt="Tu Perfil" />
-            </Link>
-        )}
-        
-        {/* Burbujas de Mascotas (Lógica Original) */}
-        {pets && pets.map(pet => <PetBubble key={pet.id} pet={pet} />)}
-        
-        {/* Botón de Añadir Mascota (Lógica Original) */}
-        <AddPetBubble />
+      <div className={styles.profilesCarouselContainer}>
+        {/* User Profile Bubble */}
+        <Link to={`/dashboard/user/${userProfile.uid}`} className={`${styles.profileBubble} ${styles.userBubble}`}>
+          <img src={userProfile.photoURL} alt={userProfile.name} className={styles.bubbleImage} />
+        </Link>
+
+        {/* Pet Bubbles */}
+        {pets.map(pet => (
+          <Link key={pet.id} to={`/dashboard/pet/${pet.id}`} className={styles.profileBubble}>
+            <img src={pet.photoURL} alt={pet.name} className={styles.bubbleImage} />
+          </Link>
+        ))}
+
+        {/* Add Pet Bubble */}
+        <Link to="/dashboard/add-pet" className={`${styles.profileBubble} ${styles.addBubble}`}>
+          <Plus size={24} />
+        </Link>
       </div>
-    </>
+    </div>
   );
-}
+};
 
 export default DefaultHeaderView;

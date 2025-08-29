@@ -1,84 +1,91 @@
-// frontend/src/MainHeader.jsx
-// Versión Final: Aplica el nuevo diseño visual sobre la arquitectura funcional original.
-
 import React, { useState, useRef, useEffect } from 'react';
-import { Trophy, LayoutGrid, X, Stethoscope } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { auth } from './firebase';
-
+import { Link } from 'react-router-dom';
 import styles from './MainHeader.module.css';
-
-// Importamos los componentes de las vistas
 import DefaultHeaderView from './components/DefaultHeaderView';
 import ManagementHeaderView from './components/ManagementHeaderView';
 import MissionsHeaderView from './components/MissionsHeaderView';
+import { Trophy, LayoutGrid } from 'lucide-react';
 
-function MainHeader({ userProfile, pets, onAcceptMission, onOpenRescueModal }) {
+const MainHeader = ({ userProfile, pets, onAcceptMission, onOpenRescueModal }) => {
   const [viewMode, setViewMode] = useState('default');
   const [minHeight, setMinHeight] = useState('auto');
   const viewContainerRef = useRef(null);
-  const navigate = useNavigate();
+  const contentRefs = {
+    default: useRef(null),
+    management: useRef(null),
+    missions: useRef(null),
+  };
 
-  // Calcula la altura del contenedor para una transición suave
   useEffect(() => {
-    if (viewContainerRef.current) {
-      const currentViewElement = viewContainerRef.current.querySelector(`.${styles.viewWrapper}:not(.${styles.hidden})`);
-      if (currentViewElement) {
-        setMinHeight(`${currentViewElement.offsetHeight}px`);
+    const updateMinHeight = () => {
+      if (contentRefs[viewMode]?.current) {
+        const contentHeight = contentRefs[viewMode].current.offsetHeight;
+        setMinHeight(`${contentHeight}px`);
       }
-    }
+    };
+
+    updateMinHeight();
+    window.addEventListener('resize', updateMinHeight);
+    return () => window.removeEventListener('resize', updateMinHeight);
   }, [viewMode, userProfile, pets]);
 
-  const handleViewChange = (targetMode) => {
-    setViewMode(prevMode => (prevMode === targetMode ? 'default' : targetMode));
-  };
-  
-  const isVerifiedVet = userProfile?.verification?.status === 'verified' && userProfile.verification?.type === 'vet';
-
-  return (
-    <header 
-      className={styles.header}
-      style={{ minHeight: viewMode === 'default' ? 'auto' : minHeight }} // Altura dinámica solo para vistas no default
-    >
-      {/* Contenedor para las vistas intercambiables */}
-      <div ref={viewContainerRef} className={styles.mainHeaderContent}>
-        <div className={`${styles.viewWrapper} ${viewMode !== 'default' ? styles.hidden : ''}`}>
+  const renderView = () => {
+    const views = {
+      default: (
+        <div ref={contentRefs.default} className={`${styles.viewContent} ${viewMode === 'default' ? styles.fadeIn : styles.fadeOut}`}>
           <DefaultHeaderView userProfile={userProfile} pets={pets} />
         </div>
-        <div className={`${styles.viewWrapper} ${viewMode !== 'management' ? styles.hidden : ''}`}>
+      ),
+      management: (
+        <div ref={contentRefs.management} className={`${styles.viewContent} ${viewMode === 'management' ? styles.fadeIn : styles.fadeOut}`}>
           <ManagementHeaderView pets={pets} onOpenRescueModal={onOpenRescueModal} />
         </div>
-        <div className={`${styles.viewWrapper} ${viewMode !== 'missions' ? styles.hidden : ''}`}>
+      ),
+      missions: (
+        <div ref={contentRefs.missions} className={`${styles.viewContent} ${viewMode === 'missions' ? styles.fadeIn : styles.fadeOut}`}>
           <MissionsHeaderView pets={pets} onAcceptMission={onAcceptMission} />
         </div>
+      ),
+    };
+
+    return Object.keys(views).map(key => (
+      <div key={key} style={{ display: viewMode === key ? 'block' : 'none' }}>
+        {views[key]}
       </div>
-      
-      {/* 3. NUEVA BARRA DE CONTROL INFERIOR */}
-      <div className={styles.controlBar}>
-        <button className={styles.actionButton} onClick={() => handleViewChange('missions')} title="Misiones">
+    ));
+  };
+  
+  return (
+    <header className={styles.header}>
+      <div ref={viewContainerRef} className={styles.viewContainer} style={{ minHeight }}>
+        {renderView()}
+      </div>
+
+      <div className={styles.bottomControlBar}>
+        <button 
+          onClick={() => setViewMode(viewMode === 'missions' ? 'default' : 'missions')} 
+          className={styles.actionButton}
+          aria-label="Ver misiones"
+        >
           <Trophy />
         </button>
-        {viewMode === 'default' ? (
-          <h1 className={styles.brandTitle}>enlapet</h1>
-        ) : (
-          <button className={styles.closeButton} onClick={() => setViewMode('default')} title="Cerrar">
-            <X />
-          </button>
-        )}
-        <button className={styles.actionButton} onClick={() => handleViewChange('management')} title="Gestión">
+        <div className={styles.brandTitle}>enlapet</div>
+        <button 
+          onClick={() => setViewMode(viewMode === 'management' ? 'default' : 'management')} 
+          className={styles.actionButton}
+          aria-label="Gestionar mascotas"
+        >
           <LayoutGrid />
         </button>
       </div>
 
-      {/* 4. NUEVO BANNER DE ACCIÓN VERIFICADO */}
-      {isVerifiedVet && viewMode === 'default' && (
-        <div className={styles.verifiedActionBanner} onClick={() => navigate('/dashboard/vet-panel')}>
-          <Stethoscope size={18} />
-          <span>Panel Veterinario</span>
-        </div>
+      {userProfile?.isVerified && userProfile.accountType === 'vet' && (
+        <Link to="/dashboard/vet" className={styles.vetPanelButton}>
+          Panel Veterinario
+        </Link>
       )}
     </header>
   );
-}
+};
 
 export default MainHeader;
