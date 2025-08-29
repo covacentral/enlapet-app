@@ -1,8 +1,8 @@
 // frontend/src/CreatePostModal.jsx
-// Versión 2.6: Integra el contexto de Misiones.
+// Versión 2.7: Reestructura el JSX para un scroll interno robusto.
 
 import { useState, useRef } from 'react';
-import { X, UploadCloud, Hash } from 'lucide-react'; // Importamos el ícono de Hash
+import { X, UploadCloud, Hash } from 'lucide-react';
 import { auth } from './firebase';
 
 import styles from './CreatePostModal.module.css';
@@ -10,7 +10,6 @@ import sharedStyles from './shared.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-// --- (El componente AuthorSelector no sufre cambios) ---
 const AuthorSelector = ({ userProfile, pets, selectedAuthor, onSelectAuthor }) => {
   const userProfileWithId = { ...userProfile, id: auth.currentUser.uid };
   const allProfiles = [userProfileWithId, ...pets];
@@ -20,12 +19,12 @@ const AuthorSelector = ({ userProfile, pets, selectedAuthor, onSelectAuthor }) =
       <div className={styles.authorSelectorScroll}>
         {allProfiles.map(profile => {
           const isSelected = profile.id === selectedAuthor.id;
-          const isUser = !profile.ownerId; 
+          const isUser = !profile.ownerId;
           const profilePic = isUser ? profile.profilePictureUrl : profile.petPictureUrl;
 
           return (
-            <div 
-              key={profile.id} 
+            <div
+              key={profile.id}
               className={`${styles.authorBubble} ${isSelected ? styles.selected : ''}`}
               onClick={() => onSelectAuthor(profile)}
             >
@@ -41,7 +40,6 @@ const AuthorSelector = ({ userProfile, pets, selectedAuthor, onSelectAuthor }) =
   );
 };
 
-// --- 1. El componente principal ahora acepta 'missionContext' ---
 function CreatePostModal({ userProfile, pets, initialAuthor, onClose, onPostCreated, missionContext = null }) {
     const userProfileWithId = { ...userProfile, id: auth.currentUser.uid };
     const [selectedAuthor, setSelectedAuthor] = useState(initialAuthor || userProfileWithId);
@@ -76,7 +74,6 @@ function CreatePostModal({ userProfile, pets, initialAuthor, onClose, onPostCrea
         formData.append('authorId', selectedAuthor.id);
         formData.append('authorType', authorType);
         
-        // --- 2. Si hay un contexto de misión, lo añadimos al payload ---
         if (missionContext) {
             formData.append('missionId', missionContext.missionId);
             formData.append('petId', missionContext.petId);
@@ -98,7 +95,7 @@ function CreatePostModal({ userProfile, pets, initialAuthor, onClose, onPostCrea
             }
 
             setMessage('¡Momento publicado con éxito!');
-            onPostCreated(data.post); 
+            onPostCreated(data.post);
             setTimeout(() => {
                 onClose();
             }, 1500);
@@ -115,27 +112,29 @@ function CreatePostModal({ userProfile, pets, initialAuthor, onClose, onPostCrea
       : `¿Qué estás pensando, ${selectedAuthor.name.split(' ')[0]}?`;
 
     return (
-        <div className={sharedStyles.modalBackdrop} onClick={onClose}>
+        <div className={styles.modalBackdrop} onClick={onClose}>
             <div className={styles.content} onClick={e => e.stopPropagation()}>
+                {/* --- The Header and AuthorSelector are now outside the form --- */}
                 <div className={sharedStyles.modalHeader}>
-                    {/* El título cambia si es una misión */}
                     <h2>{missionContext ? 'Completar Misión' : 'Crear un nuevo Momento'}</h2>
                     <button onClick={onClose} className={sharedStyles.closeButton} disabled={isLoading}>
                         <X size={24} />
                     </button>
                 </div>
                 
-                <AuthorSelector 
-                  userProfile={userProfile} 
-                  pets={pets} 
-                  selectedAuthor={selectedAuthor} 
+                <AuthorSelector
+                  userProfile={userProfile}
+                  pets={pets}
+                  selectedAuthor={selectedAuthor}
                   onSelectAuthor={setSelectedAuthor}
                 />
 
+                {/* --- The form now wraps only the body and footer --- */}
                 <form onSubmit={handleSubmit} className={styles.form}>
+                    {/* --- [NEW] This div is now the scrollable area --- */}
                     <div className={styles.body}>
-                        <div 
-                            className={styles.imageUploadArea} 
+                        <div
+                            className={styles.imageUploadArea}
                             onClick={() => fileInputRef.current.click()}
                         >
                             {previewImage ? (
@@ -148,12 +147,12 @@ function CreatePostModal({ userProfile, pets, initialAuthor, onClose, onPostCrea
                                 </div>
                             )}
                         </div>
-                        <input 
-                            type="file" 
-                            accept="image/*" 
-                            ref={fileInputRef} 
-                            onChange={handleImageChange} 
-                            style={{ display: 'none' }} 
+                        <input
+                            type="file"
+                            accept="image/*"
+                            ref={fileInputRef}
+                            onChange={handleImageChange}
+                            style={{ display: 'none' }}
                         />
                         <div className={sharedStyles.formGroup}>
                             <textarea
@@ -168,7 +167,6 @@ function CreatePostModal({ userProfile, pets, initialAuthor, onClose, onPostCrea
                             ></textarea>
                         </div>
                         
-                        {/* --- 3. Mostramos el banner informativo del hashtag --- */}
                         {missionContext && (
                             <div className={styles.missionTagInfo}>
                                 <Hash size={14} />
@@ -176,12 +174,13 @@ function CreatePostModal({ userProfile, pets, initialAuthor, onClose, onPostCrea
                             </div>
                         )}
                     </div>
+                    {/* --- The footer is the last element in the form --- */}
                     <div className={sharedStyles.modalFooter}>
                         {message && <p className={sharedStyles.responseMessage}>{message}</p>}
-                        <button 
-                          type="submit" 
-                          className={`${sharedStyles.button} ${sharedStyles.primary}`} 
-                          style={{width: '100%'}} 
+                        <button
+                          type="submit"
+                          className={`${sharedStyles.button} ${sharedStyles.primary}`}
+                          style={{width: '100%'}}
                           disabled={isLoading}
                         >
                             {isLoading ? 'Publicando...' : (missionContext ? 'Completar Misión' : 'Publicar Momento')}
