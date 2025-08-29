@@ -5,7 +5,6 @@
 /* ESTRUCTURA PRINCIPAL Y ESTADO DE CARGA        */
 /* ============================================= */
 .header {
-  /* CAMBIO: Se aplican los estilos del diseño de referencia */
   background: linear-gradient(180deg, #8E2DE2 0%, #4A00E0 100%);
   color: white;
   padding: 12px 16px;
@@ -14,9 +13,8 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 16px; /* Aumentado de 8px para crear más espacio */
   margin-bottom: 16px;
-  transition: min-height 0.3s ease;
 }
 
 /* ============================================= */
