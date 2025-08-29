@@ -70,7 +70,6 @@ function DefaultHeaderView({ userProfile, pets }) {
       </div>
 
       <div className={styles.userPetsSection}>
-        <h1 className={styles.brandTitle}>enlapet</h1>
         <div className={styles.petBubblesContainer}>
 
           {/* ----- CAMBIO 2: ADICIÓN DE LA BURBUJA DE USUARIO ----- */}
