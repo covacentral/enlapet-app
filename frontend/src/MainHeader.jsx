@@ -1,13 +1,12 @@
 // frontend/src/MainHeader.jsx
-// Versión 2.6: Limpia el componente principal, que ahora delega la barra de navegación superior a DefaultHeaderView.
+// Versión 2.8: Integra el banner para usuarios verificados en la parte inferior.
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Trophy, LayoutGrid, X } from 'lucide-react';
+import { Link } from 'react-router-dom'; // Importamos Link
+import { Trophy, LayoutGrid, X, Stethoscope } from 'lucide-react'; // Importamos Stethoscope
 
 import styles from './MainHeader.module.css';
 
-// Importamos los componentes de las vistas y el botón
-import CornerButton from './components/CornerButton';
 import DefaultHeaderView from './components/DefaultHeaderView';
 import ManagementHeaderView from './components/ManagementHeaderView';
 import MissionsHeaderView from './components/MissionsHeaderView';
@@ -22,27 +21,32 @@ function MainHeader({ userProfile, pets, onAcceptMission, onOpenRescueModal }) {
   const missionsRef = useRef(null);
 
   useEffect(() => {
-    const defaultHeight = defaultRef.current?.offsetHeight || 0;
-    const managementHeight = managementRef.current?.offsetHeight || 0;
-    const missionsHeight = missionsRef.current?.offsetHeight || 0;
-    
-    let targetHeight = 0;
-    if (viewMode === 'default') targetHeight = defaultHeight;
-    else if (viewMode === 'management') targetHeight = managementHeight;
-    else if (viewMode === 'missions') targetHeight = missionsHeight;
+    const refs = {
+      default: defaultRef,
+      management: managementRef,
+      missions: missionsRef,
+    };
+    const targetHeight = refs[viewMode]?.current?.offsetHeight || 0;
     
     if (targetHeight > 0) {
       setMinHeight(`${targetHeight}px`);
     }
   }, [viewMode, userProfile, pets]);
 
+  // ----- INICIO DE LA MODIFICACIÓN: Lógica movida aquí -----
+  // Usamos optional chaining (?.) para seguridad mientras carga el perfil.
+  const isVerifiedVet = userProfile?.verification?.status === 'verified' && userProfile?.verification?.type === 'vet';
+  // ----- FIN DE LA MODIFICACIÓN -----
+
   const handleToggle = (targetMode) => {
-    if (viewMode === targetMode) {
-      setViewMode(lastViewMode === targetMode ? 'default' : lastViewMode);
-    } else {
-      setLastViewMode(viewMode);
-      setViewMode(targetMode);
-    }
+    setViewMode(currentMode => {
+      if (currentMode === targetMode) {
+        setLastViewMode(currentMode);
+        return 'default';
+      }
+      setLastViewMode(currentMode);
+      return targetMode;
+    });
   };
 
   const handleToggleManagement = () => handleToggle('management');
@@ -56,7 +60,6 @@ function MainHeader({ userProfile, pets, onAcceptMission, onOpenRescueModal }) {
       className={styles.header}
       style={{ minHeight, transition: 'min-height 0.4s ease-in-out' }}
     >
-      {/* Contenedor para las vistas intercambiables */}
       <div className={styles.mainHeaderContent}>
         <div ref={defaultRef} className={`${styles.viewWrapper} ${viewMode !== 'default' ? styles.hidden : ''}`}>
           <DefaultHeaderView userProfile={userProfile} pets={pets} />
@@ -71,18 +74,34 @@ function MainHeader({ userProfile, pets, onAcceptMission, onOpenRescueModal }) {
         </div>
       </div>
       
-      <CornerButton 
-        position="bottomRight"
-        onClick={handleToggleManagement}
-        iconComponent={<ManagementIcon size={28} />}
-        aria-label="Toggle Management View"
-      />
-      <CornerButton 
-        position="bottomLeft"
-        onClick={handleToggleMissions}
-        iconComponent={<MissionsIcon size={28} />}
-        aria-label="Toggle Missions View"
-      />
+      <div className={styles.bottomControlBar}>
+        <button 
+          className={styles.actionButton}
+          onClick={handleToggleMissions}
+          aria-label="Alternar vista de misiones"
+        >
+          <MissionsIcon size={26} />
+        </button>
+
+        <h1 className={styles.brandTitle}>enlapet</h1>
+
+        <button 
+          className={styles.actionButton}
+          onClick={handleToggleManagement}
+          aria-label="Alternar vista de gestión"
+        >
+          <ManagementIcon size={26} />
+        </button>
+      </div>
+      
+      {/* ----- INICIO DE LA MODIFICACIÓN: JSX del banner añadido ----- */}
+      {isVerifiedVet && (
+        <Link to="/dashboard/vet-panel" className={styles.verifiedUserBanner}>
+            <Stethoscope size={18} />
+            Panel Veterinario
+        </Link>
+      )}
+      {/* ----- FIN DE LA MODIFICACIÓN ----- */}
     </header>
   );
 }

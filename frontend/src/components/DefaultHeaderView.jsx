@@ -1,10 +1,10 @@
 // frontend/src/components/DefaultHeaderView.jsx
-// Versión 1.2: Se integra la barra de navegación superior y se reestructura el layout.
+// Versión 2.1: Se elimina el botón de Panel Veterinario.
 
 import React from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { auth } from '../firebase';
-import { Plus, Stethoscope, Search, Map, Calendar, Megaphone, Menu } from 'lucide-react';
+import { Plus, Search, Map, Calendar, Megaphone, Menu } from 'lucide-react'; // Se elimina Stethoscope
 
 import styles from '../MainHeader.module.css';
 import sharedStyles from '../shared.module.css';
@@ -27,7 +27,9 @@ function DefaultHeaderView({ userProfile, pets }) {
   }
   
   const currentUserId = auth.currentUser?.uid;
-  const isVerifiedVet = userProfile.verification?.status === 'verified' && userProfile.verification?.type === 'vet';
+  // ----- INICIO DE LA MODIFICACIÓN: Lógica eliminada -----
+  // La constante isVerifiedVet ha sido eliminada de aquí.
+  // ----- FIN DE LA MODIFICACIÓN -----
 
   const handleSearchClick = () => {
     alert('Próximamente: Búsqueda de usuarios, mascotas y perfiles verificados.');
@@ -38,10 +40,8 @@ function DefaultHeaderView({ userProfile, pets }) {
   };
 
   return (
-    // Usamos un Fragment para que este componente no imponga un div extra. El layout lo manejan las clases de los elementos hijos.
     <>
       <div className={styles.userProfileSection}>
-          {/* La barra de navegación ahora vive aquí y se posiciona con 'order: -1' desde el CSS */}
           <div className={styles.topNavBar}>
               <button onClick={handleSearchClick} className={styles.topNavButton} title="Buscar (Próximamente)">
                   <Search size={22} />
@@ -59,30 +59,23 @@ function DefaultHeaderView({ userProfile, pets }) {
                   <Menu size={22} />
               </NavLink>
           </div>
-
-        <Link to={`/dashboard/user/${currentUserId}`} className={styles.userProfileLink}>
-            <h2 className={styles.userName}>{userProfile.name}</h2>
-            <div className={styles.profilePictureContainer}>
-              {userProfile.profilePictureUrl ? (
-                <img src={userProfile.profilePictureUrl} alt="Perfil" className={styles.profilePicture} />
-              ) : (
-                <div className={styles.profilePicturePlaceholder}>👤</div>
-              )}
-            </div>
-            <p className={styles.profileBio}>{userProfile.bio || 'Sin biografía.'}</p>
-        </Link>
         
-        {isVerifiedVet && (
-            <Link to="/dashboard/vet-panel" className={`${sharedStyles.button} ${sharedStyles.primary}`} style={{marginTop: '15px', textDecoration: 'none'}}>
-                <Stethoscope size={18} />
-                Panel Veterinario
-            </Link>
-        )}
+        {/* ----- INICIO DE LA MODIFICACIÓN: JSX eliminado ----- */}
+        {/* El Link al vet-panel que estaba aquí ha sido completamente eliminado. */}
+        {/* ----- FIN DE LA MODIFICACIÓN ----- */}
       </div>
 
       <div className={styles.userPetsSection}>
-        <h1 className={styles.brandTitle}>enlapet</h1>
+        {/* El h1 de enlapet ya fue eliminado en un paso anterior. */}
         <div className={styles.petBubblesContainer}>
+          <Link to={`/dashboard/user/${currentUserId}`} className={`${styles.petBubble} ${styles.userBubble}`} title={userProfile.name}>
+            {userProfile.profilePictureUrl ? (
+              <img src={userProfile.profilePictureUrl} alt="Tu Perfil" />
+            ) : (
+              <div className={styles.profilePicturePlaceholder} style={{fontSize: '24px'}}>👤</div>
+            )}
+          </Link>
+
           {pets && pets.length > 0 ? (
             pets.map(pet => <PetBubble key={pet.id} pet={pet} />)
           ) : (
