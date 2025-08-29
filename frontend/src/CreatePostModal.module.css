@@ -1,137 +1,159 @@
 /* frontend/src/CreatePostModal.module.css */
-/* Estilos específicos para el modal de creación de "Momentos". */
+/* Versión 2.7: Reestructura para un scroll interno robusto con header/footer fijos. */
+
+.modalBackdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1001;
+  backdrop-filter: blur(5px);
+}
 
 .content {
-    background-color: var(--background-light);
-    border: 1px solid var(--border-color);
-    border-radius: 15px;
-    width: 90%;
-    max-width: 550px;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  }
-  
-  .form {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-  }
-  
-  .body {
-    padding: 16px;
-  }
-  
-  .imageUploadArea {
-    width: 100%;
-    height: 300px;
-    background-color: var(--background-dark);
-    border-radius: 8px;
-    border: 2px dashed var(--border-color);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: border-color 0.2s;
-    margin-bottom: 16px;
-    overflow: hidden;
-  }
-  
-  .imageUploadArea:hover {
-    border-color: var(--primary-accent);
-  }
-  
-  .uploadPromptContent {
-    text-align: center;
-    color: var(--text-secondary);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-  }
-  
-  .imagePreview {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-  
-  /* --- Selector de Autor --- */
-  .authorSelectorContainer {
-    padding: 16px 0 16px 16px;
-    border-bottom: 1px solid var(--border-color);
-    overflow-x: auto;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-  }
-  
-  .authorSelectorContainer::-webkit-scrollbar {
-    display: none;
-  }
-  
-  .authorSelectorScroll {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-  }
-  
-  .authorBubble {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    text-decoration: none;
-    color: var(--text-secondary);
-    transition: color 0.2s;
-  }
-  
-  .authorBubble:hover {
-    color: var(--text-primary);
-  }
-  
-  .authorBubbleImage {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    border: 3px solid transparent;
-    padding: 2px;
-    transition: border-color 0.2s;
-  }
-  
-  .authorBubbleImage img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 50%;
-  }
-  
-  .authorBubble.selected .authorBubbleImage {
-    border-color: var(--primary-accent);
-  }
-  
-  .authorBubbleName {
-    font-size: 0.8rem;
-    font-weight: bold;
-    white-space: nowrap;
-  }
+  background-color: var(--background-light);
+  border: 1px solid var(--border-color);
+  border-radius: 15px;
+  width: 90%;
+  max-width: 550px;
+  /* --- CAMBIOS CLAVE --- */
+  max-height: 90vh; /* 1. Se limita la altura máxima */
+  display: flex; /* 2. Se activa flexbox en columna */
+  flex-direction: column;
+  overflow: hidden; /* 3. Se oculta el overflow del contenedor principal */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
 
-  /* --- [NUEVO] Estilos para el banner de misión --- */
-.missionTagInfo {
+.form {
+  display: flex;
+  flex-direction: column;
+  /* El formulario ocupa todo el espacio disponible */
+  flex-grow: 1; 
+  overflow: hidden; /* Oculta su propio overflow */
+}
+
+/* --- [NUEVO] Contenedor para el contenido que debe hacer scroll --- */
+.body {
+  padding: 16px;
+  overflow-y: auto; /* 4. El scroll vertical se aplica AQUÍ */
+  flex-grow: 1; /* Permite que esta área se expanda */
+}
+
+.imageUploadArea {
+  width: 100%;
+  height: 300px;
+  background-color: var(--background-dark);
+  border-radius: 8px;
+  border: 2px dashed var(--border-color);
   display: flex;
   align-items: center;
-  gap: 8px;
-  background-color: var(--background-dark);
-  border: 1px solid var(--border-color);
-  border-left: 3px solid var(--primary-accent);
-  border-radius: 6px;
-  padding: 10px 12px;
-  font-size: 0.9rem;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+.imageUploadArea:hover {
+  border-color: var(--primary-accent);
+}
+
+.uploadPromptContent {
+  text-align: center;
   color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.imagePreview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* --- Selector de Autor --- */
+.authorSelectorContainer {
+  padding: 16px 0 16px 16px;
+  border-bottom: 1px solid var(--border-color);
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  flex-shrink: 0; /* No se encoge */
+}
+
+.authorSelectorContainer::-webkit-scrollbar {
+  display: none;
+}
+
+.authorSelectorScroll {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.authorBubble {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  text-decoration: none;
+  color: var(--text-secondary);
+  transition: color 0.2s;
+}
+
+.authorBubble:hover {
+  color: var(--text-primary);
+}
+
+.authorBubbleImage {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  padding: 2px;
+  transition: border-color 0.2s;
+}
+
+.authorBubbleImage img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.authorBubble.selected .authorBubbleImage {
+  border-color: var(--primary-accent);
+}
+
+.authorBubbleName {
+  font-size: 0.8rem;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+/* --- Estilos para el banner de misión --- */
+.missionTagInfo {
+display: flex;
+align-items: center;
+gap: 8px;
+background-color: var(--background-dark);
+border: 1px solid var(--border-color);
+border-left: 3px solid var(--primary-accent);
+border-radius: 6px;
+padding: 10px 12px;
+font-size: 0.9rem;
+color: var(--text-secondary);
 }
 
 .missionTagInfo strong {
-  color: var(--text-primary);
-  font-weight: bold;
+color: var(--text-primary);
+font-weight: bold;
 }
