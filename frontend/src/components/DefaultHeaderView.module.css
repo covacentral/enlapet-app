@@ -1,0 +1,89 @@
+/* ==========================================================================
+   Estilos para DefaultHeaderView
+   ========================================================================== */
+
+   .defaultViewContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 15px; /* Espacio entre la topNavBar y el carrusel */
+  }
+  
+  /* --- Top Navigation Bar --- */
+  .topNavBar {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 5px 0;
+    width: 100%;
+    order: -1; /* Mantiene la barra de navegación visualmente arriba */
+  }
+  
+  .navIcon {
+    color: var(--gray-dark);
+    cursor: pointer;
+    transition: color 0.2s ease, transform 0.2s ease;
+    background: none;
+    border: none;
+    padding: 5px;
+  }
+  
+  .navIcon:hover {
+    color: var(--primary-color);
+    transform: scale(1.1);
+  }
+  
+  /* --- Profiles Carousel --- */
+  .profilesCarouselContainer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    overflow-x: auto;
+    padding: 10px 5px; /* Pequeño padding para que las sombras no se corten */
+    scrollbar-width: none; /* Firefox */
+  }
+  
+  .profilesCarouselContainer::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+  
+  .profileBubble {
+    min-width: 65px;
+    width: 65px;
+    height: 65px;
+    border-radius: 50%;
+    border: 2px solid var(--primary-color-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    overflow: hidden; /* Asegura que la imagen no se salga del borde */
+  }
+  
+  .profileBubble:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  .userBubble {
+    border-color: var(--primary-color);
+    border-width: 3px;
+  }
+  
+  .bubbleImage {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  .addBubble {
+    background-color: var(--gray-light);
+    border: 2px dashed var(--gray-medium);
+    color: var(--gray-dark);
+  }
+  
+  .addBubble:hover {
+    background-color: var(--primary-color-light);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+  }
