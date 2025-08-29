@@ -1,9 +1,9 @@
 // frontend/src/MainHeader.jsx
-// Versión 2.9: Alinea los nombres de clase con el nuevo CSS del diseño vibrante.
+// Versión 2.8: Integra el banner para usuarios verificados en la parte inferior.
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Trophy, LayoutGrid, X, Stethoscope } from 'lucide-react';
+import { Link } from 'react-router-dom'; // Importamos Link
+import { Trophy, LayoutGrid, X, Stethoscope } from 'lucide-react'; // Importamos Stethoscope
 
 import styles from './MainHeader.module.css';
 
@@ -33,7 +33,10 @@ function MainHeader({ userProfile, pets, onAcceptMission, onOpenRescueModal }) {
     }
   }, [viewMode, userProfile, pets]);
 
+  // ----- INICIO DE LA MODIFICACIÓN: Lógica movida aquí -----
+  // Usamos optional chaining (?.) para seguridad mientras carga el perfil.
   const isVerifiedVet = userProfile?.verification?.status === 'verified' && userProfile?.verification?.type === 'vet';
+  // ----- FIN DE LA MODIFICACIÓN -----
 
   const handleToggle = (targetMode) => {
     setViewMode(currentMode => {
@@ -71,14 +74,13 @@ function MainHeader({ userProfile, pets, onAcceptMission, onOpenRescueModal }) {
         </div>
       </div>
       
-      {/* CAMBIO: Se actualiza el className a .controlBar */}
-      <div className={styles.controlBar}>
+      <div className={styles.bottomControlBar}>
         <button 
           className={styles.actionButton}
           onClick={handleToggleMissions}
           aria-label="Alternar vista de misiones"
         >
-          <MissionsIcon size={24} />
+          <MissionsIcon size={26} />
         </button>
 
         <h1 className={styles.brandTitle}>enlapet</h1>
@@ -88,17 +90,18 @@ function MainHeader({ userProfile, pets, onAcceptMission, onOpenRescueModal }) {
           onClick={handleToggleManagement}
           aria-label="Alternar vista de gestión"
         >
-          <ManagementIcon size={24} />
+          <ManagementIcon size={26} />
         </button>
       </div>
       
+      {/* ----- INICIO DE LA MODIFICACIÓN: JSX del banner añadido ----- */}
       {isVerifiedVet && (
-        // CAMBIO: Se actualiza el className a .verifiedActionBanner
-        <Link to="/dashboard/vet-panel" className={styles.verifiedActionBanner}>
+        <Link to="/dashboard/vet-panel" className={styles.verifiedUserBanner}>
             <Stethoscope size={18} />
             Panel Veterinario
         </Link>
       )}
+      {/* ----- FIN DE LA MODIFICACIÓN ----- */}
     </header>
   );
 }

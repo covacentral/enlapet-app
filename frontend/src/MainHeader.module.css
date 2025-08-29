@@ -1,67 +1,89 @@
-/* ============================================= */
-/* ESTRUCTURA PRINCIPAL Y ESTADO DE CARGA        */
-/* ============================================= */
+/* frontend/src/MainHeader.module.css */
+/* Versión 2.1: Implementa el nuevo tema de color vibrante. */
+
 .header {
-  background: var(--gradient-brand);
-  color: white;
-  padding: 12px 16px;
-  border-radius: 24px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  margin-bottom: 16px;
-  transition: min-height 0.3s ease;
+  /* CAMBIO: Fondo degradado */
+  background: linear-gradient(135deg, #4f46e5 0%, #a21caf 100%);
+  padding: 25px 25px 0 25px;
+  border-radius: 15px;
+  margin-bottom: 20px;
+  position: relative; 
+  overflow: hidden; 
 }
 
-.header.loading {
-  min-height: 150px;
+.mainHeaderContent {
+  position: relative;
+  width: 100%;
 }
 
-/* ============================================= */
-/* BARRA DE NAVEGACIÓN SUPERIOR (ESTILOS ORIGINALES) */
-/* ============================================= */
-.topNavBar {
+/* (Estilos de ManagementView se mantienen sin cambios) */
+.managementViewContainer { display: flex; flex-direction: column; gap: 1.5rem; width: 100%; }
+.nfcBanner { background: linear-gradient(90deg, var(--primary-accent) 0%, #06b6d4 100%); padding: 1rem; border-radius: 8px; text-align: left; text-decoration: none; display: block; }
+.nfcBannerTitle { font-size: 1.1rem; font-weight: 800; color: white; margin: 0 0 4px 0; }
+.nfcBannerText { font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); margin: 0; }
+.managementViewTitle { font-size: 1.2rem; font-weight: 800; text-align: left; margin: 0 0 0.5rem 0; }
+.cardCarousel { display: flex; gap: 1rem; overflow-x: auto; padding: 0.5rem 0; scrollbar-width: none; }
+.cardCarousel::-webkit-scrollbar { display: none; }
+
+
+.bottomControlBar {
   display: flex;
-  justify-content: space-around;
+  justify-content: space-between;
   align-items: center;
+  width: 100%;
+  padding-top: 20px;
+  margin-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2); /* CAMBIO: Borde más claro */
+  padding-bottom: 15px;
 }
 
-.topNavButton {
-  background: none;
+.actionButton {
+  /* CAMBIO: Estilo de botón invertido */
+  background-color: var(--brand-cream);
+  color: var(--primary-accent);
   border: none;
-  color: white;
+  border-radius: 50%;
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  opacity: 0.7;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-  padding: 4px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.actionButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  background-color: #e2e8f0; /* Un gris claro para el hover */
+}
+
+.userPetsSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.brandTitle {
+  font-family: 'cocogoose', sans-serif;
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--brand-cream); /* CAMBIO: Color de texto blanco */
+  margin: 0;
+}
+
+.petBubblesContainer {
   display: flex;
   justify-content: center;
   align-items: center;
-}
-
-.topNavButton:hover {
-  opacity: 1;
-  transform: scale(1.1);
-}
-
-.topNavButton.active {
-  opacity: 1;
-  transform: scale(1.1);
-}
-
-/* ============================================= */
-/* NUEVO CARRUSEL DE PERFILES                    */
-/* ============================================= */
-.petBubblesContainer {
-  display: flex;
-  align-items: center;
-  gap: 16px;
+  gap: 1rem;
+  width: 100%;
   overflow-x: auto;
-  padding-block: 8px;
+  padding-bottom: 5px;
   scrollbar-width: none;
-  -ms-overflow-style: none;
 }
 
 .petBubblesContainer::-webkit-scrollbar {
@@ -69,113 +91,111 @@
 }
 
 .petBubble, .addPetBubble {
-  flex-shrink: 0;
+  min-width: 60px;
   width: 60px;
   height: 60px;
   border-radius: 50%;
+  /* CAMBIO: Borde blanco y más grueso */
+  border: 4px solid var(--brand-cream); 
   display: flex;
-  justify-content: center;
   align-items: center;
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  justify-content: center;
+  overflow: hidden;
+  transition: border-color 0.2s ease;
 }
 
-.petBubble:hover, .addPetBubble:hover {
-  transform: scale(1.05);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-}
-
-.petBubble img {
+.petBubble img, .userBubble img {
   width: 100%;
   height: 100%;
-  border-radius: 50%;
-  border: 2px solid white;
   object-fit: cover;
 }
 
+.petBubble:hover {
+  border-color: #a78bfa; /* Un lila claro para el hover */
+}
+
+.userBubble {
+  border-color: #a78bfa; /* Borde lila para destacar al usuario */
+  border-width: 4px;
+}
+
 .addPetBubble {
-  border: 2px dashed rgba(255, 255, 255, 0.5);
-  background-color: rgba(255, 255, 255, 0.1);
+  border-style: dashed;
+  /* CAMBIO: Fondo blanco para la burbuja de añadir */
+  background-color: var(--brand-cream); 
+  transition: all 0.2s ease;
 }
 
-/* ============================================= */
-/* NUEVA BARRA DE CONTROL INFERIOR               */
-/* ============================================= */
-.controlBar {
+.addPetBubble:hover {
+  border-color: #a78bfa;
+  background-color: #ede9fe;
+}
+
+.noPetsHeader {
+  color: var(--brand-cream); /* CAMBIO: Color de texto blanco */
+  opacity: 0.8;
+  font-size: 0.9rem;
+}
+
+.viewWrapper {
+  width: 100%;
+  transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
+}
+
+.viewWrapper.hidden {
+  opacity: 0;
+  transform: scale(0.98);
+  position: absolute;
+  top: 25px;
+  left: 25px;
+  right: 25px;
+  pointer-events: none;
+}
+
+.topNavBar {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 8px;
-  margin-top: auto;
+  justify-content: center;
+  gap: 1rem;
+  width: 100%;
+  order: -1;
+  margin-bottom: 15px;
 }
 
-.controlBar .closeButton {
-  margin: 0 auto; /* Centra el botón de cierre cuando no hay otros elementos */
-}
-
-.brandTitle {
-  color: #ffffff;
-  text-align: center;
-  flex-grow: 1;
-  font-family: 'Poppins', sans-serif;
-  font-weight: 700;
-  font-size: 24px;
-  margin: 0;
-}
-
-.actionButton {
-  background-color: white;
-  color: var(--color-primary);
+.topNavButton {
+  background: none;
   border: none;
-  width: 48px;
-  height: 48px;
+  padding: 8px;
   border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  color: var(--brand-cream); /* CAMBIO: Íconos blancos */
   cursor: pointer;
-  transition: transform 0.2s ease;
+  transition: all 0.2s ease;
 }
 
-.actionButton:hover {
-  transform: scale(1.05);
+.topNavButton:hover {
+  background-color: rgba(255, 255, 255, 0.15); /* CAMBIO: Fondo translúcido en hover */
 }
 
-.closeButton {
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
-  color: white;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
+.topNavButton.active {
+  background-color: rgba(255, 255, 255, 0.1); /* CAMBIO: Fondo translúcido para activo */
+  color: var(--brand-cream);
 }
 
-/* ============================================= */
-/* NUEVO BANNER DE VETERINARIO                   */
-/* ============================================= */
-.verifiedActionBanner {
-  background-color: #FFD700;
-  color: #2c2c2c;
-  font-weight: 600;
-  padding: 12px 16px;
-  margin: 12px -16px -12px -16px;
-  border-bottom-left-radius: 24px;
-  border-bottom-right-radius: 24px;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
+.verifiedUserBanner {
   display: flex;
-  justify-content: center;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 10px;
+  /* CAMBIO: Color sólido que complementa el degradado */
+  background-color: #312e81; /* Indigo 900 */
+  color: var(--brand-cream);
   text-decoration: none;
+  font-weight: bold;
+  padding: 15px 20px;
+  margin: 0 -25px 0 -25px; 
+  border-radius: 0 0 15px 15px;
+  transition: background-color 0.2s ease;
 }
 
-.verifiedActionBanner:hover {
-  background-color: #f0c400;
+.verifiedUserBanner:hover {
+  background-color: #3730a3; /* Indigo 800 */
 }
