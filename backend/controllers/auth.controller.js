@@ -1,8 +1,9 @@
 // backend/controllers/auth.controller.js
 // Lógica de negocio para el registro y la autenticación.
+// VERSIÓN 2.0: Refactorizado para usar auth.service.js
 
-const { db, auth } = require('../config/firebase');
-const { getNewUserProfile } = require('../models/user.model'); // <-- 1. IMPORTAMOS el nuevo modelo de usuario
+const { auth } = require('../config/firebase');
+const authService = require('../services/auth.service'); // <-- 1. IMPORTAMOS el servicio
 
 /**
  * Registra un nuevo usuario con email y contraseña.
@@ -17,10 +18,9 @@ const registerUser = async (req, res) => {
     // 1. Crear el usuario en Firebase Authentication.
     const userRecord = await auth.createUser({ email, password, displayName: name });
 
-    // 2. Crear el documento de perfil del usuario en Firestore usando el modelo.
-    // <-- 2. UTILIZAMOS el modelo para generar la estructura de datos
-    const newUserProfile = getNewUserProfile(name, email);
-    await db.collection('users').doc(userRecord.uid).set(newUserProfile);
+    // 2. LLAMAMOS AL SERVICIO para crear el perfil en Firestore.
+    // La lógica de si existe o no, y cómo se crea, está ahora en el servicio.
+    await authService.findOrCreateUser(userRecord.uid, name, email);
 
     res.status(201).json({ message: 'Usuario registrado con éxito', uid: userRecord.uid });
   } catch (error) {
@@ -47,26 +47,25 @@ const googleAuth = async (req, res) => {
   try {
     const decodedToken = await auth.verifyIdToken(idToken);
     const { uid, name, email, picture } = decodedToken;
-    const userRef = db.collection('users').doc(uid);
-    const userDoc = await userRef.get();
 
-    // 1. Si el usuario no existe en Firestore, lo creamos usando el modelo.
-    if (!userDoc.exists) {
-      // <-- 3. UTILIZAMOS el modelo también para el registro con Google
-      const newUserProfile = getNewUserProfile(name, email, picture || '');
-      await userRef.set(newUserProfile);
-      return res.status(201).json({ message: 'Usuario registrado y autenticado con Google.', uid });
-    } else {
-      // 2. Si ya existe, simplemente confirmamos la autenticación.
-      return res.status(200).json({ message: 'Usuario autenticado con Google.', uid });
-    }
+    // LLAMAMOS AL SERVICIO para encontrar o crear el usuario en Firestore.
+    const { isNewUser } = await authService.findOrCreateUser(uid, name, email, picture);
+    
+    const message = isNewUser 
+      ? 'Usuario registrado y autenticado con Google.' 
+      : 'Usuario autenticado con Google.';
+    
+    const statusCode = isNewUser ? 201 : 200;
+
+    return res.status(statusCode).json({ message, uid });
+
   } catch (error) {
-    console.error('Error en googleAuth:', error);
-    res.status(500).json({ message: 'Error en la autenticación con Google.' });
+    console.error("Error en googleAuth:", error);
+    return res.status(401).json({ message: "Token de Google inválido o expirado." });
   }
 };
 
 module.exports = {
   registerUser,
-  googleAuth
+  googleAuth,
 };
