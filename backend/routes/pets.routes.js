@@ -1,8 +1,13 @@
 // backend/routes/pets.routes.js
-// Versión 2.4 - Añade la ruta para obtener las misiones completadas.
+// Versión 3.0: Añade validación de datos para la creación y actualización de mascotas.
 
 const { Router } = require('express');
 const multer = require('multer');
+
+// --- 1. Importamos middleware y esquemas ---
+const validateRequest = require('../middleware/validateRequest');
+const { createPetSchema, updatePetSchema } = require('../models/pet.model');
+
 const {
     getMyPets,
     createPet,
@@ -10,7 +15,7 @@ const {
     uploadPetPicture,
     managePatientLink,
     manageRescueMode,
-    getCompletedMissions // <-- 1. Importamos la nueva función del controlador
+    getCompletedMissions
 } = require('../controllers/pet.controller');
 
 // Configuración de Multer para la subida de archivos en memoria
@@ -26,11 +31,13 @@ router.get('/pets', getMyPets);
 
 // URL: /api/pets
 // Método: POST
-router.post('/pets', createPet);
+// --- 2. Aplicamos el middleware de validación para la creación ---
+router.post('/pets', validateRequest(createPetSchema), createPet);
 
 // URL: /api/pets/:petId
 // Método: PUT
-router.put('/pets/:petId', updatePet);
+// --- 3. Aplicamos el middleware de validación para la actualización ---
+router.put('/pets/:petId', validateRequest(updatePetSchema), updatePet);
 
 // URL: /api/pets/:petId/picture
 // Método: POST
@@ -41,13 +48,11 @@ router.post('/pets/:petId/picture', upload.single('petPicture'), uploadPetPictur
 router.post('/pets/:petId/manage-link', managePatientLink);
 
 // URL: /api/pets/:petId/rescue-mode
-// Método: PUT
-router.put('/pets/:petId/rescue-mode', manageRescueMode);
+// Método: POST
+router.post('/pets/:petId/rescue-mode', manageRescueMode);
 
-// --- [NUEVA RUTA] ---
 // URL: /api/pets/:petId/completed-missions
 // Método: GET
-// Función: Obtiene el historial de misiones (hitos) de una mascota.
 router.get('/pets/:petId/completed-missions', getCompletedMissions);
 
 
