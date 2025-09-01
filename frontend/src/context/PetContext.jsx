@@ -1,8 +1,8 @@
 // frontend/src/context/PetContext.jsx
-// VERSIÓN CORREGIDA: Reacciona a los cambios de AuthContext para un flujo de datos unidireccional.
+// VERSIÓN CORREGIDA 2.1: Exporta fetchPets para permitir actualizaciones desde los componentes.
 
 import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
-import { useAuth } from './AuthContext'; // <-- 1. Importamos useAuth para escuchar cambios.
+import { useAuth } from './AuthContext';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -20,10 +20,10 @@ export const PetProvider = ({ children }) => {
   const [pets, setPets] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const { currentUser } = useAuth(); // <-- 2. Obtenemos el usuario actual de AuthContext.
+  const { currentUser } = useAuth();
 
   const fetchPets = useCallback(async () => {
-    if (!currentUser) return; // No hacer nada si no hay usuario.
+    if (!currentUser) return;
 
     setIsLoading(true);
     setError(null);
@@ -44,13 +44,12 @@ export const PetProvider = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [currentUser]); // <-- El currentUser es ahora la dependencia.
+  }, [currentUser]);
 
   const clearPets = () => {
     setPets([]);
   };
 
-  // 3. Este useEffect reacciona a los cambios en currentUser.
   useEffect(() => {
     if (currentUser) {
       fetchPets();
@@ -63,7 +62,7 @@ export const PetProvider = ({ children }) => {
     pets,
     isLoading,
     error,
-    // Las funciones de fetch/clear ya no necesitan ser exportadas.
+    fetchPets, // <-- AÑADIDO: Exponemos la función para refrescar.
   };
 
   return <PetContext.Provider value={value}>{children}</PetContext.Provider>;
