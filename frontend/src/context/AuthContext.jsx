@@ -1,5 +1,5 @@
 // frontend/src/context/AuthContext.jsx
-// VERSIÓN 2.0: Integra la carga de datos de UserContext y PetContext.
+// VERSIÓN CORREGIDA: Elimina dependencias circulares. Su única responsabilidad es el estado de autenticación.
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import {
@@ -11,8 +11,6 @@ import {
   onAuthStateChanged,
 } from 'firebase/auth';
 import { auth } from '../firebase';
-import { useUser } from './UserContext';
-import { usePets } from './PetContext'; // <-- 1. Importamos el hook de PetContext
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -29,17 +27,8 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const { fetchUserProfile, clearUserProfile } = useUser();
-  const { fetchPets, clearPets } = usePets(); // <-- 2. Obtenemos las funciones de PetContext
 
-  const fetchAllUserData = async () => {
-    await Promise.all([fetchUserProfile(), fetchPets()]);
-  };
-
-  const clearAllUserData = () => {
-    clearUserProfile();
-    clearPets();
-  };
+  // Las funciones de UserContext y PetContext han sido eliminadas de aquí.
 
   const signUp = async (name, email, password) => {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -53,15 +42,13 @@ export const AuthProvider = ({ children }) => {
       },
       body: JSON.stringify({ name, email, password }),
     });
-
-    await fetchAllUserData(); // <-- 3. Cargamos todos los datos del usuario
+    // Ya no se llama a fetchUserProfile aquí.
     return userCredential;
   };
 
-  const signIn = async (email, password) => {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    await fetchAllUserData(); // <-- 3. Cargamos todos los datos del usuario
-    return userCredential;
+  const signIn = (email, password) => {
+    // Ya no se llama a fetchUserProfile aquí.
+    return signInWithEmailAndPassword(auth, email, password);
   };
 
   const signInWithGoogle = async () => {
@@ -74,24 +61,19 @@ export const AuthProvider = ({ children }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ idToken })
     });
-
-    await fetchAllUserData(); // <-- 3. Cargamos todos los datos del usuario
+    // Ya no se llama a fetchUserProfile aquí.
     return result;
   };
 
-  const signOut = async () => {
-    await firebaseSignOut(auth);
-    clearAllUserData(); // <-- 4. Limpiamos todos los datos del usuario
+  const signOut = () => {
+    // Ya no se llama a clearUserProfile aquí.
+    return firebaseSignOut(auth);
   };
 
   useEffect(() => {
+    // Este efecto ahora solo actualiza currentUser.
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
-      if (user) {
-        fetchAllUserData();
-      } else {
-        clearAllUserData();
-      }
       setLoading(false);
     });
     return unsubscribe;

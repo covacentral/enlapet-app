@@ -1,14 +1,13 @@
 // frontend/src/context/PetContext.jsx
+// VERSIÓN CORREGIDA: Reacciona a los cambios de AuthContext para un flujo de datos unidireccional.
 
-import React, { createContext, useState, useContext, useCallback } from 'react';
-import { auth } from '../firebase';
+import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
+import { useAuth } from './AuthContext'; // <-- 1. Importamos useAuth para escuchar cambios.
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-// 1. Creamos el Contexto
 const PetContext = createContext();
 
-// 2. Hook personalizado para consumir el contexto
 export const usePets = () => {
   const context = useContext(PetContext);
   if (!context) {
@@ -17,23 +16,19 @@ export const usePets = () => {
   return context;
 };
 
-// 3. Creamos el Proveedor del Contexto
 export const PetProvider = ({ children }) => {
   const [pets, setPets] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const { currentUser } = useAuth(); // <-- 2. Obtenemos el usuario actual de AuthContext.
 
   const fetchPets = useCallback(async () => {
-    const user = auth.currentUser;
-    if (!user) {
-      setPets([]);
-      return;
-    }
+    if (!currentUser) return; // No hacer nada si no hay usuario.
 
     setIsLoading(true);
     setError(null);
     try {
-      const idToken = await user.getIdToken();
+      const idToken = await currentUser.getIdToken();
       const response = await fetch(`${API_URL}/api/pets`, {
         headers: { 'Authorization': `Bearer ${idToken}` },
       });
@@ -49,18 +44,26 @@ export const PetProvider = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [currentUser]); // <-- El currentUser es ahora la dependencia.
 
   const clearPets = () => {
     setPets([]);
   };
 
+  // 3. Este useEffect reacciona a los cambios en currentUser.
+  useEffect(() => {
+    if (currentUser) {
+      fetchPets();
+    } else {
+      clearPets();
+    }
+  }, [currentUser, fetchPets]);
+
   const value = {
     pets,
     isLoading,
     error,
-    fetchPets,
-    clearPets,
+    // Las funciones de fetch/clear ya no necesitan ser exportadas.
   };
 
   return <PetContext.Provider value={value}>{children}</PetContext.Provider>;

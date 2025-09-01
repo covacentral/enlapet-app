@@ -1,5 +1,5 @@
 // frontend/src/main.jsx
-// Versión 3.1: Integra PetProvider y corrige el orden de anidación de los contextos.
+// VERSIÓN CORREGIDA: Establece el orden de anidación correcto para los proveedores de contexto.
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
@@ -10,7 +10,7 @@ import * as Sentry from "@sentry/react";
 import App from './App.jsx';
 import { AuthProvider } from './context/AuthContext.jsx';
 import { UserProvider } from './context/UserContext.jsx';
-import { PetProvider } from './context/PetContext.jsx'; // <-- 1. Importamos PetProvider
+import { PetProvider } from './context/PetContext.jsx';
 import './index.css';
 import 'leaflet/dist/leaflet.css';
 
@@ -35,8 +35,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        {/* 2. Corregimos y anidamos los proveedores en el orden correcto. */}
-        {/* AuthProvider es el más externo, ya que UserProvider y PetProvider dependen de él. */}
+        {/* El orden correcto es AuthProvider en el nivel más externo. */}
+        {/* UserProvider y PetProvider son "hijos" que consumen el estado de AuthProvider. */}
         <AuthProvider>
           <UserProvider>
             <PetProvider>
