@@ -1,8 +1,13 @@
 // backend/routes/posts.routes.js
-// VERSIÓN CORREGIDA: Añade la ruta para obtener un post por ID.
+// VERSIÓN 3.0: Añade validación de datos para la creación de posts.
 
 const { Router } = require('express');
 const multer = require('multer');
+
+// --- 1. Importamos middleware y esquema ---
+const validateRequest = require('../middleware/validateRequest');
+const { createPostSchema } = require('../models/post.model');
+
 const {
     getFeed,
     createPost,
@@ -16,7 +21,7 @@ const {
     unsavePost,
     getSaveStatuses,
     getSavedPosts,
-    getPostById // <-- 1. Importamos la nueva función
+    getPostById
 } = require('../controllers/post.controller');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
@@ -28,23 +33,23 @@ router.get('/feed', getFeed);
 router.get('/user/saved-posts', getSavedPosts);
 
 // --- Rutas de Posts Generales ---
-router.post('/posts', upload.single('postImage'), createPost);
+// --- 2. Aplicamos el middleware de validación a la creación de posts ---
+router.post('/posts', upload.single('postImage'), validateRequest(createPostSchema), createPost);
 router.get('/posts/by-author/:authorId', getPostsByAuthor);
 
 // --- Rutas de Estados (Like y Guardado) ---
 router.post('/posts/like-statuses', getLikeStatuses);
 router.post('/posts/save-statuses', getSaveStatuses);
 
-// --- [NUEVO] Ruta para un Post Específico ---
-// Debe ir antes de las rutas con /:postId/ para evitar conflictos de enrutamiento.
-router.get('/posts/:postId', getPostById); // <-- 2. Añadimos la nueva ruta
+// --- Ruta para un Post Específico ---
+router.get('/posts/:postId', getPostById);
 
 // --- Rutas de Interacción con Posts Específicos ---
-router.post('/posts/:postId/like', likePost);
-router.delete('/posts/:postId/unlike', unlikePost);
-router.post('/posts/:postId/comment', addComment);
-router.get('/posts/:postId/comments', getComments);
-router.post('/posts/:postId/save', savePost);
-router.delete('/posts/:postId/unsave', unsavePost);
+router.post('/:postId/like', likePost);
+router.delete('/:postId/like', unlikePost);
+router.post('/:postId/comments', addComment);
+router.get('/:postId/comments', getComments);
+router.post('/:postId/save', savePost);
+router.delete('/:postId/save', unsavePost);
 
 module.exports = router;

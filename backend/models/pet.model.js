@@ -1,10 +1,10 @@
 // backend/models/pet.model.js
 // Define la estructura y los valores por defecto para un documento de mascota en Firestore.
+// VERSIÓN 2.0: Introduce esquemas de validación con Zod.
 
-// Usaremos una versión de nanoid compatible con CommonJS (la que instalamos es v3.x)
+const { z } = require('zod');
 const { customAlphabet } = require('nanoid');
 
-// Generador para el EnlaPet ID (EPID): 6 caracteres, alfanumérico, mayúsculas.
 const generateEPID = customAlphabet('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ', 6);
 
 /**
@@ -13,6 +13,11 @@ const generateEPID = customAlphabet('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ', 6);
  * @property {string} department
  * @property {string} city
  */
+const petLocationSchema = z.object({
+  country: z.string().optional(),
+  department: z.string().optional(),
+  city: z.string().optional(),
+});
 
 /**
  * @typedef {Object} HealthRecord
@@ -21,26 +26,23 @@ const generateEPID = customAlphabet('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ', 6);
  * @property {Array<Object>} vaccines
  * @property {Array<Object>} medicalHistory
  */
+const healthRecordSchema = z.object({
+  birthDate: z.string().optional(),
+  gender: z.enum(['Macho', 'Hembra', '']).optional(),
+  vaccines: z.array(z.object({
+    id: z.string(),
+    name: z.string(),
+    date: z.string(),
+    nextDate: z.string().optional(),
+  })).optional(),
+  medicalHistory: z.array(z.object({
+    id: z.string(),
+    title: z.string(),
+    date: z.string(),
+    description: z.string(),
+  })).optional(),
+});
 
-/**
- * @typedef {Object} VetLink
- * @property {string} vetId - UID del veterinario vinculado.
- * @property {string} linkedAt - Fecha del vínculo en formato ISO.
- * @property {'pending' | 'active' | 'revoked'} status - Estado del vínculo.
- */
-
-/**
- * [NUEVO] Define la estructura para el modo de rescate de una mascota.
- * @typedef {Object} RescueMode
- * @property {boolean} isActive - Si el modo rescate está activo o no.
- * @property {string | null} activatedAt - Fecha de activación en formato ISO.
- * @property {Object} lastSeen - Información sobre el último avistamiento.
- * @property {import('firebase-admin').firestore.GeoPoint | null} lastSeen.coordinates - Coordenadas del último avistamiento.
- * @property {string} lastSeen.address - Descripción textual de la ubicación.
- * @property {number} lastSeen.radius - Radio de búsqueda en metros.
- * @property {string} message - Mensaje personalizado del dueño para quien encuentre a la mascota.
- * @property {boolean} showContactPhone - Decide si el teléfono del dueño se muestra en el perfil de rescate.
- */
 
 /**
  * Devuelve el objeto base para un nuevo perfil de mascota.
@@ -53,37 +55,50 @@ const getNewPetProfile = (ownerId, name, breed = '') => ({
   ownerId,
   name,
   breed,
-  epid: generateEPID(), // Asignamos un EnlaPet ID único al nacer
+  epid: generateEPID(),
   createdAt: new Date().toISOString(),
   petPictureUrl: '',
-  /** @type {PetLocation} */
   location: { country: 'Colombia', department: '', city: '' },
-  /** @type {HealthRecord} */
   healthRecord: { birthDate: '', gender: '', vaccines: [], medicalHistory: [] },
   followersCount: 0,
-  /** @type {Array<VetLink>} */
   linkedVets: [],
-  activeVetIds: [], // Para consultas eficientes de veterinarios activos
-  /** @type {RescueMode} */
+  activeVetIds: [],
   rescueMode: {
     isActive: false,
     activatedAt: null,
     lastSeen: {
       coordinates: null,
       address: '',
-      radius: 1000 // Radio por defecto de 1km
+      radius: 1000
     },
     message: '',
     showContactPhone: true
   },
-  // Para perfiles creados por veterinarios para dueños sin cuenta
   unclaimedInfo: {
     isUnclaimed: false,
-    ownerIdentifier: null, // ej. Cédula o teléfono del dueño
-    createdByVet: null // ID del veterinario que lo creó
+    ownerIdentifier: null,
+    createdByVet: null
   }
 });
 
+// --- Esquemas de Zod para Validación ---
+
+const basePetSchema = z.object({
+  name: z.string().min(2, "El nombre debe tener al menos 2 caracteres.").max(50, "El nombre no puede exceder los 50 caracteres."),
+  breed: z.string().max(50, "La raza no puede exceder los 50 caracteres.").optional(),
+  location: petLocationSchema.optional(),
+  healthRecord: healthRecordSchema.optional(),
+});
+
+const createPetSchema = z.object({
+    name: z.string().min(2, "El nombre es requerido.").max(50),
+    breed: z.string().max(50).optional(),
+});
+
+const updatePetSchema = basePetSchema.partial();
+
 module.exports = {
-  getNewPetProfile
+  getNewPetProfile,
+  createPetSchema,
+  updatePetSchema,
 };

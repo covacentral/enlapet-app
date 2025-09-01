@@ -1,8 +1,14 @@
 // backend/routes/profile.routes.js
 // Define los endpoints PROTEGIDOS para la gestión de perfiles de usuario y seguimiento.
+// VERSIÓN 2.0: Añade validación de datos para la actualización de perfiles.
 
 const { Router } = require('express');
 const multer = require('multer');
+
+// --- 1. Importamos el middleware de validación y el esquema de usuario ---
+const validateRequest = require('../middleware/validateRequest');
+const { updateUserSchema } = require('../models/user.model');
+
 const { 
     getCurrentUserProfile,
     updateUserProfile,
@@ -27,7 +33,11 @@ router.get('/profile', getCurrentUserProfile);
 // URL: /api/profile
 // Método: PUT
 // Función: Actualiza el perfil del usuario autenticado.
-router.put('/profile', updateUserProfile);
+// --- 2. Aplicamos el middleware de validación a esta ruta ---
+// Ahora, antes de que se ejecute 'updateUserProfile', 'validateRequest' verificará
+// que los datos en req.body cumplan con la estructura de 'updateUserSchema'.
+router.put('/profile', validateRequest(updateUserSchema), updateUserProfile);
+
 
 // URL: /api/profile/picture
 // Método: POST
