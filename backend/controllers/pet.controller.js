@@ -1,9 +1,9 @@
 // backend/controllers/pet.controller.js
-// VERSIÓN 3.0: Refactorizado para usar pet.service.js en funciones CRUD.
+// VERSIÓN 3.1: CORREGIDO. Asegura que las fotos de mascotas subidas sean públicas.
 
 const { db, bucket } = require('../config/firebase');
 const admin = require('firebase-admin');
-const petService = require('../services/pet.service'); // <-- IMPORTAMOS el servicio
+const petService = require('../services/pet.service');
 
 // --- FUNCIONES REFACTORIZADAS (Usan pet.service.js) ---
 
@@ -131,17 +131,11 @@ const uploadPetPicture = async (req, res) => {
         });
 
         blobStream.on('finish', async () => {
+            // --- [CORRECCIÓN] ---
+            // 1. Hacemos el archivo públicamente legible.
+            await fileUpload.makePublic();
 
-            try {
-                await blob.makePublic()
-              } catch (error) {
-                console.error('Error al hacer pública la imagen:', error)
-                return res
-                  .status(500)
-                  .json({ message: 'La imagen se subió pero no se pudo hacer pública.' })
-              }// hace pública la foto de perfil pet
-
-
+            // 2. Obtenemos la URL pública y la guardamos en la base de datos.
             const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
             await petRef.update({ petPictureUrl: publicUrl });
             res.status(200).json({ message: 'Foto de perfil actualizada con éxito.', petPictureUrl: publicUrl });
