@@ -1,196 +1,257 @@
-import {
-    getNewPetProfile,
-    petProfileSchema,
-    updatePetProfileSchema
-  } from '../models/pet.model.js'
-  import {
-    findPetsByOwnerId,
+// backend/controllers/pet.controller.js
+// VERSIÓN 3.0: Refactorizado para usar pet.service.js en funciones CRUD.
+
+const { db, bucket } = require('../config/firebase');
+const admin = require('firebase-admin');
+const petService = require('../services/pet.service'); // <-- IMPORTAMOS el servicio
+
+// --- FUNCIONES REFACTORIZADAS (Usan pet.service.js) ---
+
+const getMyPets = async (req, res) => {
+    try {
+        const { uid } = req.user;
+        const pets = await petService.findPetsByOwnerId(uid);
+        res.status(200).json(pets);
+    } catch (error) {
+        console.error('Error en getMyPets:', error);
+        res.status(500).json({ message: 'Error interno al obtener las mascotas.' });
+    }
+};
+
+const createPet = async (req, res) => {
+    try {
+        const { uid } = req.user;
+        const { name, breed } = req.body;
+        const newPet = await petService.createPetProfile(uid, name, breed);
+        res.status(201).json({ message: 'Mascota registrada con éxito.', ...newPet });
+    } catch (error) {
+        console.error('Error en createPet:', error);
+        res.status(500).json({ message: 'Error interno al crear la mascota.' });
+    }
+};
+
+const updatePet = async (req, res) => {
+    try {
+        const { uid } = req.user;
+        const { petId } = req.params;
+        const updateData = req.body;
+        await petService.updatePetDetails(uid, petId, updateData);
+        res.status(200).json({ message: 'Perfil de la mascota actualizado con éxito.' });
+    } catch (error) {
+        console.error(`Error en updatePet para petId ${req.params.petId}:`, error);
+        if (error.message === 'Mascota no encontrada.') {
+            return res.status(404).json({ message: error.message });
+        }
+        if (error.message === 'No autorizado para modificar esta mascota.') {
+            return res.status(403).json({ message: error.message });
+        }
+        res.status(500).json({ message: 'Error interno al actualizar la mascota.' });
+    }
+};
+
+const getCompletedMissions = async (req, res) => {
+    try {
+        const { uid } = req.user;
+        const { petId } = req.params;
+        const missionsData = await petService.getCompletedMissionsForPet(uid, petId);
+        res.status(200).json(missionsData);
+    } catch (error) {
+        console.error(`Error en getCompletedMissions para petId ${req.params.petId}:`, error);
+        if (error.message.startsWith('No autorizado')) {
+            return res.status(403).json({ message: error.message });
+        }
+        res.status(500).json({ message: 'Error interno al obtener el historial de misiones.' });
+    }
+};
+
+
+// --- FUNCIONES NO REFACTORIZADAS (Mantienen lógica original) ---
+
+const getPetPublicProfile = async (req, res) => {
+    try {
+        const { petId } = req.params;
+        const petDoc = await db.collection('pets').doc(petId).get();
+        if (!petDoc.exists) {
+            return res.status(404).json({ message: 'Mascota no encontrada.' });
+        }
+
+        const petData = petDoc.data();
+        const userDoc = await db.collection('users').doc(petData.ownerId).get();
+
+        let ownerData = { id: petData.ownerId, name: 'Responsable', phone: 'No disponible' };
+
+        if (userDoc.exists) {
+            const fullOwnerData = userDoc.data();
+            ownerData = {
+                id: petData.ownerId,
+                name: fullOwnerData.name,
+                phone: fullOwnerData.phone || 'No proporcionado'
+            };
+        }
+
+        if (petData.rescueMode?.isActive && !petData.rescueMode?.showContactPhone) {
+            ownerData.phone = 'Contacto Oculto por el Dueño';
+        }
+
+        res.status(200).json({ pet: petData, owner: ownerData });
+
+    } catch (error) {
+        console.error(`Error en getPetPublicProfile para petId ${req.params.petId}:`, error);
+        res.status(500).json({ message: 'Error interno del servidor.' });
+    }
+};
+
+const uploadPetPicture = async (req, res) => {
+    try {
+        const { uid } = req.user;
+        const { petId } = req.params;
+        const file = req.file;
+
+        if (!file) {
+            return res.status(400).json({ message: 'No se proporcionó ningún archivo.' });
+        }
+
+        const petRef = db.collection('pets').doc(petId);
+        const petDoc = await petRef.get();
+
+        if (!petDoc.exists || petDoc.data().ownerId !== uid) {
+            return res.status(403).json({ message: 'No autorizado para modificar esta mascota.' });
+        }
+
+        const fileName = `pets-pictures/${petId}/${Date.now()}_${file.originalname}`;
+        const fileUpload = bucket.file(fileName);
+
+        const blobStream = fileUpload.createWriteStream({
+            metadata: { contentType: file.mimetype }
+        });
+
+        blobStream.on('error', (error) => {
+            console.error(error);
+            res.status(500).json({ message: 'Error al subir la imagen.' });
+        });
+
+        blobStream.on('finish', async () => {
+
+            try {
+                await blob.makePublic()
+              } catch (error) {
+                console.error('Error al hacer pública la imagen:', error)
+                return res
+                  .status(500)
+                  .json({ message: 'La imagen se subió pero no se pudo hacer pública.' })
+              }// hace pública la foto de perfil pet
+
+
+            const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+            await petRef.update({ petPictureUrl: publicUrl });
+            res.status(200).json({ message: 'Foto de perfil actualizada con éxito.', petPictureUrl: publicUrl });
+        });
+
+        blobStream.end(file.buffer);
+    } catch (error) {
+        console.error(`Error en uploadPetPicture para petId ${req.params.petId}:`, error);
+        res.status(500).json({ message: 'Error interno del servidor.' });
+    }
+};
+
+const managePatientLink = async (req, res) => {
+    try {
+        const { uid: vetId } = req.user;
+        const { petId } = req.params;
+        const { action } = req.body; // 'request', 'accept', 'revoke'
+
+        const petRef = db.collection('pets').doc(petId);
+
+        await db.runTransaction(async (transaction) => {
+            const petDoc = await transaction.get(petRef);
+            if (!petDoc.exists) {
+                throw new Error('Mascota no encontrada.');
+            }
+            const petData = petDoc.data();
+            const vetLinkIndex = petData.linkedVets.findIndex(v => v.vetId === vetId);
+
+            if (action === 'request') {
+                if (vetLinkIndex !== -1) {
+                    throw new Error('Ya existe una solicitud para esta mascota.');
+                }
+                const newLink = { vetId, linkedAt: new Date().toISOString(), status: 'pending' };
+                transaction.update(petRef, { linkedVets: admin.firestore.FieldValue.arrayUnion(newLink) });
+            } else if (action === 'accept' && petData.ownerId === req.user.uid) {
+                if (vetLinkIndex === -1) {
+                    throw new Error('No se encontró la solicitud de vínculo.');
+                }
+                const updatedVets = [...petData.linkedVets];
+                updatedVets[vetLinkIndex].status = 'active';
+                transaction.update(petRef, {
+                    linkedVets: updatedVets,
+                    activeVetIds: admin.firestore.FieldValue.arrayUnion(vetId)
+                });
+            } else if (action === 'revoke') {
+                if (vetLinkIndex === -1) {
+                    throw new Error('No se encontró el vínculo a revocar.');
+                }
+                const updatedVets = [...petData.linkedVets];
+                updatedVets[vetLinkIndex].status = 'revoked';
+                transaction.update(petRef, {
+                    linkedVets: updatedVets,
+                    activeVetIds: admin.firestore.FieldValue.arrayRemove(vetId)
+                });
+            } else {
+                throw new Error('Acción no válida o no autorizada.');
+            }
+        });
+        res.status(200).json({ message: `Vínculo de paciente gestionado con éxito para la acción: ${action}.` });
+    } catch (error) {
+        console.error('Error en managePatientLink:', error);
+        res.status(500).json({ message: error.message || 'Error interno al gestionar el vínculo.' });
+    }
+};
+
+const manageRescueMode = async (req, res) => {
+    const { petId } = req.params;
+    const { uid } = req.user;
+    const { isActive, lastSeen, message, showContactPhone } = req.body;
+
+    try {
+        const petRef = db.collection('pets').doc(petId);
+        const petDoc = await petRef.get();
+
+        if (!petDoc.exists) {
+            return res.status(404).json({ message: "Mascota no encontrada." });
+        }
+
+        if (petDoc.data().ownerId !== uid) {
+            return res.status(403).json({ message: "No autorizado para modificar esta mascota." });
+        }
+
+        const updatePayload = {
+            'rescueMode.isActive': isActive,
+            'rescueMode.activatedAt': isActive ? new Date().toISOString() : null,
+            'rescueMode.message': message || '',
+            'rescueMode.showContactPhone': showContactPhone === true,
+        };
+
+        if (lastSeen) {
+            updatePayload['rescueMode.lastSeen'] = lastSeen;
+        }
+
+        await petRef.update(updatePayload);
+        res.status(200).json({ message: `Modo rescate ${isActive ? 'activado' : 'desactivado'} con éxito.` });
+
+    } catch (error) {
+        console.error("Error en manageRescueMode:", error);
+        res.status(500).json({ message: "Error interno del servidor al gestionar el modo rescate." });
+    }
+};
+
+
+module.exports = {
+    getMyPets,
     createPet,
-    findPetById,
     updatePet,
-    deletePet,
-    findPetByNFCId
-  } from '../services/pet.service.js'
-  import { findUserById } from '../services/auth.service.js'
-  import { bucket } from '../config/firebase.js'
-  import { v4 as uuidv4 } from 'uuid'
-  
-  // Obtener todas las mascotas del usuario logueado
-  export const getMyPets = async (req, res) => {
-    try {
-      const pets = await findPetsByOwnerId(req.user.uid)
-      res.status(200).json(pets)
-    } catch (error) {
-      res.status(500).json({ message: 'Error al obtener las mascotas' })
-    }
-  }
-  
-  // Obtener una mascota por su ID
-  export const getPetById = async (req, res) => {
-    try {
-      const pet = await findPetById(req.params.id)
-      if (!pet) {
-        return res.status(404).json({ message: 'Mascota no encontrada' })
-      }
-      // Opcional: Verificar si el usuario tiene permiso para ver esta mascota
-      // if (pet.ownerId !== req.user.uid) {
-      //   return res.status(403).json({ message: 'No tienes permiso para ver esta mascota' });
-      // }
-      res.status(200).json(pet)
-    } catch (error) {
-      res.status(500).json({ message: 'Error al obtener la mascota' })
-    }
-  }
-  
-  // Crear una nueva mascota
-  export const createNewPet = async (req, res) => {
-    try {
-      const user = await findUserById(req.user.uid)
-      if (!user) {
-        return res.status(404).json({ message: 'Usuario no encontrado' })
-      }
-  
-      const petData = getNewPetProfile({
-        ...req.body,
-        ownerId: req.user.uid,
-        ownerInfo: {
-          name: user.name,
-          lastName: user.lastName,
-          phone: user.phone,
-          email: user.email
-        }
-      })
-  
-      const newPet = await createPet(petData)
-      res.status(201).json(newPet)
-    } catch (error) {
-      console.error('Error al crear la mascota:', error)
-      res.status(500).json({ message: 'Error al crear la mascota' })
-    }
-  }
-  
-  // Actualizar una mascota
-  export const updatePetById = async (req, res) => {
-    try {
-      const pet = await findPetById(req.params.id)
-      if (!pet) {
-        return res.status(404).json({ message: 'Mascota no encontrada' })
-      }
-  
-      if (pet.ownerId !== req.user.uid) {
-        return res
-          .status(403)
-          .json({ message: 'No tienes permiso para editar esta mascota' })
-      }
-  
-      // Validar los datos de entrada con el esquema de actualización
-      const validatedData = updatePetProfileSchema.parse(req.body)
-  
-      const updatedPet = await updatePet(req.params.id, validatedData)
-      res.status(200).json(updatedPet)
-    } catch (error) {
-      if (error.name === 'ZodError') {
-        return res
-          .status(400)
-          .json({ message: 'Datos de mascota inválidos', errors: error.errors })
-      }
-      console.error(error)
-      res.status(500).json({ message: 'Error al actualizar la mascota' })
-    }
-  }
-  
-  // Eliminar una mascota
-  export const deletePetById = async (req, res) => {
-    try {
-      const pet = await findPetById(req.params.id)
-      if (!pet) {
-        return res.status(404).json({ message: 'Mascota no encontrada' })
-      }
-  
-      if (pet.ownerId !== req.user.uid) {
-        return res
-          .status(403)
-          .json({ message: 'No tienes permiso para eliminar esta mascota' })
-      }
-  
-      await deletePet(req.params.id)
-      res.status(204).send() // No Content
-    } catch (error) {
-      res.status(500).json({ message: 'Error al eliminar la mascota' })
-    }
-  }
-  
-  export const getPetByNFCId = async (req, res) => {
-    try {
-      const { nfcId } = req.params
-      const pet = await findPetByNFCId(nfcId)
-  
-      if (!pet) {
-        return res.status(404).json({ message: 'Mascota no encontrada' })
-      }
-  
-      res.json(pet)
-    } catch (error) {
-      console.error('Error fetching pet by NFC ID:', error)
-      res.status(500).json({ message: 'Error interno del servidor' })
-    }
-  }
-  
-  export const uploadPetPicture = async (req, res) => {
-    const { id: petId } = req.params
-    const userId = req.user.uid
-  
-    if (!req.file) {
-      return res.status(400).json({ message: 'No se subió ningún archivo.' })
-    }
-  
-    try {
-      const pet = await findPetById(petId)
-      if (!pet) {
-        return res.status(404).json({ message: 'Mascota no encontrada.' })
-      }
-      if (pet.ownerId !== userId) {
-        return res
-          .status(403)
-          .json({ message: 'No autorizado para cambiar esta foto.' })
-      }
-  
-      const blob = bucket.file(`pets-pictures/${petId}/${uuidv4()}`)
-      const blobStream = blob.createWriteStream({
-        metadata: {
-          contentType: req.file.mimetype
-        }
-      })
-  
-      blobStream.on('error', (err) => {
-        console.error(err)
-        res.status(500).json({ message: 'Error al subir la imagen.' })
-      })
-  
-      blobStream.on('finish', async () => {
-        // **INICIO DE LA CORRECCIÓN**
-        // Hacer el archivo públicamente legible
-        try {
-          await blob.makePublic()
-        } catch (error) {
-          console.error('Error al hacer pública la imagen:', error)
-          return res
-            .status(500)
-            .json({ message: 'La imagen se subió pero no se pudo hacer pública.' })
-        }
-        // **FIN DE LA CORRECCIÓN**
-  
-        const publicUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`
-        await updatePet(petId, { photoURL: publicUrl })
-        res.status(200).json({
-          message: 'Foto de perfil actualizada con éxito',
-          photoURL: publicUrl
-        })
-      })
-  
-      blobStream.end(req.file.buffer)
-    } catch (error) {
-      console.error(error)
-      res.status(500).json({ message: 'Error interno del servidor.' })
-    }
-  }
+    getCompletedMissions,
+    getPetPublicProfile,
+    uploadPetPicture,
+    managePatientLink,
+    manageRescueMode,
+};
