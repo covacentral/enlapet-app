@@ -1,10 +1,9 @@
 // frontend/src/context/UserContext.jsx
-// VERSIÓN CORREGIDA: Reacciona a los cambios de AuthContext para un flujo de datos unidireccional.
+// VERSIÓN 3.0: Refactorizado para usar la capa de API (profile.api.js).
 
 import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
-import { useAuth } from './AuthContext'; // <-- 1. Importamos useAuth para escuchar cambios.
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+import { useAuth } from './AuthContext';
+import { getUserProfile } from '../api/profile.api'; // <-- 1. Importamos la función del servicio de API
 
 const UserContext = createContext();
 
@@ -18,25 +17,18 @@ export const useUser = () => {
 
 export const UserProvider = ({ children }) => {
   const [userProfile, setUserProfile] = useState(null);
-  const [isLoading, setIsLoading] = useState(false); // Inicia en false, se activa al haber usuario.
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const { currentUser } = useAuth(); // <-- 2. Obtenemos el usuario actual de AuthContext.
+  const { currentUser } = useAuth();
 
   const fetchUserProfile = useCallback(async () => {
-    if (!currentUser) return; // No hacer nada si no hay usuario.
+    if (!currentUser) return;
 
     setIsLoading(true);
     setError(null);
     try {
-      const idToken = await currentUser.getIdToken();
-      const response = await fetch(`${API_URL}/api/profile`, {
-        headers: { 'Authorization': `Bearer ${idToken}` },
-      });
-
-      if (!response.ok) {
-        throw new Error('No se pudo obtener el perfil del usuario.');
-      }
-      const profileData = await response.json();
+      // 2. Reemplazamos el bloque fetch con la llamada al servicio de API.
+      const profileData = await getUserProfile();
       setUserProfile(profileData);
     } catch (err) {
       setError(err.message);
@@ -44,13 +36,12 @@ export const UserProvider = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [currentUser]); // <-- El currentUser es ahora la dependencia.
+  }, [currentUser]);
 
   const clearUserProfile = () => {
     setUserProfile(null);
   };
 
-  // 3. Este useEffect reacciona a los cambios en currentUser.
   useEffect(() => {
     if (currentUser) {
       fetchUserProfile();
@@ -63,8 +54,6 @@ export const UserProvider = ({ children }) => {
     userProfile,
     isLoading,
     error,
-    // Ya no es necesario exportar fetchUserProfile o clearUserProfile,
-    // porque el contexto ahora se autogestiona.
   };
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
