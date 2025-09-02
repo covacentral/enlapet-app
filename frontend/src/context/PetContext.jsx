@@ -1,10 +1,9 @@
 // frontend/src/context/PetContext.jsx
-// VERSIÓN CORREGIDA 2.1: Exporta fetchPets para permitir actualizaciones desde los componentes.
+// VERSIÓN 3.0: Refactorizado para usar la capa de API (pets.api.js).
 
 import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
 import { useAuth } from './AuthContext';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+import { getPets } from '../api/pets.api'; // <-- 1. Importamos la función del servicio de API
 
 const PetContext = createContext();
 
@@ -28,15 +27,8 @@ export const PetProvider = ({ children }) => {
     setIsLoading(true);
     setError(null);
     try {
-      const idToken = await currentUser.getIdToken();
-      const response = await fetch(`${API_URL}/api/pets`, {
-        headers: { 'Authorization': `Bearer ${idToken}` },
-      });
-
-      if (!response.ok) {
-        throw new Error('No se pudo obtener la lista de mascotas.');
-      }
-      const petsData = await response.json();
+      // 2. Reemplazamos el bloque fetch con la llamada al servicio de API.
+      const petsData = await getPets();
       setPets(Array.isArray(petsData) ? petsData : []);
     } catch (err) {
       setError(err.message);
@@ -62,7 +54,7 @@ export const PetProvider = ({ children }) => {
     pets,
     isLoading,
     error,
-    fetchPets, // <-- AÑADIDO: Exponemos la función para refrescar.
+    fetchPets,
   };
 
   return <PetContext.Provider value={value}>{children}</PetContext.Provider>;

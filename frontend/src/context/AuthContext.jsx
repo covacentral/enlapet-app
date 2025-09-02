@@ -1,5 +1,5 @@
 // frontend/src/context/AuthContext.jsx
-// VERSIÓN CORREGIDA: Elimina dependencias circulares. Su única responsabilidad es el estado de autenticación.
+// VERSIÓN 3.0: Refactorizado para usar la capa de API (auth.api.js).
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import {
@@ -11,8 +11,8 @@ import {
   onAuthStateChanged,
 } from 'firebase/auth';
 import { auth } from '../firebase';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+// 1. Importamos las funciones del servicio de API de autenticación.
+import { registerUserInBackend, authenticateWithGoogleBackend } from '../api/auth.api';
 
 const AuthContext = createContext();
 
@@ -28,26 +28,18 @@ export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Las funciones de UserContext y PetContext han sido eliminadas de aquí.
-
   const signUp = async (name, email, password) => {
+    // La creación en Firebase Auth se mantiene aquí.
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const idToken = await userCredential.user.getIdToken();
+    
+    // 2. Reemplazamos el fetch con la llamada al servicio de API.
+    // El token se adjunta automáticamente por el interceptor de Axios.
+    await registerUserInBackend({ name, email, password });
 
-    await fetch(`${API_URL}/api/auth/register`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${idToken}`,
-      },
-      body: JSON.stringify({ name, email, password }),
-    });
-    // Ya no se llama a fetchUserProfile aquí.
     return userCredential;
   };
 
   const signIn = (email, password) => {
-    // Ya no se llama a fetchUserProfile aquí.
     return signInWithEmailAndPassword(auth, email, password);
   };
 
@@ -56,22 +48,17 @@ export const AuthProvider = ({ children }) => {
     const result = await signInWithPopup(auth, provider);
     const idToken = await result.user.getIdToken();
     
-    await fetch(`${API_URL}/api/auth/google`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken })
-    });
-    // Ya no se llama a fetchUserProfile aquí.
+    // 3. Reemplazamos el fetch con la llamada al servicio de API.
+    await authenticateWithGoogleBackend(idToken);
+    
     return result;
   };
 
   const signOut = () => {
-    // Ya no se llama a clearUserProfile aquí.
     return firebaseSignOut(auth);
   };
 
   useEffect(() => {
-    // Este efecto ahora solo actualiza currentUser.
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
       setLoading(false);
