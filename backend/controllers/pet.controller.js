@@ -114,7 +114,7 @@ const uploadPetPicture = async (req, res) => {
         const petRef = db.collection('pets').doc(petId);
         const petDoc = await petRef.get();
 
-        if (!petDoc.exists || petDoc.data().ownerId !== uid) {
+        if (!petDoc.exists() || petDoc.data().ownerId !== uid) {
             return res.status(403).json({ message: 'No autorizado para modificar esta mascota.' });
         }
 
@@ -131,6 +131,15 @@ const uploadPetPicture = async (req, res) => {
         });
 
         blobStream.on('finish', async () => {
+            // **INICIO DE LA CORRECCIÓN**
+            try {
+                await fileUpload.makePublic();
+            } catch (error) {
+                console.error('Error al hacer pública la imagen:', error);
+                return res.status(500).json({ message: 'La imagen se subió pero no se pudo hacer pública.' });
+            }
+            // **FIN DE LA CORRECCIÓN**
+
             const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
             await petRef.update({ petPictureUrl: publicUrl });
             res.status(200).json({ message: 'Foto de perfil actualizada con éxito.', petPictureUrl: publicUrl });
@@ -153,7 +162,7 @@ const managePatientLink = async (req, res) => {
 
         await db.runTransaction(async (transaction) => {
             const petDoc = await transaction.get(petRef);
-            if (!petDoc.exists) {
+            if (!petDoc.exists()) {
                 throw new Error('Mascota no encontrada.');
             }
             const petData = petDoc.data();
@@ -205,7 +214,7 @@ const manageRescueMode = async (req, res) => {
         const petRef = db.collection('pets').doc(petId);
         const petDoc = await petRef.get();
 
-        if (!petDoc.exists) {
+        if (!petDoc.exists()) {
             return res.status(404).json({ message: "Mascota no encontrada." });
         }
 

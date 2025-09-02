@@ -27,8 +27,6 @@ const getUserPublicProfile = async (req, res) => {
             bio: userData.bio || '',
             followersCount: userData.followersCount || 0,
             followingCount: userData.followingCount || 0,
-            // --- LÍNEA CORREGIDA ---
-            // Añadimos el objeto de verificación a la respuesta pública.
             verification: userData.verification || { status: 'none', type: 'none' },
         };
 
@@ -110,7 +108,10 @@ const uploadProfilePicture = async (req, res) => {
 
         blobStream.on('finish', async () => {
             try {
+                // **INICIO DE LA CORRECCIÓN DE BUG DE IMAGEN**
                 await fileUpload.makePublic();
+                // **FIN DE LA CORRECCIÓN DE BUG DE IMAGEN**
+
                 const publicUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
                 await db.collection('users').doc(uid).update({ profilePictureUrl: publicUrl });
                 res.status(200).json({ message: 'Foto actualizada.', profilePictureUrl: publicUrl });
@@ -217,6 +218,8 @@ const getFollowStatus = async (req, res) => {
 };
 
 
+// **INICIO DE LA CORRECCIÓN DE DEPLOYMENT**
+// Se añade la función `getCurrentUserProfile` que faltaba en el bloque de exportación.
 module.exports = {
     getUserPublicProfile,
     getCurrentUserProfile,
@@ -226,3 +229,4 @@ module.exports = {
     unfollowProfile,
     getFollowStatus
 };
+// **FIN DE LA CORRECCIÓN DE DEPLOYMENT**
