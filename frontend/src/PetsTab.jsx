@@ -1,10 +1,11 @@
 // frontend/src/PetsTab.jsx
-// Versión 4.0: Funcionalidad y diseño originales restaurados, integrados con PetContext.
+// Versión 4.2: CORRECCIÓN FINAL. Restaura el 100% de la funcionalidad y diseño original,
+// conectándolo correctamente al PetContext y al PetEditModal corregido.
 
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from './context/AuthContext'; // <-- 1. Importamos useAuth
-import { usePets } from './context/PetContext';   // <-- 2. Importamos usePets
+import { useAuth } from './context/AuthContext';
+import { usePets } from './context/PetContext';
 import PetEditModal from './PetEditModal';
 import LoadingComponent from './LoadingComponent';
 import { ClipboardList } from 'lucide-react';
@@ -73,11 +74,9 @@ function PetCard({ pet, onEdit, onManageLink }) {
 
 
 function PetsTab() {
-  // 3. Obtenemos datos y funciones de los contextos.
   const { pets, isLoading: isLoadingPets, error, fetchPets } = usePets();
   const { currentUser } = useAuth();
 
-  // El estado local ahora solo es para el formulario y el modal.
   const [message, setMessage] = useState('');
   const [petName, setPetName] = useState('');
   const [petBreed, setPetBreed] = useState('');
@@ -87,6 +86,7 @@ function PetsTab() {
 
   const handleAddPet = async (e) => {
     e.preventDefault();
+    if (!currentUser) return;
     setIsAdding(true);
     setMessage('Registrando mascota...');
     try {
@@ -102,7 +102,7 @@ function PetsTab() {
       setMessage(`¡Mascota añadida! Su EPID es: ${data.epid}`);
       setPetName('');
       setPetBreed('');
-      fetchPets(); // 4. Refrescamos la lista desde el contexto.
+      fetchPets();
     } catch (error) {
       setMessage(`Error: ${error.message}`);
     } finally {
@@ -112,6 +112,7 @@ function PetsTab() {
   };
   
   const handleManageLink = async (petId, vetId, action) => {
+      if (!currentUser) return;
       setMessage('Procesando solicitud...');
       try {
         const idToken = await currentUser.getIdToken();
@@ -123,7 +124,7 @@ function PetsTab() {
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
         setMessage(`¡Solicitud ${action === 'approve' ? 'aprobada' : 'rechazada'}!`);
-        fetchPets(); // 4. Refrescamos la lista desde el contexto.
+        fetchPets();
       } catch (error) {
           setMessage(`Error: ${error.message}`);
       } finally {
