@@ -1,16 +1,20 @@
 // frontend/src/PetsTab.jsx
-// Versión 2.7: Añade blindaje contra props nulas o indefinidas.
-// TAREA: Se asegura que el estado local 'pets' sea siempre un array para máxima robustez.
+// Versión 4.0: Funcionalidad y diseño originales restaurados, integrados con PetContext.
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from './context/AuthContext'; // <-- 1. Importamos useAuth
+import { usePets } from './context/PetContext';   // <-- 2. Importamos usePets
 import PetEditModal from './PetEditModal';
+import LoadingComponent from './LoadingComponent';
 import { ClipboardList } from 'lucide-react';
 
 import styles from './PetsTab.module.css';
 import sharedStyles from './shared.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+// --- Subcomponentes (Restaurados a su versión funcional original) ---
 
 const UpdatePrompt = () => (
     <div className={styles.updatePrompt}>
@@ -39,9 +43,6 @@ const VetRequest = ({ request, onManage }) => {
 
 function PetCard({ pet, onEdit, onManageLink }) {
   const isProfileIncomplete = !pet.location?.city || !pet.healthRecord?.birthDate;
-  
-  // --- LÍNEA CORREGIDA (BLINDAJE) ---
-  // Nos aseguramos de que 'linkedVets' sea un array antes de intentar filtrarlo.
   const pendingRequests = Array.isArray(pet.linkedVets) 
     ? pet.linkedVets.filter(link => link.status === 'pending') 
     : [];
@@ -71,29 +72,25 @@ function PetCard({ pet, onEdit, onManageLink }) {
 }
 
 
-function PetsTab({ user, initialPets, onPetsUpdate }) {
-  // --- LÍNEA CORREGIDA (BLINDAJE) ---
-  // Garantizamos que el estado 'pets' se inicialice como un array, incluso si 'initialPets' no lo es.
-  const [pets, setPets] = useState(Array.isArray(initialPets) ? initialPets : []);
+function PetsTab() {
+  // 3. Obtenemos datos y funciones de los contextos.
+  const { pets, isLoading: isLoadingPets, error, fetchPets } = usePets();
+  const { currentUser } = useAuth();
+
+  // El estado local ahora solo es para el formulario y el modal.
   const [message, setMessage] = useState('');
   const [petName, setPetName] = useState('');
   const [petBreed, setPetBreed] = useState('');
   const [isAdding, setIsAdding] = useState(false);
-  
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedPet, setSelectedPet] = useState(null);
-
-  useEffect(() => {
-    // Se asegura de que cualquier actualización a las props también sea un array.
-    setPets(Array.isArray(initialPets) ? initialPets : []);
-  }, [initialPets]);
 
   const handleAddPet = async (e) => {
     e.preventDefault();
     setIsAdding(true);
     setMessage('Registrando mascota...');
     try {
-      const idToken = await user.getIdToken(true);
+      const idToken = await currentUser.getIdToken(true);
       const response = await fetch(`${API_URL}/api/pets`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
@@ -105,7 +102,7 @@ function PetsTab({ user, initialPets, onPetsUpdate }) {
       setMessage(`¡Mascota añadida! Su EPID es: ${data.epid}`);
       setPetName('');
       setPetBreed('');
-      onPetsUpdate();
+      fetchPets(); // 4. Refrescamos la lista desde el contexto.
     } catch (error) {
       setMessage(`Error: ${error.message}`);
     } finally {
@@ -117,7 +114,7 @@ function PetsTab({ user, initialPets, onPetsUpdate }) {
   const handleManageLink = async (petId, vetId, action) => {
       setMessage('Procesando solicitud...');
       try {
-        const idToken = await user.getIdToken();
+        const idToken = await currentUser.getIdToken();
         const response = await fetch(`${API_URL}/api/pets/${petId}/manage-link`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
@@ -126,7 +123,7 @@ function PetsTab({ user, initialPets, onPetsUpdate }) {
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
         setMessage(`¡Solicitud ${action === 'approve' ? 'aprobada' : 'rechazada'}!`);
-        onPetsUpdate();
+        fetchPets(); // 4. Refrescamos la lista desde el contexto.
       } catch (error) {
           setMessage(`Error: ${error.message}`);
       } finally {
@@ -143,6 +140,13 @@ function PetsTab({ user, initialPets, onPetsUpdate }) {
     setSelectedPet(null);
     setIsModalOpen(false);
   };
+
+  if (isLoadingPets) {
+    return <LoadingComponent text="Cargando tus mascotas..." />;
+  }
+  if (error) {
+    return <p className={sharedStyles.responseMessageError}>{error}</p>;
+  }
 
   return (
     <>
@@ -177,7 +181,7 @@ function PetsTab({ user, initialPets, onPetsUpdate }) {
           </div>
         </div>
       </div>
-      {isModalOpen && (<PetEditModal pet={selectedPet} user={user} onClose={handleCloseModal} onUpdate={onPetsUpdate} />)}
+      {isModalOpen && (<PetEditModal pet={selectedPet} user={currentUser} onClose={handleCloseModal} onUpdate={fetchPets} />)}
     </>
   );
 }
