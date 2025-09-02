@@ -32,7 +32,7 @@ import {
       if (!pet) {
         return res.status(404).json({ message: 'Mascota no encontrada' })
       }
-      // Opcional: Verificar si el usuario tiene permiso para ver esta mascota
+      // Opcional: Verificar  si el usuario tiene permiso para ver esta mascota
       // if (pet.ownerId !== req.user.uid) {
       //   return res.status(403).json({ message: 'No tienes permiso para ver esta mascota' });
       // }
