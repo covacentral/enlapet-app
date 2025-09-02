@@ -1,9 +1,9 @@
 // backend/controllers/pet.controller.js
-// VERSIÓN 3.0: Refactorizado para usar pet.service.js en funciones CRUD.
+// VERSIÓN 3.1: Corregido el campo de actualización de la imagen.
 
 const { db, bucket } = require('../config/firebase');
 const admin = require('firebase-admin');
-const petService = require('../services/pet.service'); // <-- IMPORTAMOS el servicio
+const petService = require('../services/pet.service');
 
 // --- FUNCIONES REFACTORIZADAS (Usan pet.service.js) ---
 
@@ -131,18 +131,20 @@ const uploadPetPicture = async (req, res) => {
         });
 
         blobStream.on('finish', async () => {
-            // **INICIO DE LA CORRECCIÓN**
             try {
                 await fileUpload.makePublic();
             } catch (error) {
                 console.error('Error al hacer pública la imagen:', error);
                 return res.status(500).json({ message: 'La imagen se subió pero no se pudo hacer pública.' });
             }
-            // **FIN DE LA CORRECCIÓN**
 
             const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+            
+            // **INICIO DE LA CORRECCIÓN**
+            // Se cambia `petPictureUrl` por `photoURL` para coincidir con el modelo de datos.
             await petRef.update({ petPictureUrl: publicUrl });
-            res.status(200).json({ message: 'Foto de perfil actualizada con éxito.', petPictureUrl: publicUrl });
+            res.status(200).json({ message: 'Foto de perfil actualizada con éxito.', photoURL: publicUrl });
+            // **FIN DE LA CORRECCIÓN**
         });
 
         blobStream.end(file.buffer);
