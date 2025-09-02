@@ -33,33 +33,11 @@ const getUserPublicProfile = async (req, res) => {
         };
 
         const petsSnapshot = await db.collection('pets').where('ownerId', '==', userId).get();
-        const petsList = petsSnapshot.docs.map(doc => ({
-            id: doc.id,
-            name: doc.data().name,
-            breed: doc.data().breed,
-            petPictureUrl: doc.data().petPictureUrl || ''
-        }));
+        const pets = petsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        res.status(200).json({ userProfile: publicProfile, pets: petsList });
+        res.status(200).json({ profile: publicProfile, pets });
     } catch (error) {
-        console.error(`Error en getUserPublicProfile para userId ${req.params.userId}:`, error);
-        res.status(500).json({ message: 'Error interno del servidor.' });
-    }
-};
-
-/**
- * Obtiene el perfil privado del usuario autenticado.
- */
-const getCurrentUserProfile = async (req, res) => {
-    try {
-        const { uid } = req.user;
-        const userDoc = await db.collection('users').doc(uid).get();
-        if (!userDoc.exists) {
-            return res.status(404).json({ message: 'Perfil no encontrado.' });
-        }
-        res.status(200).json(userDoc.data());
-    } catch (error) {
-        console.error('Error en getCurrentUserProfile:', error);
+        console.error('Error al obtener el perfil público del usuario:', error);
         res.status(500).json({ message: 'Error interno del servidor.' });
     }
 };
@@ -70,122 +48,119 @@ const getCurrentUserProfile = async (req, res) => {
 const updateUserProfile = async (req, res) => {
     try {
         const { uid } = req.user;
-        const dataToUpdate = req.body;
+        const { name, bio, phone, address } = req.body;
+        const userRef = db.collection('users').doc(uid);
         
-        delete dataToUpdate.uid;
-        delete dataToUpdate.email;
-        delete dataToUpdate.followersCount;
-        delete dataToUpdate.followingCount;
+        const updateData = {};
+        if (name) updateData.name = name;
+        if (bio) updateData.bio = bio;
+        if (phone) updateData.phone = phone;
+        if (address) updateData.address = address;
 
-        if (Object.keys(dataToUpdate).length === 0) {
-            return res.status(400).json({ message: 'No se proporcionaron datos válidos para actualizar.' });
-        }
-
-        await db.collection('users').doc(uid).set(dataToUpdate, { merge: true });
+        await userRef.update(updateData);
         res.status(200).json({ message: 'Perfil actualizado con éxito.' });
     } catch (error) {
-        console.error('Error en updateUserProfile:', error);
-        res.status(500).json({ message: 'Error interno del servidor.' });
+        console.error('Error al actualizar el perfil:', error);
+        res.status(500).json({ message: 'Error interno al actualizar el perfil.' });
     }
 };
 
 /**
- * Sube o actualiza la foto de perfil del usuario autenticado.
+ * Sube o actualiza la foto de perfil del usuario.
  */
 const uploadProfilePicture = async (req, res) => {
     try {
         const { uid } = req.user;
-        if (!req.file) {
-            return res.status(400).json({ message: 'No se subió ningún archivo.' });
+        const file = req.file;
+
+        if (!file) {
+            return res.status(400).json({ message: 'No se proporcionó ningún archivo.' });
         }
 
-        const filePath = `profile-pictures/${uid}/${Date.now()}-${req.file.originalname}`;
-        const fileUpload = bucket.file(filePath);
-        const blobStream = fileUpload.createWriteStream({ metadata: { contentType: req.file.mimetype } });
+        const fileName = `profile-pictures/${uid}/${Date.now()}_${file.originalname}`;
+        const fileUpload = bucket.file(fileName);
+
+        const blobStream = fileUpload.createWriteStream({
+            metadata: { contentType: file.mimetype }
+        });
 
         blobStream.on('error', (error) => {
-            console.error('Error en blobStream (profile picture):', error);
-            res.status(500).json({ message: 'Error durante la subida del archivo.' });
+            console.error(error);
+            res.status(500).json({ message: 'Error al subir la imagen.' });
         });
 
         blobStream.on('finish', async () => {
+            // **INICIO DE LA CORRECCIÓN**
             try {
                 await fileUpload.makePublic();
-                const publicUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
-                await db.collection('users').doc(uid).update({ profilePictureUrl: publicUrl });
-                res.status(200).json({ message: 'Foto actualizada.', profilePictureUrl: publicUrl });
-            } catch (finishError) {
-                console.error('Error al finalizar la subida de foto de perfil:', finishError);
-                res.status(500).json({ message: 'Error al procesar el archivo después de subirlo.' });
+            } catch (error) {
+                console.error('Error al hacer pública la imagen:', error);
+                return res.status(500).json({ message: 'La imagen se subió pero no se pudo hacer pública.' });
             }
+            // **FIN DE LA CORRECCIÓN**
+
+            const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+            await db.collection('users').doc(uid).update({ profilePictureUrl: publicUrl });
+            res.status(200).json({ message: 'Foto de perfil actualizada con éxito.', profilePictureUrl: publicUrl });
         });
 
-        blobStream.end(req.file.buffer);
+        blobStream.end(file.buffer);
     } catch (error) {
-        console.error('Error en uploadProfilePicture:', error);
+        console.error('Error al subir la foto de perfil:', error);
         res.status(500).json({ message: 'Error interno del servidor.' });
     }
 };
 
+
 /**
- * Permite a un usuario seguir a otro perfil (usuario o mascota).
+ * Permite a un usuario seguir a otro.
  */
 const followProfile = async (req, res) => {
     const { uid } = req.user;
     const { profileId } = req.params;
-    const { profileType } = req.body;
 
     if (uid === profileId) {
-        return res.status(400).json({ message: 'No te puedes seguir a ti mismo.' });
-    }
-    if (!profileType || !['user', 'pet'].includes(profileType)) {
-        return res.status(400).json({ message: 'Se requiere un tipo de perfil válido (pet/user).' });
+        return res.status(400).json({ message: 'No puedes seguirte a ti mismo.' });
     }
 
     const currentUserRef = db.collection('users').doc(uid);
-    const followedProfileRef = db.collection(profileType === 'pet' ? 'pets' : 'users').doc(profileId);
+    const followedProfileRef = db.collection('users').doc(profileId);
 
     try {
         await db.runTransaction(async (t) => {
             const followedDoc = await t.get(followedProfileRef);
-            if (!followedDoc.exists) throw new Error('El perfil que intentas seguir no existe.');
+            if (!followedDoc.exists) {
+                throw new Error('El perfil que intentas seguir no existe.');
+            }
 
-            const recipientId = profileType === 'pet' ? followedDoc.data().ownerId : profileId;
+            const followingRef = currentUserRef.collection('following').doc(profileId);
+            const followerRef = followedProfileRef.collection('followers').doc(uid);
 
-            t.set(currentUserRef.collection('following').doc(profileId), {
-                followedAt: new Date().toISOString(),
-                type: profileType
-            });
+            t.set(followingRef, { followedAt: new Date() });
             t.update(currentUserRef, { followingCount: admin.firestore.FieldValue.increment(1) });
-
-            t.set(followedProfileRef.collection('followers').doc(uid), {
-                followedAt: new Date().toISOString()
-            });
+            t.set(followerRef, { followerAt: new Date() });
             t.update(followedProfileRef, { followersCount: admin.firestore.FieldValue.increment(1) });
-            
-            await createNotification(recipientId, uid, 'new_follower', profileId, profileType);
         });
-        res.status(200).json({ message: 'Ahora estás siguiendo a este perfil.' });
+        
+        // Crear notificación para el usuario seguido
+        await createNotification(profileId, 'new_follower', `Comenzó a seguirte.`, uid);
+
+        res.status(200).json({ message: 'Ahora sigues a este perfil.' });
     } catch (error) {
         console.error('Error al seguir al perfil:', error);
-        res.status(500).json({ message: 'No se pudo completar la acción de seguir.' });
+        res.status(500).json({ message: error.message || 'No se pudo completar la acción.' });
     }
 };
 
 /**
- * Permite a un usuario dejar de seguir a otro perfil.
+ * Permite a un usuario dejar de seguir a otro.
  */
 const unfollowProfile = async (req, res) => {
     const { uid } = req.user;
     const { profileId } = req.params;
-    const { profileType } = req.body;
-
-    if (!profileType || !['user', 'pet'].includes(profileType)) {
-        return res.status(400).json({ message: 'Se requiere un tipo de perfil válido (pet/user).' });
-    }
 
     const currentUserRef = db.collection('users').doc(uid);
-    const followedProfileRef = db.collection(profileType === 'pet' ? 'pets' : 'users').doc(profileId);
+    const followedProfileRef = db.collection('users').doc(profileId);
 
     try {
         await db.runTransaction(async (t) => {
@@ -216,10 +191,8 @@ const getFollowStatus = async (req, res) => {
     }
 };
 
-
 module.exports = {
     getUserPublicProfile,
-    getCurrentUserProfile,
     updateUserProfile,
     uploadProfilePicture,
     followProfile,
