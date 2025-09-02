@@ -143,7 +143,7 @@ const uploadPetPicture = async (req, res) => {
             // **INICIO DE LA CORRECCIÓN**
             // Se cambia `petPictureUrl` por `photoURL` para coincidir con el modelo de datos.
             await petRef.update({ petPictureUrl: publicUrl });
-            res.status(200).json({ message: 'Foto de perfil actualizada con éxito.', photoURL: publicUrl });
+            res.status(200).json({ message: 'Foto de perfil actualizada con éxito.', petPictureUrl: publicUrl });
             // **FIN DE LA CORRECCIÓN**
         });
 
