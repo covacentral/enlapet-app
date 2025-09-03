@@ -53,7 +53,7 @@ function CommentsModal({ postId, onClose, onCommentAdded }) {
       const user = auth.currentUser;
       if (!user) throw new Error("No autenticado.");
       const idToken = await user.getIdToken();
-      const response = await fetch(`${API_URL}/api/posts/${postId}/comment`, {
+      const response = await fetch(`${API_URL}/api/posts/${postId}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
         body: JSON.stringify({ text: newComment })
