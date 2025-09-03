@@ -1,10 +1,9 @@
 // backend/routes/posts.routes.js
-// VERSIÓN 3.0: Añade validación de datos para la creación de posts.
+// VERSIÓN 3.1: CORREGIDO. Reordena las rutas para resolver conflictos de enrutamiento.
 
 const { Router } = require('express');
 const multer = require('multer');
 
-// --- 1. Importamos middleware y esquema ---
 const validateRequest = require('../middleware/validateRequest');
 const { createPostSchema } = require('../models/post.model');
 
@@ -33,7 +32,6 @@ router.get('/feed', getFeed);
 router.get('/user/saved-posts', getSavedPosts);
 
 // --- Rutas de Posts Generales ---
-// --- 2. Aplicamos el middleware de validación a la creación de posts ---
 router.post('/posts', upload.single('postImage'), validateRequest(createPostSchema), createPost);
 router.get('/posts/by-author/:authorId', getPostsByAuthor);
 
@@ -41,15 +39,22 @@ router.get('/posts/by-author/:authorId', getPostsByAuthor);
 router.post('/posts/like-statuses', getLikeStatuses);
 router.post('/posts/save-statuses', getSaveStatuses);
 
-// --- Ruta para un Post Específico ---
-router.get('/posts/:postId', getPostById);
+
+// --- [CORRECCIÓN] ---
+// Las rutas más específicas deben ir ANTES de las rutas más genéricas para que Express las capture correctamente.
+// Se añade el prefijo /posts que faltaba.
 
 // --- Rutas de Interacción con Posts Específicos ---
-router.post('/:postId/like', likePost);
-router.delete('/:postId/like', unlikePost);
-router.post('/:postId/comments', addComment);
-router.get('/:postId/comments', getComments);
-router.post('/:postId/save', savePost);
-router.delete('/:postId/save', unsavePost);
+router.post('/posts/:postId/like', likePost);
+router.delete('/posts/:postId/unlike', unlikePost);
+router.post('/posts/:postId/comments', addComment);
+router.get('/posts/:postId/comments', getComments);
+router.post('/posts/:postId/save', savePost);
+router.delete('/posts/:postId/save', unsavePost);
+
+// --- Ruta Genérica para un Post Específico ---
+// Esta es la ruta más genérica, por lo que debe ir al final.
+router.get('/posts/:postId', getPostById);
+
 
 module.exports = router;
