@@ -180,7 +180,7 @@ const managePatientLink = async (req, res) => {
                     linkedVets: updatedVets,
                     activeVetIds: admin.firestore.FieldValue.arrayUnion(vetId)
                 });
-            } else if (action === 'revoke') {
+            } else if (action === 'reject') {
                 if (vetLinkIndex === -1) {
                     throw new Error('No se encontró el vínculo a revocar.');
                 }
