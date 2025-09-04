@@ -150,9 +150,10 @@ const uploadPetPicture = async (req, res) => {
 
 const managePatientLink = async (req, res) => {
     try {
-        const { uid: vetId } = req.user;
         const { petId } = req.params;
-        const { action } = req.body; // 'request', 'accept', 'revoke'
+        // Se corrige la obtención del vetId. No siempre será el usuario actual.
+        const { action, vetId: vetIdFromRequest } = req.body; 
+        const requesterId = req.user.uid;
 
         const petRef = db.collection('pets').doc(petId);
 
@@ -162,34 +163,44 @@ const managePatientLink = async (req, res) => {
                 throw new Error('Mascota no encontrada.');
             }
             const petData = petDoc.data();
-            const vetLinkIndex = petData.linkedVets.findIndex(v => v.vetId === vetId);
-
+            
             if (action === 'request') {
+                // Si la acción es 'request', el solicitante es el veterinario.
+                const vetId = requesterId;
+                const vetLinkIndex = petData.linkedVets.findIndex(v => v.vetId === vetId);
                 if (vetLinkIndex !== -1) {
                     throw new Error('Ya existe una solicitud para esta mascota.');
                 }
                 const newLink = { vetId, linkedAt: new Date().toISOString(), status: 'pending' };
                 transaction.update(petRef, { linkedVets: admin.firestore.FieldValue.arrayUnion(newLink) });
-            } else if (action === 'approve' && petData.ownerId === req.user.uid) {
+
+            } else if ((action === 'approve' || action === 'reject') && petData.ownerId === requesterId) {
+                // Si la acción es 'approve' o 'reject', el solicitante debe ser el dueño.
+                // El vetId debe venir en el cuerpo de la solicitud.
+                const vetId = vetIdFromRequest;
+                if (!vetId) {
+                    throw new Error('No se proporcionó el ID del veterinario.');
+                }
+                const vetLinkIndex = petData.linkedVets.findIndex(v => v.vetId === vetId);
                 if (vetLinkIndex === -1) {
                     throw new Error('No se encontró la solicitud de vínculo.');
                 }
+
                 const updatedVets = [...petData.linkedVets];
-                updatedVets[vetLinkIndex].status = 'active';
-                transaction.update(petRef, {
-                    linkedVets: updatedVets,
-                    activeVetIds: admin.firestore.FieldValue.arrayUnion(vetId)
-                });
-            } else if (action === 'reject') {
-                if (vetLinkIndex === -1) {
-                    throw new Error('No se encontró el vínculo a revocar.');
+                
+                if (action === 'approve') {
+                    updatedVets[vetLinkIndex].status = 'active';
+                    transaction.update(petRef, {
+                        linkedVets: updatedVets,
+                        activeVetIds: admin.firestore.FieldValue.arrayUnion(vetId)
+                    });
+                } else { // action === 'reject'
+                    updatedVets[vetLinkIndex].status = 'revoked'; // O 'rejected'
+                    transaction.update(petRef, {
+                        linkedVets: updatedVets,
+                        activeVetIds: admin.firestore.FieldValue.arrayRemove(vetId)
+                    });
                 }
-                const updatedVets = [...petData.linkedVets];
-                updatedVets[vetLinkIndex].status = 'revoked';
-                transaction.update(petRef, {
-                    linkedVets: updatedVets,
-                    activeVetIds: admin.firestore.FieldValue.arrayRemove(vetId)
-                });
             } else {
                 throw new Error('Acción no válida o no autorizada.');
             }
