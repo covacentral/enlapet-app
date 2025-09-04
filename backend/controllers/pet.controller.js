@@ -170,7 +170,7 @@ const managePatientLink = async (req, res) => {
                 }
                 const newLink = { vetId, linkedAt: new Date().toISOString(), status: 'pending' };
                 transaction.update(petRef, { linkedVets: admin.firestore.FieldValue.arrayUnion(newLink) });
-            } else if (action === 'accept' && petData.ownerId === req.user.uid) {
+            } else if (action === 'approve' && petData.ownerId === req.user.uid) {
                 if (vetLinkIndex === -1) {
                     throw new Error('No se encontró la solicitud de vínculo.');
                 }
