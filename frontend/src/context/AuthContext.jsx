@@ -36,10 +36,14 @@ export const AuthProvider = ({ children }) => {
     const idToken = await userCredential.user.getIdToken();
 
     // 3. Enviamos el token y el nombre al backend para que cree el perfil en Firestore.
+    // Usamos fetch aquí para no depender de la instancia de Axios que se basa en un currentUser que puede no estar listo aún.
     const response = await fetch(`${API_URL}/api/register`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idToken, name }),
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${idToken}` // <-- Token enviado aquí
+      },
+      body: JSON.stringify({ name }), // Solo necesitamos enviar el nombre
     });
 
     if (!response.ok) {
@@ -59,7 +63,7 @@ export const AuthProvider = ({ children }) => {
     const result = await signInWithPopup(auth, provider);
     const idToken = await result.user.getIdToken();
     
-    // El flujo de Google ya era correcto, se mantiene.
+    // El flujo de Google ya era casi correcto, nos aseguramos de que la ruta sea la correcta.
     await fetch(`${API_URL}/api/google`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
