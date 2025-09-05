@@ -51,7 +51,7 @@ function AuthPage() {
     try {
         const result = await signInWithPopup(auth, provider);
         const idToken = await result.user.getIdToken();
-        const response = await fetch(`${API_URL}/api/auth/google`, {
+        const response = await fetch(`${API_URL}/api/google`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ idToken }),
@@ -78,7 +78,7 @@ function AuthPage() {
     setIsLoading(true);
     setMessage('Registrando...');
     try {
-      const response = await fetch(`${API_URL}/api/auth/register`, {
+      const response = await fetch(`${API_URL}/api/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
