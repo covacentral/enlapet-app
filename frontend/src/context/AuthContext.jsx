@@ -1,5 +1,5 @@
 // frontend/src/context/AuthContext.jsx
-// VERSIÓN 3.0: Refactorizado para usar la capa de API (auth.api.js).
+// VERSIÓN 4.0: CORREGIDO. Envía el idToken al backend durante el registro.
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import {
@@ -11,8 +11,8 @@ import {
   onAuthStateChanged,
 } from 'firebase/auth';
 import { auth } from '../firebase';
-// 1. Importamos las funciones del servicio de API de autenticación.
-import { registerUserInBackend, authenticateWithGoogleBackend } from '../api/auth.api';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const AuthContext = createContext();
 
@@ -29,12 +29,23 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   const signUp = async (name, email, password) => {
-    // La creación en Firebase Auth se mantiene aquí.
+    // 1. Creamos el usuario en Firebase Authentication
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     
-    // 2. Reemplazamos el fetch con la llamada al servicio de API.
-    // El token se adjunta automáticamente por el interceptor de Axios.
-    await registerUserInBackend({ name, email, password });
+    // 2. Obtenemos el token de autenticación del nuevo usuario
+    const idToken = await userCredential.user.getIdToken();
+
+    // 3. Enviamos el token y el nombre al backend para que cree el perfil en Firestore.
+    const response = await fetch(`${API_URL}/api/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken, name }),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'No se pudo completar el registro en el servidor.');
+    }
 
     return userCredential;
   };
@@ -48,8 +59,12 @@ export const AuthProvider = ({ children }) => {
     const result = await signInWithPopup(auth, provider);
     const idToken = await result.user.getIdToken();
     
-    // 3. Reemplazamos el fetch con la llamada al servicio de API.
-    await authenticateWithGoogleBackend(idToken);
+    // El flujo de Google ya era correcto, se mantiene.
+    await fetch(`${API_URL}/api/google`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken })
+    });
     
     return result;
   };
