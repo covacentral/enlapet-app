@@ -91,9 +91,11 @@ function AppointmentModal({ vetProfile, pets, onClose, onAppointmentRequested })
         if (!response.ok) throw new Error(data.message);
 
         setMessage('¡Solicitud de cita enviada!');
-        // Llamamos a la función callback para notificar al componente padre
+      // Verificamos si la función de callback fue proporcionada antes de llamarla.
+      if (typeof onAppointmentRequested === 'function') {
         onAppointmentRequested();
-        setTimeout(() => onClose(), 2000);
+      }
+      setTimeout(() => onClose(), 2000);
 
     } catch (error) {
         setMessage(error.message);
