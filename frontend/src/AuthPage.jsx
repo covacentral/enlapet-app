@@ -89,10 +89,12 @@ function AuthPage() {
       const response = await fetch(`${API_URL}/api/register`, {
         method: 'POST',
         headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ name: formData.name })
+        body: JSON.stringify({ 
+          idToken: idToken,
+          name: formData.name 
+        })
       });
       
       const data = await response.json();
