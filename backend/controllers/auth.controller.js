@@ -1,37 +1,40 @@
 // backend/controllers/auth.controller.js
-// Lógica de negocio para el registro y la autenticación.
-// VERSIÓN 2.0: Refactorizado para usar auth.service.js
+// VERSIÓN 3.0: CORREGIDO. Unifica la lógica de registro para que se base en la verificación de tokens.
 
-const { auth } = require('../config/firebase');
-const authService = require('../services/auth.service'); // <-- 1. IMPORTAMOS el servicio
+const { db, auth } = require('../config/firebase');
+const { getNewUserProfile } = require('../models/user.model');
 
 /**
- * Registra un nuevo usuario con email y contraseña.
+ * Registra un nuevo usuario en Firestore a partir de un token de email/contraseña.
  */
 const registerUser = async (req, res) => {
+  // 1. Ahora esperamos un idToken en lugar de email/password.
+  const { idToken, name } = req.body;
+  if (!idToken || !name) {
+    return res.status(400).json({ message: 'Se requiere un token y un nombre.' });
+  }
+
   try {
-    const { email, password, name } = req.body;
-    if (!email || !password || !name) {
-      return res.status(400).json({ message: 'Nombre, email y contraseña son requeridos.' });
+    // 2. Verificamos el token para obtener el UID y el email de forma segura.
+    const decodedToken = await auth.verifyIdToken(idToken);
+    const { uid, email } = decodedToken;
+
+    // 3. Verificamos si el usuario ya existe en Firestore.
+    const userRef = db.collection('users').doc(uid);
+    const userDoc = await userRef.get();
+
+    if (userDoc.exists) {
+        return res.status(409).json({ message: 'El usuario ya existe en la base de datos.' });
     }
 
-    // 1. Crear el usuario en Firebase Authentication.
-    const userRecord = await auth.createUser({ email, password, displayName: name });
+    // 4. Creamos el perfil de usuario en Firestore.
+    const newUserProfile = getNewUserProfile(name, email);
+    await userRef.set(newUserProfile);
 
-    // 2. LLAMAMOS AL SERVICIO para crear el perfil en Firestore.
-    // La lógica de si existe o no, y cómo se crea, está ahora en el servicio.
-    await authService.findOrCreateUser(userRecord.uid, name, email);
-
-    res.status(201).json({ message: 'Usuario registrado con éxito', uid: userRecord.uid });
+    res.status(201).json({ message: 'Usuario registrado con éxito', uid });
   } catch (error) {
     console.error('Error en registerUser:', error);
-    if (error.code === 'auth/email-already-exists') {
-      return res.status(409).json({ message: 'El correo electrónico ya está en uso.' });
-    }
-    if (error.code === 'auth/invalid-password') {
-      return res.status(400).json({ message: 'La contraseña debe tener al menos 6 caracteres.' });
-    }
-    res.status(500).json({ message: 'Error al registrar el usuario.' });
+    res.status(500).json({ message: 'Error al registrar el usuario en la base de datos.' });
   }
 };
 
@@ -47,18 +50,17 @@ const googleAuth = async (req, res) => {
   try {
     const decodedToken = await auth.verifyIdToken(idToken);
     const { uid, name, email, picture } = decodedToken;
+    const userRef = db.collection('users').doc(uid);
+    const userDoc = await userRef.get();
 
-    // LLAMAMOS AL SERVICIO para encontrar o crear el usuario en Firestore.
-    const { isNewUser } = await authService.findOrCreateUser(uid, name, email, picture);
-    
-    const message = isNewUser 
-      ? 'Usuario registrado y autenticado con Google.' 
-      : 'Usuario autenticado con Google.';
-    
-    const statusCode = isNewUser ? 201 : 200;
-
-    return res.status(statusCode).json({ message, uid });
-
+    // 5. Lógica de "buscar o crear" restaurada para máxima fiabilidad.
+    if (!userDoc.exists) {
+      const newUserProfile = getNewUserProfile(name, email, picture || '');
+      await userRef.set(newUserProfile);
+      return res.status(201).json({ message: 'Usuario registrado y autenticado con Google.', uid });
+    } else {
+      return res.status(200).json({ message: 'Usuario autenticado con Google.', uid });
+    }
   } catch (error) {
     console.error("Error en googleAuth:", error);
     return res.status(401).json({ message: "Token de Google inválido o expirado." });
