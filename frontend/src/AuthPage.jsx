@@ -5,6 +5,7 @@
 import { useState, useEffect } from 'react';
 import { auth } from './firebase';
 import { 
+  createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
   GoogleAuthProvider,
@@ -78,17 +79,27 @@ function AuthPage() {
     setIsLoading(true);
     setMessage('Registrando...');
     try {
+      // 1. Crear usuario en Firebase Authentication
+      const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+      
+      // 2. Obtener el token de autenticación
+      const idToken = await userCredential.user.getIdToken();
+
+      // 3. Enviar el token y el nombre al backend
       const response = await fetch(`${API_URL}/api/register`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({ name: formData.name })
       });
+      
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.message || 'Ocurrió un error al registrar.');
       }
-      setMessage('¡Usuario registrado con éxito! Por favor, inicia sesión.');
-      setView('login');
+      setMessage('¡Usuario registrado con éxito!');
     } catch (error) {
       setMessage(`Error: ${error.message}`);
     } finally {
