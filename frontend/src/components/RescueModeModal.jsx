@@ -91,10 +91,10 @@ function RescueModeModal({ pet, onClose, onSuccess }) {
         if (!user) throw new Error("No autenticado.");
         const idToken = await user.getIdToken();
         const response = await fetch(`${API_URL}/api/pets/${pet.id}/rescue-mode`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}`},
-            body: JSON.stringify(payload)
-        });
+          method: 'POST', // <--- CORRECCIÓN
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}`},
+          body: JSON.stringify(payload)
+      });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
         setMessage('¡Modo rescate activado! El aviso ya es visible para la comunidad.');
