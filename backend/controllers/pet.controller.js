@@ -131,14 +131,24 @@ const uploadPetPicture = async (req, res) => {
         });
 
         blobStream.on('finish', async () => {
-            // --- [CORRECCIÓN] ---
-            // 1. Hacemos el archivo públicamente legible.
             await fileUpload.makePublic();
 
-            // 2. Obtenemos la URL pública y la guardamos en la base de datos.
-            const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
-            await petRef.update({ petPictureUrl: publicUrl });
-            res.status(200).json({ message: 'Foto de perfil actualizada con éxito.', petPictureUrl: publicUrl });
+            // =================================================================
+            // INICIO DEL CAMBIO: Construir la nueva URL optimizada
+            // =================================================================
+            const originalPath = fileName;
+            const lastDotIndex = originalPath.lastIndexOf('.');
+            const pathWithoutExt = originalPath.substring(0, lastDotIndex);
+            
+            // Usamos el sufijo exacto de la extensión (1080x1080 y .webp)
+            const resizedFilePath = `${pathWithoutExt}_1080x1080.webp`;
+            const publicUrl = `https://storage.googleapis.com/${bucket.name}/${resizedFilePath}`;
+            // =================================================================
+            // FIN DEL CAMBIO
+            // =================================================================
+
+            await petRef.update({ petPictureUrl: publicUrl }); // <-- Guarda la URL optimizada
+            res.status(200).json({ message: 'Foto de perfil actualizada con éxito.', petPictureUrl: publicUrl }); // <-- Devuelve la URL optimizada
         });
 
         blobStream.end(file.buffer);
@@ -147,6 +157,7 @@ const uploadPetPicture = async (req, res) => {
         res.status(500).json({ message: 'Error interno del servidor.' });
     }
 };
+
 
 const managePatientLink = async (req, res) => {
     try {

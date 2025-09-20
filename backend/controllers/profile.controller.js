@@ -108,13 +108,24 @@ const uploadProfilePicture = async (req, res) => {
 
         blobStream.on('finish', async () => {
             try {
-                // **INICIO DE LA CORRECCIÓN DE BUG DE IMAGEN**
                 await fileUpload.makePublic();
-                // **FIN DE LA CORRECCIÓN DE BUG DE IMAGEN**
 
-                const publicUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
-                await db.collection('users').doc(uid).update({ profilePictureUrl: publicUrl });
-                res.status(200).json({ message: 'Foto actualizada.', profilePictureUrl: publicUrl });
+                // =================================================================
+                // INICIO DEL CAMBIO: Construir la nueva URL optimizada
+                // =================================================================
+                const originalPath = filePath;
+                const lastDotIndex = originalPath.lastIndexOf('.');
+                const pathWithoutExt = originalPath.substring(0, lastDotIndex);
+                
+                // Usamos el sufijo exacto de la extensión (1080x1080 y .webp)
+                const resizedFilePath = `${pathWithoutExt}_1080x1080.webp`;
+                const publicUrl = `https://storage.googleapis.com/${bucket.name}/${resizedFilePath}`;
+                // =================================================================
+                // FIN DEL CAMBIO
+                // =================================================================
+
+                await db.collection('users').doc(uid).update({ profilePictureUrl: publicUrl }); // <-- Guarda la URL optimizada
+                res.status(200).json({ message: 'Foto actualizada.', profilePictureUrl: publicUrl }); // <-- Devuelve la URL optimizada
             } catch (finishError) {
                 console.error('Error al finalizar la subida de foto de perfil:', finishError);
                 res.status(500).json({ message: 'Error al procesar el archivo después de subirlo.' });
@@ -127,6 +138,7 @@ const uploadProfilePicture = async (req, res) => {
         res.status(500).json({ message: 'Error interno del servidor.' });
     }
 };
+
 
 /**
  * Permite a un usuario seguir a otro perfil (usuario o mascota).

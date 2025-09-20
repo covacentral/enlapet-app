@@ -127,7 +127,20 @@ const createPost = async (req, res) => {
 
         blobStream.on('finish', async () => {
             await fileUpload.makePublic();
-            const imageUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
+
+            // =================================================================
+            // INICIO DEL CAMBIO: Construir la nueva URL de la imagen optimizada
+            // =================================================================
+            const originalPath = filePath;
+            const lastDotIndex = originalPath.lastIndexOf('.');
+            const pathWithoutExt = originalPath.substring(0, lastDotIndex);
+            
+            // Usamos el sufijo exacto que configuraste en la extensión (1080x1080 y .webp)
+            const resizedFilePath = `${pathWithoutExt}_1080x1080.webp`;
+            const imageUrl = `https://storage.googleapis.com/${bucket.name}/${resizedFilePath}`;
+            // =================================================================
+            // FIN DEL CAMBIO
+            // =================================================================
             
             try {
                 const newPost = await db.runTransaction(async (t) => {
@@ -137,7 +150,6 @@ const createPost = async (req, res) => {
                     if (missionId && petId) {
                         const missionRef = db.collection('missions').doc(missionId);
                         const completedMissionRef = db.collection('pets').doc(petId).collection('completedMissions').doc(missionId);
-                        // Leemos ambos documentos al inicio.
                         [missionDoc, completedMissionDoc] = await Promise.all([t.get(missionRef), t.get(completedMissionRef)]);
                     }
                     
@@ -154,26 +166,24 @@ const createPost = async (req, res) => {
                     }
                     
                     const postData = {
-                        authorId, authorType, imageUrl, caption: finalCaption,
+                        authorId, authorType, imageUrl, caption: finalCaption, // <-- ¡Ahora usa la URL optimizada!
                         authorLocation: authorDoc.data().location || null,
                         createdAt: new Date().toISOString(),
                         likesCount: 0, commentsCount: 0
                     };
 
                     // --- FASE 3: TODAS LAS ESCRITURAS ---
-                    t.set(postRef, postData); // Escritura 1: Post
+                    t.set(postRef, postData);
 
                     if (isMissionPost) {
                         const userRef = db.collection('users').doc(uid);
                         const completedMissionRef = db.collection('pets').doc(petId).collection('completedMissions').doc(missionId);
                         
-                        // Escritura 2: Hito de la Misión
                         t.set(completedMissionRef, {
                             completedAt: new Date().toISOString(), status: 'completed',
                             proof: { type: 'POST', postId: postRef.id }
                         });
                         
-                        // Escritura 3: Puntos del Usuario
                         t.update(userRef, {
                             enlaPetPoints: admin.firestore.FieldValue.increment(missionData.reward.points || 0)
                         });
@@ -202,6 +212,7 @@ const createPost = async (req, res) => {
         res.status(500).json({ message: 'Error al verificar el autor.' });
     }
 };
+
 
 const getPostsByAuthor = async (req, res) => {
     try {
