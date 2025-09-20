@@ -33,7 +33,9 @@ const PORT = process.env.PORT || 3001;
 const allowedOrigins = [
     'http://localhost:5173',
     'https://covacentral.shop',
-    'https://www.covacentral.shop' 
+    'https://www.covacentral.shop',
+    'https://enlapet.com',
+    'https://www.enlapet.com'
 ];
 
 const vercelPreviewPattern = /^https:\/\/enlapet-app-.*\.vercel\.app$/;
