@@ -32,9 +32,10 @@ const getUnreadCount = async (req, res) => {
         const snapshot = await db.collection('notifications')
             .where('recipientId', '==', uid)
             .where('read', '==', false)
+            .count()
             .get();
             
-        res.status(200).json({ count: snapshot.size });
+        res.status(200).json({ count: snapshot.data().count });
     } catch (error) {
         console.error('Error en getUnreadCount:', error);
         res.status(500).json({ message: 'Error al contar notificaciones.' });
