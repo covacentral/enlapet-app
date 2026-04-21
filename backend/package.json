@@ -27,6 +27,9 @@
     "firebase-admin": "^12.2.0",
     "multer": "^1.4.5-lts.1",
     "nanoid": "^3.3.7",
+    "node-cache": "^5.1.2",
+    "express-rate-limit": "^7.3.1",
+    "helmet": "^7.1.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {

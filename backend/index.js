@@ -3,6 +3,8 @@
 
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const { db } = require('./config/firebase');
 
 // Middlewares
@@ -28,6 +30,28 @@ const publicRoutes = require('./routes/public.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// --- [SEGURIDAD HTTP] ---
+app.use(helmet());
+
+// --- [RATE LIMITING] ---
+const globalLimiter = rateLimit({
+    windowMs: 5 * 60 * 1000, // 5 minutos
+    limit: 300, // 300 peticiones máximo por IP
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: "Demasiadas peticiones desde esta IP. Por favor espera unos minutos." }
+});
+
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    limit: 20, // 20 intentos de autenticación por IP
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: "Demasiados intentos de acceso repetidos. Por seguridad, intente más tarde." }
+});
+
+app.use(globalLimiter);
 
 // --- [CONFIGURACIÓN DE CORS DEFINITIVA] ---
 const allowedOrigins = [
@@ -66,7 +90,7 @@ app.get('/', (req, res) => {
 
 // Rutas Públicas y de Autenticación
 app.use('/api', publicRoutes);
-app.use('/api', authRoutes);
+app.use('/api', authLimiter, authRoutes); // authLimiter aplicado a rutas de autenticación
 
 // Middleware de autenticación para rutas protegidas
 app.use(authenticateUser);

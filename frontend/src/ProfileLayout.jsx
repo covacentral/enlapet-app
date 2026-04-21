@@ -48,7 +48,7 @@ function ProfileLayout({ user }) {
   
   const [unreadCount, setUnreadCount] = useState(0);
 
-  const fetchCoreData = useCallback(async () => {
+  const fetchCoreData = useCallback(async (retryCount = 0) => {
     if (!user) return;
     try {
       const idToken = await user.getIdToken();
@@ -56,16 +56,30 @@ function ProfileLayout({ user }) {
         fetch(`${API_URL}/api/profile`, { headers: { 'Authorization': `Bearer ${idToken}` } }),
         fetch(`${API_URL}/api/pets`, { headers: { 'Authorization': `Bearer ${idToken}` } }),
       ]);
-      if (!profileResponse.ok || !petsResponse.ok) throw new Error("No se pudieron cargar los datos del perfil.");
+      
+      if (!profileResponse.ok) {
+          // Si el perfil no existe aún (posible carrera con el registro en el backend), reintentamos unas veces.
+          if (profileResponse.status === 404 && retryCount < 3) {
+              console.warn(`Perfil no encontrado, reintentando carga (${retryCount + 1}/3)...`);
+              setTimeout(() => fetchCoreData(retryCount + 1), 1000);
+              return;
+          }
+          throw new Error("No se pudieron cargar los datos del perfil.");
+      }
       
       const profileData = await profileResponse.json();
-      const petsData = await petsResponse.json();
+      const petsData = petsResponse.ok ? await petsResponse.json() : [];
       setUserProfile(profileData);
       setPets(Array.isArray(petsData) ? petsData : []);
 
     } catch (error) {
       console.error("Error fetching core data:", error);
-      setPets([]);
+      if (retryCount < 3) {
+          console.warn(`Error de red, reintentando carga (${retryCount + 1}/3)...`);
+          setTimeout(() => fetchCoreData(retryCount + 1), 1000);
+      } else {
+          setPets([]);
+      }
     }
   }, [user]);
 
