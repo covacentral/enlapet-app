@@ -61,8 +61,8 @@ function ProfileLayout({ user }) {
           // Si el perfil no existe aún (posible carrera con el registro en el backend), reintentamos unas veces.
           if (profileResponse.status === 404 && retryCount < 3) {
               console.warn(`Perfil no encontrado, reintentando carga (${retryCount + 1}/3)...`);
-              setTimeout(() => fetchCoreData(retryCount + 1), 1000);
-              return;
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              return fetchCoreData(retryCount + 1);
           }
           throw new Error("No se pudieron cargar los datos del perfil.");
       }
@@ -76,7 +76,8 @@ function ProfileLayout({ user }) {
       console.error("Error fetching core data:", error);
       if (retryCount < 3) {
           console.warn(`Error de red, reintentando carga (${retryCount + 1}/3)...`);
-          setTimeout(() => fetchCoreData(retryCount + 1), 1000);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          return fetchCoreData(retryCount + 1);
       } else {
           setPets([]);
       }

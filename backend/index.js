@@ -31,6 +31,11 @@ const publicRoutes = require('./routes/public.routes');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// --- [CONFIGURACIÓN CLAVE PARA RENDIMIENTO Y RATE LIMITS] ---
+// Como la app está en Render (PaaS) detrás de un Load Balancer proxy,
+// necesitamos confiar en el proxy para obtener la verdadera IP del usuario.
+app.set('trust proxy', 1);
+
 // --- [SEGURIDAD HTTP] ---
 app.use(helmet());
 

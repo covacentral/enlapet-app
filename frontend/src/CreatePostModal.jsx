@@ -107,9 +107,9 @@ function CreatePostModal({ userProfile, pets, initialAuthor, onClose, onPostCrea
         }
     };
     
-    const placeholderText = selectedAuthor.ownerId
-      ? `¿Qué está haciendo ${selectedAuthor.name}?`
-      : `¿Qué estás pensando, ${selectedAuthor.name.split(' ')[0]}?`;
+    const placeholderText = selectedAuthor?.ownerId
+      ? `¿Qué está haciendo ${selectedAuthor?.name || 'tu mascota'}?`
+      : `¿Qué estás pensando, ${(selectedAuthor?.name || 'Amigo').split(' ')[0]}?`;
 
     return (
         <div className={styles.modalBackdrop} onClick={onClose}>
