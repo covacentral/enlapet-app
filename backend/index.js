@@ -95,7 +95,9 @@ app.get('/', (req, res) => {
 
 // Rutas Públicas y de Autenticación
 app.use('/api', publicRoutes);
-app.use('/api', authLimiter, authRoutes); // authLimiter aplicado a rutas de autenticación
+app.use('/api/register', authLimiter);
+app.use('/api/google', authLimiter);
+app.use('/api', authRoutes);
 
 // Middleware de autenticación para rutas protegidas
 app.use(authenticateUser);
