@@ -5,7 +5,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const { db } = require('./config/firebase');
+const { db, bucket } = require('./config/firebase');
 
 // Middlewares
 const authenticateUser = require('./middleware/authenticateUser');
@@ -121,8 +121,17 @@ app.use('/api', reportRoutes);
 app.use('/api/search', searchRoutes);
 
 db.collection('users').limit(1).get()
-    .then(() => console.log('Conexión a Firestore exitosa.'))
-    .catch(err => console.error('Error de conexión a Firestore:', err));
+    .then(() => {
+        console.log('Conexión a Firestore exitosa.');
+        return bucket.setCorsConfiguration([{ 
+            origin: ['*'], 
+            method: ['GET', 'OPTIONS'], 
+            maxAgeSeconds: 3600, 
+            responseHeader: ['Content-Type'] 
+        }]);
+    })
+    .then(() => console.log('CORS de Storage configurado correctamente.'))
+    .catch(err => console.error('Error al inicializar Firestore/Storage:', err));
 
 app.listen(PORT, () => {
     console.log(`Servidor escuchando en el puerto ${PORT}`);
