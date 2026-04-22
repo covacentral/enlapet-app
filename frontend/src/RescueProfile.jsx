@@ -123,8 +123,15 @@ function RescueProfile() {
     );
     if (!petData) return null;
 
-    const hasCoordinates = petData.lastSeen?.coordinates?._latitude && petData.lastSeen?.coordinates?._longitude;
-    const position = hasCoordinates ? [petData.lastSeen.coordinates._latitude, petData.lastSeen.coordinates._longitude] : null;
+    const isGeoPoint = petData.lastSeen?.coordinates?._latitude && petData.lastSeen?.coordinates?._longitude;
+    const isSimpleCoords = petData.lastSeen?.latitude && petData.lastSeen?.longitude;
+    
+    let position = null;
+    if (isGeoPoint) {
+        position = [petData.lastSeen.coordinates._latitude, petData.lastSeen.coordinates._longitude];
+    } else if (isSimpleCoords) {
+        position = [petData.lastSeen.latitude, petData.lastSeen.longitude];
+    }
     
     const WhatsAppButton = ({ phoneNumber }) => {
         if (!phoneNumber) return null;

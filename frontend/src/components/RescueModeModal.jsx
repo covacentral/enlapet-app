@@ -49,15 +49,22 @@ function RescueModeModal({ pet, onClose, onSuccess }) {
 
   useEffect(() => {
     const petCoords = pet.rescueMode?.lastSeen?.coordinates;
+    const petLat = pet.rescueMode?.lastSeen?.latitude;
+    const petLng = pet.rescueMode?.lastSeen?.longitude;
+
     if (petCoords?._latitude && petCoords?._longitude) {
       const savedPos = { lat: petCoords._latitude, lng: petCoords._longitude };
       setSelectedCoordinates(savedPos);
       setInitialMapPosition(savedPos);
       return;
+    } else if (petLat && petLng) {
+      const savedPos = { lat: petLat, lng: petLng };
+      setSelectedCoordinates(savedPos);
+      setInitialMapPosition(savedPos);
+      return;
     }
     
-    // --- [LÍNEA CORREGIDA] ---
-    // Se usa el nombre de la variable importada correctamente: 'colombiaDepartments'.
+    // Si no hay coords guardadas, centrar en la ciudad
     const departmentData = colombiaDepartments.find(d => d.department === pet.location?.department);
     if (departmentData) {
       const cityData = departmentData.cities.find(c => c.name === pet.location?.city);
@@ -194,7 +201,7 @@ function RescueModeModal({ pet, onClose, onSuccess }) {
                     </button>
                 )}
 
-                <button type="submit" className={`${sharedStyles.button} ${sharedStyles.danger}`} style={{width: '100%', backgroundColor: 'var(--error-red)'}} disabled={isLoading}>
+                <button type="submit" className={`${sharedStyles.button} ${sharedStyles.danger}`} style={{width: '100%', backgroundColor: 'var(--error-red)', color: 'white'}} disabled={isLoading}>
                     {isLoading ? 'Guardando...' : (pet.rescueMode?.isActive ? 'Actualizar Búsqueda' : 'Activar Modo Rescate (15 Días)')}
                 </button>
             </div>
