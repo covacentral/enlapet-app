@@ -261,11 +261,12 @@ const manageRescueMode = async (req, res) => {
         const updatePayload = {
             'rescueMode.isActive': isActive,
             'rescueMode.activatedAt': isActive ? new Date().toISOString() : null,
+            'rescueMode.expiresAt': isActive ? new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString() : null,
             'rescueMode.message': message || '',
             'rescueMode.showContactPhone': showContactPhone === true,
         };
 
-        if (lastSeen) {
+        if (lastSeen && isActive) {
             updatePayload['rescueMode.lastSeen'] = lastSeen;
         }
 

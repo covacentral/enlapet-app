@@ -147,18 +147,37 @@ const getActiveRescuePets = async (req, res) => {
             return res.status(200).json({ pets: [], nextCursor: null });
         }
 
-        const rescuePets = snapshot.docs.map(doc => {
+        const rescuePets = [];
+        const expiredIds = [];
+        const now = new Date();
+
+        snapshot.docs.forEach(doc => {
             const data = doc.data();
-            return {
-                id: doc.id,
-                epid: data.epid,
-                name: data.name,
-                breed: data.breed,
-                petPictureUrl: data.petPictureUrl,
-                lastSeenAddress: data.rescueMode.lastSeen.address,
-                activatedAt: data.rescueMode.activatedAt
-            };
+            const expiresAt = data.rescueMode?.expiresAt ? new Date(data.rescueMode.expiresAt) : null;
+            
+            if (expiresAt && now > expiresAt) {
+                expiredIds.push(doc.id);
+            } else {
+                rescuePets.push({
+                    id: doc.id,
+                    epid: data.epid,
+                    name: data.name,
+                    breed: data.breed,
+                    petPictureUrl: data.petPictureUrl,
+                    lastSeenAddress: data.rescueMode?.lastSeen?.address || '',
+                    activatedAt: data.rescueMode?.activatedAt
+                });
+            }
         });
+
+        // Lazy Expiration: Apagado en segundo plano de perfiles caducados
+        if (expiredIds.length > 0) {
+            Promise.all(expiredIds.map(id => db.collection('pets').doc(id).update({
+                'rescueMode.isActive': false,
+                'rescueMode.activatedAt': null,
+                'rescueMode.expiresAt': null
+            }))).catch(e => console.error("Error limpiando expirados:", e));
+        }
         
         // Determinamos el cursor para la siguiente página.
         const lastDoc = snapshot.docs[snapshot.docs.length - 1];

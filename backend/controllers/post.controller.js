@@ -108,13 +108,31 @@ const getFeed = async (req, res) => {
                     .get();
                 
                 if (!rescueSnapshot.empty) {
-                    rescuePetsData = rescueSnapshot.docs.map(doc => {
+                    const expiredIds = [];
+                    const now = new Date();
+                    
+                    rescueSnapshot.docs.forEach(doc => {
                         const data = doc.data();
-                        return {
-                            id: doc.id, epid: data.epid, name: data.name, breed: data.breed,
-                            petPictureUrl: data.petPictureUrl, lastSeenAddress: data.rescueMode.lastSeen.address
-                        };
+                        const expiresAt = data.rescueMode?.expiresAt ? new Date(data.rescueMode.expiresAt) : null;
+                        
+                        if (expiresAt && now > expiresAt) {
+                            expiredIds.push(doc.id);
+                        } else {
+                            rescuePetsData.push({
+                                id: doc.id, epid: data.epid, name: data.name, breed: data.breed,
+                                petPictureUrl: data.petPictureUrl, lastSeenAddress: data.rescueMode?.lastSeen?.address || ''
+                            });
+                        }
                     });
+
+                    // Lazy Expiration background cleanup
+                    if (expiredIds.length > 0) {
+                        Promise.all(expiredIds.map(id => db.collection('pets').doc(id).update({
+                            'rescueMode.isActive': false,
+                            'rescueMode.activatedAt': null,
+                            'rescueMode.expiresAt': null
+                        }))).catch(console.error);
+                    }
                 }
                 feedCache.set(rescueCacheKey, rescuePetsData);
             }

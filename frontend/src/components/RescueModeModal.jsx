@@ -107,6 +107,36 @@ function RescueModeModal({ pet, onClose, onSuccess }) {
     }
   };
 
+  const handleDeactivate = async () => {
+    if (!window.confirm(`¿Estás seguro de que deseas detener la búsqueda de ${pet.name}?`)) return;
+    
+    setIsLoading(true);
+    setMessage('Deteniendo búsqueda...');
+    const payload = {
+        isActive: false,
+    };
+
+    try {
+        const user = auth.currentUser;
+        if (!user) throw new Error("No autenticado.");
+        const idToken = await user.getIdToken();
+        const response = await fetch(`${API_URL}/api/pets/${pet.id}/rescue-mode`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}`},
+          body: JSON.stringify(payload)
+      });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message);
+        setMessage('¡Búsqueda detenida con éxito!');
+        onSuccess(false); // Pasamos 'false' o actualizamos datos
+        setTimeout(() => onClose(), 2000);
+    } catch (error) {
+        setMessage(`Error: ${error.message}`);
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
@@ -157,8 +187,15 @@ function RescueModeModal({ pet, onClose, onSuccess }) {
             
             <div className={sharedStyles.modalFooter}>
                 {message && <p className={message.startsWith('Error') ? sharedStyles.responseMessageError : sharedStyles.responseMessage}>{message}</p>}
+                
+                {pet.rescueMode?.isActive && (
+                    <button type="button" onClick={handleDeactivate} className={`${sharedStyles.button} ${sharedStyles.secondary}`} style={{width: '100%', marginBottom: '10px'}} disabled={isLoading}>
+                        Detener Búsqueda Activa
+                    </button>
+                )}
+
                 <button type="submit" className={`${sharedStyles.button} ${sharedStyles.danger}`} style={{width: '100%', backgroundColor: 'var(--error-red)'}} disabled={isLoading}>
-                    {isLoading ? 'Activando...' : `Activar Modo Rescate`}
+                    {isLoading ? 'Guardando...' : (pet.rescueMode?.isActive ? 'Actualizar Búsqueda' : 'Activar Modo Rescate (15 Días)')}
                 </button>
             </div>
         </form>
