@@ -81,26 +81,25 @@
     border-top: 1px solid var(--border-color);
 }
 
-.addToCartButton {
+.whatsappButton {
     width: 100%;
     padding: 15px;
     font-size: 1.1rem;
-}
-
-.paymentMethods {
-    text-align: center;
-    margin-top: 1.5rem;
-    color: var(--text-secondary);
-    font-size: 0.9rem;
-}
-
-.paymentMethods p {
-    margin: 0 0 0.5rem 0;
-}
-
-.paymentMethods span {
+    background-color: #25D366;
+    color: white;
+    border: none;
+    border-radius: 8px;
     font-weight: bold;
-    color: var(--text-primary);
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    transition: background-color 0.2s ease;
+}
+
+.whatsappButton:hover {
+    background-color: #128C7E;
 }
 
 

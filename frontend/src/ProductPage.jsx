@@ -3,21 +3,18 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
+import { MessageCircle } from 'lucide-react';
 import LoadingComponent from './LoadingComponent';
-import { useCart } from './context/CartContext'; // 1. Importamos el hook del carrito
 import styles from './ProductPage.module.css';
 import sharedStyles from './shared.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 function ProductPage() {
-  const { productId } = useParams(); // Ahora leemos el ID desde la URL
+  const { productId } = useParams();
   const [product, setProduct] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isAdded, setIsAdded] = useState(false); // Estado para feedback visual
-
-  const { addToCart } = useCart(); // 2. Obtenemos la función para añadir al carrito
 
   const fetchProduct = useCallback(async () => {
     setIsLoading(true);
@@ -41,10 +38,15 @@ function ProductPage() {
     fetchProduct();
   }, [fetchProduct]);
 
-  const handleAddToCart = () => {
-    addToCart(product);
-    setIsAdded(true);
-    setTimeout(() => setIsAdded(false), 2000); // Reseteamos el feedback después de 2 segundos
+  const handleWhatsAppPurchase = () => {
+    // Leemos el contacto configurado en la base de datos o usamos el predeterminado
+    const waNumber = product.whatsappContact || '573218248087';
+    const waMessage = product.whatsappMessage || '¡Hola Cova Central! Me interesa el collar enlapet.';
+    
+    // Codificamos el mensaje y construimos la URL dinámica
+    const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(waMessage)}`;
+    
+    window.open(waUrl, '_blank');
   };
 
   const formatPrice = (amount, currency) => {
@@ -79,19 +81,13 @@ function ProductPage() {
         </ul>
 
         <div className={styles.actions}>
-            {/* --- 3. Botón ahora funcional y con feedback --- */}
             <button 
-                className={`${sharedStyles.button} ${isAdded ? sharedStyles.secondary : sharedStyles.primary} ${styles.addToCartButton}`}
-                onClick={handleAddToCart}
-                disabled={isAdded}
+                className={styles.whatsappButton}
+                onClick={handleWhatsAppPurchase}
             >
-                {isAdded ? '¡Añadido al carrito!' : 'Añadir al Carrito'}
+                <MessageCircle size={22} />
+                <span>Comprar por WhatsApp</span>
             </button>
-        </div>
-
-        <div className={styles.paymentMethods}>
-            <p>Múltiples métodos de pago seguros con:</p>
-            <span>ePayco | Addi | Sistecrédito | PSE</span>
         </div>
       </div>
     </div>
