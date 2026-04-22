@@ -58,7 +58,7 @@
 /* ============================================= */
 .petBubblesContainer {
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: flex-start;
   gap: 16px;
   overflow-x: auto;
