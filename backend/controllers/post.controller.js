@@ -4,6 +4,11 @@
 const { db, bucket } = require('../config/firebase');
 const { createNotification } = require('../services/notification.service');
 const admin = require('firebase-admin');
+const NodeCache = require('node-cache');
+
+// --- [Cachés de Optimización del Feed] ---
+const feedCache = new NodeCache({ stdTTL: 120, checkperiod: 60 }); // 2 min (Mantener reactivo pero colapsar lecturas idénticas)
+const authorCache = new NodeCache({ stdTTL: 1800, checkperiod: 600 }); // 30 min (Los perfiles rara vez cambian repetidamente)
 // Se elimina la importación de 'completeMission', ya que su lógica se integra directamente.
 
 // --- (getFeed y otras funciones no relacionadas con la creación permanecen sin cambios) ---
@@ -34,12 +39,28 @@ const getFeed = async (req, res) => {
         }
         const remainingLimit = POSTS_PER_PAGE - posts.length;
         if (remainingLimit > 0) {
-            let discoveryQuery = db.collection('posts').orderBy('createdAt', 'desc').limit(remainingLimit + 5);
-            const discoverySnapshot = await discoveryQuery.get();
-            discoverySnapshot.docs.forEach(doc => {
-                if (posts.length < POSTS_PER_PAGE && !fetchedPostIds.has(doc.id)) {
-                    posts.push({ id: doc.id, ...doc.data() });
-                    fetchedPostIds.add(doc.id);
+            let discoveryPostsList = [];
+            const cacheKey = 'discovery_posts_feed';
+            const cachedDocs = feedCache.get(cacheKey);
+
+            if (cachedDocs && !cursor) {
+                // Modo Caché (Solo sin cursor para mantener frescura y lógica en la primera página)
+                discoveryPostsList = cachedDocs;
+            } else {
+                // Consulta costosa a Firebase
+                let discoveryQuery = db.collection('posts').orderBy('createdAt', 'desc').limit(remainingLimit + 5);
+                const discoverySnapshot = await discoveryQuery.get();
+                discoveryPostsList = discoverySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                if (!cursor) {
+                    feedCache.set(cacheKey, discoveryPostsList);
+                }
+            }
+
+            discoveryPostsList.forEach(postData => {
+                if (posts.length < POSTS_PER_PAGE && !fetchedPostIds.has(postData.id)) {
+                    posts.push(postData);
+                    fetchedPostIds.add(postData.id);
                 }
             });
         }
@@ -49,15 +70,23 @@ const getFeed = async (req, res) => {
         const authorIds = [...new Set(posts.map(p => p.authorId))];
         const authorsData = {};
         if (authorIds.length > 0) {
-            const authorPromises = authorIds.map(id =>
-                db.collection('users').doc(id).get().then(doc => doc.exists ? doc : db.collection('pets').doc(id).get())
-            );
-            const authorSnapshots = await Promise.all(authorPromises);
-            authorSnapshots.forEach(doc => {
-                if (doc.exists) {
-                    const data = doc.data();
-                    authorsData[doc.id] = { id: doc.id, name: data.name, profilePictureUrl: data.profilePictureUrl || data.petPictureUrl || '' };
+            const authorPromises = authorIds.map(async (id) => {
+                const cachedAuthor = authorCache.get(id);
+                if (cachedAuthor) return cachedAuthor;
+                
+                const doc = await db.collection('users').doc(id).get();
+                const targetDoc = doc.exists ? doc : await db.collection('pets').doc(id).get();
+                if (targetDoc.exists) {
+                    const data = targetDoc.data();
+                    const authorData = { id: targetDoc.id, name: data.name, profilePictureUrl: data.profilePictureUrl || data.petPictureUrl || '' };
+                    authorCache.set(id, authorData);
+                    return authorData;
                 }
+                return null;
+            });
+            const resolvedAuthors = await Promise.all(authorPromises);
+            resolvedAuthors.forEach(data => {
+                if (data) authorsData[data.id] = data;
             });
         }
         const finalPosts = posts.map(post => ({ ...post, author: authorsData[post.authorId] || { id: post.authorId, name: 'Autor Desconocido' } }));
@@ -66,24 +95,28 @@ const getFeed = async (req, res) => {
         // Solo lo hacemos en la primera carga del feed (cuando no hay cursor) para eficiencia.
         let rescuePetsData = [];
         if (!cursor) {
-            const rescueSnapshot = await db.collection('pets')
-                .where('rescueMode.isActive', '==', true)
-                .orderBy('rescueMode.activatedAt', 'desc')
-                .limit(5)
-                .get();
+            const rescueCacheKey = 'rescue_pets_carousel';
+            const cachedRescuePets = feedCache.get(rescueCacheKey);
             
-            if (!rescueSnapshot.empty) {
-                rescuePetsData = rescueSnapshot.docs.map(doc => {
-                    const data = doc.data();
-                    return {
-                        id: doc.id,
-                        epid: data.epid, // <-- CAMBIO CLAVE: Añadimos el EPID
-                        name: data.name,
-                        breed: data.breed,
-                        petPictureUrl: data.petPictureUrl,
-                        lastSeenAddress: data.rescueMode.lastSeen.address
-                    };
-                });
+            if (cachedRescuePets) {
+                rescuePetsData = cachedRescuePets;
+            } else {
+                const rescueSnapshot = await db.collection('pets')
+                    .where('rescueMode.isActive', '==', true)
+                    .orderBy('rescueMode.activatedAt', 'desc')
+                    .limit(5)
+                    .get();
+                
+                if (!rescueSnapshot.empty) {
+                    rescuePetsData = rescueSnapshot.docs.map(doc => {
+                        const data = doc.data();
+                        return {
+                            id: doc.id, epid: data.epid, name: data.name, breed: data.breed,
+                            petPictureUrl: data.petPictureUrl, lastSeenAddress: data.rescueMode.lastSeen.address
+                        };
+                    });
+                }
+                feedCache.set(rescueCacheKey, rescuePetsData);
             }
         }
 
@@ -252,6 +285,10 @@ const likePost = async (req, res) => {
             }
             t.set(likeRef, { createdAt: new Date().toISOString() });
             t.update(postRef, { likesCount: admin.firestore.FieldValue.increment(1) });
+            
+            // --- NUEVO: Optimización Estructural N+1 ---
+            const summaryRef = db.collection('users').doc(uid).collection('engagements').doc('summary');
+            t.set(summaryRef, { likedPosts: admin.firestore.FieldValue.arrayUnion(postId) }, { merge: true });
         });
         if (recipientId && recipientId !== 'ALREADY_LIKED') {
             await createNotification(recipientId, uid, 'new_like', postId, 'post');
@@ -273,6 +310,10 @@ const unlikePost = async (req, res) => {
             if (!likeDoc.exists) return;
             t.delete(likeRef);
             t.update(postRef, { likesCount: admin.firestore.FieldValue.increment(-1) });
+            
+            // --- NUEVO: Optimización Estructural N+1 ---
+            const summaryRef = db.collection('users').doc(uid).collection('engagements').doc('summary');
+            t.set(summaryRef, { likedPosts: admin.firestore.FieldValue.arrayRemove(postId) }, { merge: true });
         });
         res.status(200).json({ message: 'Like eliminado.' });
     } catch (error) {
@@ -285,10 +326,28 @@ const getLikeStatuses = async (req, res) => {
     const { postIds } = req.body;
     if (!Array.isArray(postIds) || postIds.length === 0) return res.status(200).json({});
     try {
-        const likePromises = postIds.map(postId => db.collection('posts').doc(postId).collection('likes').doc(uid).get());
-        const likeSnapshots = await Promise.all(likePromises);
+        const summaryRef = db.collection('users').doc(uid).collection('engagements').doc('summary');
+        const summaryDoc = await summaryRef.get();
         const statuses = {};
-        likeSnapshots.forEach((doc, index) => { statuses[postIds[index]] = doc.exists; });
+        
+        if (summaryDoc.exists && summaryDoc.data().likedPosts !== undefined) {
+            // Lectura óptima O(1): Usando Set en memoria (Costo: 1 Lectura para TODOS los posts)
+            const likedSet = new Set(summaryDoc.data().likedPosts || []);
+            postIds.forEach(id => { statuses[id] = likedSet.has(id); });
+        } else {
+            // Migración transparente si el usuario es activo antiguo y no tiene el resumen actualizado
+            const likePromises = postIds.map(postId => db.collection('posts').doc(postId).collection('likes').doc(uid).get());
+            const likeSnapshots = await Promise.all(likePromises);
+            const likedPostsForSummary = [];
+            
+            likeSnapshots.forEach((doc, index) => { 
+                const isLiked = doc.exists;
+                statuses[postIds[index]] = isLiked;
+                if (isLiked) likedPostsForSummary.push(postIds[index]);
+            });
+            // Creamos el resumen para que el letal costo N+1 jamás vuelva a ocurrir.
+            await summaryRef.set({ likedPosts: likedPostsForSummary }, { merge: true });
+        }
         res.status(200).json(statuses);
     } catch (error) {
         console.error('Error en getLikeStatuses:', error);
@@ -349,8 +408,14 @@ const savePost = async (req, res) => {
     const { uid } = req.user;
     const { postId } = req.params;
     try {
+        const batch = db.batch();
         const savedPostRef = db.collection('users').doc(uid).collection('saved_posts').doc(postId);
-        await savedPostRef.set({ savedAt: new Date().toISOString() });
+        const summaryRef = db.collection('users').doc(uid).collection('engagements').doc('summary');
+        
+        batch.set(savedPostRef, { savedAt: new Date().toISOString() });
+        batch.set(summaryRef, { savedPosts: admin.firestore.FieldValue.arrayUnion(postId) }, { merge: true });
+        
+        await batch.commit();
         res.status(200).json({ message: 'Publicación guardada.' });
     } catch (error) {
         console.error('Error en savePost:', error);
@@ -361,8 +426,14 @@ const unsavePost = async (req, res) => {
     const { uid } = req.user;
     const { postId } = req.params;
     try {
+        const batch = db.batch();
         const savedPostRef = db.collection('users').doc(uid).collection('saved_posts').doc(postId);
-        await savedPostRef.delete();
+        const summaryRef = db.collection('users').doc(uid).collection('engagements').doc('summary');
+        
+        batch.delete(savedPostRef);
+        batch.set(summaryRef, { savedPosts: admin.firestore.FieldValue.arrayRemove(postId) }, { merge: true });
+        
+        await batch.commit();
         res.status(200).json({ message: 'Publicación eliminada de guardados.' });
     } catch (error) {
         console.error('Error en unsavePost:', error);
@@ -374,11 +445,26 @@ const getSaveStatuses = async (req, res) => {
     const { postIds } = req.body;
     if (!Array.isArray(postIds) || postIds.length === 0) return res.status(200).json({});
     try {
-        const savedPostsRef = db.collection('users').doc(uid).collection('saved_posts');
-        const promises = postIds.map(id => savedPostsRef.doc(id).get());
-        const results = await Promise.all(promises);
+        const summaryRef = db.collection('users').doc(uid).collection('engagements').doc('summary');
+        const summaryDoc = await summaryRef.get();
         const statuses = {};
-        results.forEach((doc, index) => { statuses[postIds[index]] = doc.exists; });
+        
+        if (summaryDoc.exists && summaryDoc.data().savedPosts !== undefined) {
+            const savedSet = new Set(summaryDoc.data().savedPosts || []);
+            postIds.forEach(id => { statuses[id] = savedSet.has(id); });
+        } else {
+            const savedPostsRef = db.collection('users').doc(uid).collection('saved_posts');
+            const promises = postIds.map(id => savedPostsRef.doc(id).get());
+            const results = await Promise.all(promises);
+            const savedPostsForSummary = [];
+            
+            results.forEach((doc, index) => { 
+                const isSaved = doc.exists;
+                statuses[postIds[index]] = isSaved;
+                if (isSaved) savedPostsForSummary.push(postIds[index]);
+            });
+            await summaryRef.set({ savedPosts: savedPostsForSummary }, { merge: true });
+        }
         res.status(200).json(statuses);
     } catch (error) {
         console.error('Error en getSaveStatuses:', error);
