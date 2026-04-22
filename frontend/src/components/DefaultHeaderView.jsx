@@ -31,9 +31,7 @@ function DefaultHeaderView({ userProfile, pets }) {
   // La constante isVerifiedVet ha sido eliminada de aquí.
   // ----- FIN DE LA MODIFICACIÓN -----
 
-  const handleSearchClick = () => {
-    alert('Próximamente: Búsqueda de usuarios, mascotas y perfiles verificados.');
-  };
+
 
   const getTopNavLinkClass = ({ isActive }) => {
     return isActive ? `${styles.topNavButton} ${styles.active}` : styles.topNavButton;
@@ -43,9 +41,9 @@ function DefaultHeaderView({ userProfile, pets }) {
     <>
       <div className={styles.userProfileSection}>
           <div className={styles.topNavBar}>
-              <button onClick={handleSearchClick} className={styles.topNavButton} title="Buscar (Próximamente)">
+              <NavLink to="/dashboard/search" className={getTopNavLinkClass} title="Búsqueda Inteligente">
                   <Search size={22} />
-              </button>
+              </NavLink>
               <NavLink to="/dashboard/map" className={getTopNavLinkClass} title="Mapa Comunitario">
                   <Map size={22} />
               </NavLink>

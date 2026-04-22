@@ -1,0 +1,187 @@
+.container {
+    padding: 16px;
+    padding-bottom: 80px; /* Room for bottom bar */
+    color: var(--text-primary);
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.searchHeader {
+    position: sticky;
+    top: 54px;
+    background-color: var(--bg-primary);
+    z-index: 10;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 16px;
+}
+
+.searchInputWrapper {
+    position: relative;
+    width: 100%;
+}
+
+.searchIcon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+}
+
+.searchInput {
+    width: 100%;
+    padding: 14px 14px 14px 44px;
+    border-radius: 20px;
+    border: none;
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 1rem;
+    outline: none;
+    transition: box-shadow 0.2s ease;
+}
+
+.searchInput:focus {
+    box-shadow: 0 0 0 2px var(--accent-primary);
+}
+
+.tabsContainer {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
+
+.tab {
+    padding: 8px 16px;
+    border-radius: 20px;
+    background-color: var(--bg-secondary);
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 0.9rem;
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+}
+
+.tab.active {
+    background-color: var(--accent-primary);
+    color: white;
+}
+
+.resultsContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.resultCard {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    background-color: var(--bg-secondary);
+    border-radius: 16px;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.2s ease;
+}
+
+.resultCard:active {
+    transform: scale(0.98);
+}
+
+.avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-right: 16px;
+    background-color: var(--bg-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.nameRow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.name {
+    font-weight: 700;
+    font-size: 1rem;
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.vetBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background-color: rgba(66, 153, 225, 0.15); /* Light blue bg */
+    color: #4299e1; /* Verified blue */
+    padding: 2px 6px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.subText {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin: 2px 0 0 0;
+}
+
+.epidBadge {
+    background-color: rgba(72, 187, 120, 0.15);
+    color: #48bb78;
+    padding: 2px 6px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    display: inline-block;
+    margin-top: 4px;
+}
+
+.rescueBadge {
+    background-color: rgba(245, 101, 101, 0.15);
+    color: #f56565;
+    padding: 2px 6px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    margin-left: 6px;
+}
+
+.emptyState {
+    text-align: center;
+    color: var(--text-secondary);
+    padding: 40px 20px;
+}
+
+.loader {
+    text-align: center;
+    padding: 20px;
+    color: var(--accent-primary);
+}
+
+.spin {
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}

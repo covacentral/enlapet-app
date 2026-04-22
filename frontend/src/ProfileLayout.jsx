@@ -29,8 +29,8 @@ import PostDetailModal from './PostDetailModal.jsx';
 import LostAndFoundPage from './LostAndFoundPage.jsx';
 import RescueModeModal from './components/RescueModeModal.jsx';
 import NotificationsPage from './NotificationsPage.jsx';
-// --- 1. IMPORTAMOS el componente del panel de veterinario ---
 import VetDashboardPage from './VetDashboardPage.jsx';
+import SearchPage from './SearchPage.jsx';
 
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -192,8 +192,9 @@ function ProfileLayout({ user }) {
           <Route path="order-confirmation" element={<OrderConfirmationPage />} />
           <Route path="notifications" element={<NotificationsPage onMarkAsRead={handleMarkAsRead} />} />
           
-          {/* --- 2. AÑADIMOS la ruta faltante para el panel --- */}
+          {/* --- Rutas nuevas --- */}
           <Route path="vet-panel" element={<VetDashboardPage userProfile={userProfile} />} />
+          <Route path="search" element={<SearchPage />} />
         </Routes>
       </main>
 

@@ -27,6 +27,7 @@ const paymentRoutes = require('./routes/payment.routes');
 const orderRoutes = require('./routes/order.routes');
 const reportRoutes = require('./routes/reports.routes');
 const publicRoutes = require('./routes/public.routes');
+const searchRoutes = require('./routes/search.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -117,6 +118,7 @@ app.use('/api', productRoutes);
 app.use('/api', paymentRoutes);
 app.use('/api', orderRoutes);
 app.use('/api', reportRoutes);
+app.use('/api/search', searchRoutes);
 
 db.collection('users').limit(1).get()
     .then(() => console.log('Conexión a Firestore exitosa.'))
