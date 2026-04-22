@@ -90,7 +90,21 @@ function RescueProfile() {
         try {
           const computedStyle = window.getComputedStyle(node);
           node.style.backgroundColor = computedStyle.backgroundColor;
-          const dataUrl = await toPng(node, { cacheBust: true, pixelRatio: 2 });
+          const dataUrl = await toPng(node, { 
+            cacheBust: true, 
+            pixelRatio: 2,
+            filter: (domNode) => {
+              // Excluimos el mapa porque los tiles de Leaflet no tienen crossOrigin y manchan el canvas
+              if (domNode?.classList?.contains('leaflet-container') || domNode?.classList?.contains(styles.mapWrapper)) {
+                return false;
+              }
+              // Excluimos los íconos/flechas interactivas para que el cartel quede limpio
+              if (domNode?.tagName === 'svg' && domNode?.parentNode?.classList?.contains(styles.icon)) {
+                 // Dejar los iconos de lucide si se quieren, pero el map no.
+              }
+              return true;
+            }
+          });
           const link = document.createElement('a');
           link.download = `se-busca-${petData?.name || 'mascota'}.png`;
           link.href = dataUrl;
@@ -156,7 +170,12 @@ function RescueProfile() {
 
             <div ref={cardRef} className={`${styles.card} ${isMapVisible ? styles.expanded : ''}`}>
                 <div className={styles.header}><h1>¡SE BUSCA!</h1></div>
-                <img src={petData.petPictureUrl || 'https://placehold.co/300x300/E2E8F0/4A5568?text=🐾'} alt={petData.name} className={styles.picture} />
+                <img 
+                    src={petData.petPictureUrl || 'https://placehold.co/300x300/E2E8F0/4A5568?text=🐾'} 
+                    alt={petData.name} 
+                    className={styles.picture} 
+                    crossOrigin="anonymous"
+                />
                 <div className={styles.petInfoCaption}><h2 className={styles.name}>{petData.name}</h2><p className={styles.breed}>{petData.breed || 'Raza no especificada'}</p></div>
                 <div className={styles.infoBox + ' ' + styles.clickable} onClick={() => setIsMapVisible(!isMapVisible)}>
                     <div className={styles.icon}><MapPin size={24} /></div>
