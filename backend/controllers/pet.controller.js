@@ -4,13 +4,24 @@
 const { db, bucket } = require('../config/firebase');
 const admin = require('firebase-admin');
 const petService = require('../services/pet.service');
+const NodeCache = require('node-cache');
+
+const petCache = new NodeCache({ stdTTL: 60, checkperiod: 120 }); // Memoria de 1 minuto para evitar re-render loops del front
+
 
 // --- FUNCIONES REFACTORIZADAS (Usan pet.service.js) ---
 
 const getMyPets = async (req, res) => {
     try {
         const { uid } = req.user;
-        const pets = await petService.findPetsByOwnerId(uid);
+        const cacheKey = `my_pets_${uid}`;
+        let pets = petCache.get(cacheKey);
+        
+        if (!pets) {
+            pets = await petService.findPetsByOwnerId(uid);
+            petCache.set(cacheKey, pets);
+        }
+        
         res.status(200).json(pets);
     } catch (error) {
         console.error('Error en getMyPets:', error);
@@ -23,6 +34,9 @@ const createPet = async (req, res) => {
         const { uid } = req.user;
         const { name, breed } = req.body;
         const newPet = await petService.createPetProfile(uid, name, breed);
+        
+        petCache.del(`my_pets_${uid}`); // Invalida el caché
+        
         res.status(201).json({ message: 'Mascota registrada con éxito.', ...newPet });
     } catch (error) {
         console.error('Error en createPet:', error);
@@ -36,6 +50,9 @@ const updatePet = async (req, res) => {
         const { petId } = req.params;
         const updateData = req.body;
         await petService.updatePetDetails(uid, petId, updateData);
+        
+        petCache.del(`my_pets_${uid}`); // Invalida el caché
+        
         res.status(200).json({ message: 'Perfil de la mascota actualizado con éxito.' });
     } catch (error) {
         console.error(`Error en updatePet para petId ${req.params.petId}:`, error);
@@ -147,8 +164,9 @@ const uploadPetPicture = async (req, res) => {
             // FIN DEL CAMBIO
             // =================================================================
 
-            await petRef.update({ petPictureUrl: publicUrl }); // <-- Guarda la URL optimizada
-            res.status(200).json({ message: 'Foto de perfil actualizada con éxito.', petPictureUrl: publicUrl }); // <-- Devuelve la URL optimizada
+            await petRef.update({ petPictureUrl: publicUrl });
+            petCache.del(`my_pets_${uid}`); // Invalida el caché de las mascotas del dueño
+            res.status(200).json({ message: 'Foto de perfil actualizada con éxito.', petPictureUrl: publicUrl });
         });
 
         blobStream.end(file.buffer);

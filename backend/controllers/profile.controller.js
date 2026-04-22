@@ -4,6 +4,9 @@
 const { db, bucket } = require('../config/firebase');
 const { createNotification } = require('../services/notification.service');
 const admin = require('firebase-admin');
+const NodeCache = require('node-cache');
+
+const profileCache = new NodeCache({ stdTTL: 60, checkperiod: 120 }); // Escudo térmico temporal contra bucles del front
 
 /**
  * Obtiene el perfil público de un usuario, incluyendo sus mascotas.
@@ -30,13 +33,22 @@ const getUserPublicProfile = async (req, res) => {
             verification: userData.verification || { status: 'none', type: 'none' },
         };
 
-        const petsSnapshot = await db.collection('pets').where('ownerId', '==', userId).get();
-        const petsList = petsSnapshot.docs.map(doc => ({
-            id: doc.id,
-            name: doc.data().name,
-            breed: doc.data().breed,
-            petPictureUrl: doc.data().petPictureUrl || ''
-        }));
+        let petsList = [];
+        const cacheKey = `profile_pets_${userId}`;
+        const cachedPets = profileCache.get(cacheKey);
+
+        if (cachedPets) {
+            petsList = cachedPets;
+        } else {
+            const petsSnapshot = await db.collection('pets').where('ownerId', '==', userId).get();
+            petsList = petsSnapshot.docs.map(doc => ({
+                id: doc.id,
+                name: doc.data().name,
+                breed: doc.data().breed,
+                petPictureUrl: doc.data().petPictureUrl || ''
+            }));
+            profileCache.set(cacheKey, petsList);
+        }
 
         res.status(200).json({ userProfile: publicProfile, pets: petsList });
     } catch (error) {
