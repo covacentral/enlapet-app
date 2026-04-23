@@ -6,7 +6,7 @@ const admin = require('firebase-admin');
 const petService = require('../services/pet.service');
 const NodeCache = require('node-cache');
 
-const petCache = new NodeCache({ stdTTL: 60, checkperiod: 120 }); // Memoria de 1 minuto para evitar re-render loops del front
+const petCache = new NodeCache({ stdTTL: 900, checkperiod: 120 }); // Memoria de 15 minutos para evitar lecturas repetidas al cambiar de pestaña
 
 
 // --- FUNCIONES REFACTORIZADAS (Usan pet.service.js) ---

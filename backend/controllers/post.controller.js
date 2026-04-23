@@ -7,8 +7,8 @@ const admin = require('firebase-admin');
 const NodeCache = require('node-cache');
 
 // --- [Cachés de Optimización del Feed] ---
-const feedCache = new NodeCache({ stdTTL: 120, checkperiod: 60 }); // 2 min (Mantener reactivo pero colapsar lecturas idénticas)
-const authorCache = new NodeCache({ stdTTL: 1800, checkperiod: 600 }); // 30 min (Los perfiles rara vez cambian repetidamente)
+const feedCache = new NodeCache({ stdTTL: 900, checkperiod: 120 }); // 15 min (Reducción masiva de lecturas mientras Render esté vivo)
+const authorCache = new NodeCache({ stdTTL: 3600, checkperiod: 600 }); // 1 hora (Los perfiles rara vez cambian repetidamente)
 // Se elimina la importación de 'completeMission', ya que su lógica se integra directamente.
 
 // --- (getFeed y otras funciones no relacionadas con la creación permanecen sin cambios) ---

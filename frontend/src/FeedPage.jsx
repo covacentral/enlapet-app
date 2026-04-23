@@ -41,6 +41,28 @@ function FeedPage({ userProfile, pets }) {
   };
 
   const fetchFeed = useCallback(async (cursor, reset = false) => {
+    const CACHE_KEY = 'enlapet_feed_cache';
+    const CACHE_TTL = 5 * 60 * 1000; // 5 minutos de caché en navegador
+
+    if (reset && !cursor) {
+      const cached = sessionStorage.getItem(CACHE_KEY);
+      if (cached) {
+        try {
+          const { data, timestamp } = JSON.parse(cached);
+          if (Date.now() - timestamp < CACHE_TTL) {
+            setPosts(data.posts);
+            if (data.lostPets) setLostPets(data.lostPets);
+            setNextCursor(data.nextCursor);
+            setHasMore(!!data.nextCursor);
+            setLikedStatuses(data.likedStatuses || {});
+            setSavedStatuses(data.savedStatuses || {});
+            setIsLoading(false);
+            return; // Cargado desde caché, evita la petición de red
+          }
+        } catch (e) { /* Ignorar errores de parseo de caché */ }
+      }
+    }
+
     if (reset || posts.length === 0) setIsLoading(true);
     setError(null);
     try {
@@ -77,7 +99,15 @@ function FeedPage({ userProfile, pets }) {
     } finally {
       setIsLoading(false);
     }
-  }, [posts.length]);
+  }, []); // Dependencias vacías, usa setState funcionales internamente
+
+  // Guardar en caché automáticamente cuando los datos cambien
+  useEffect(() => {
+    if (posts.length > 0 && !nextCursor) { // Solo guarda la primera página para no saturar memoria
+      const cacheData = { posts, lostPets, nextCursor, likedStatuses, savedStatuses };
+      sessionStorage.setItem('enlapet_feed_cache', JSON.stringify({ timestamp: Date.now(), data: cacheData }));
+    }
+  }, [posts, lostPets, nextCursor, likedStatuses, savedStatuses]);
 
   useEffect(() => {
     fetchFeed(null, true);

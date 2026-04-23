@@ -18,10 +18,26 @@ function LostAndFoundPage() {
   const [hasMore, setHasMore] = useState(true);
 
   const fetchLostPets = useCallback(async (cursor = null) => {
-    if (cursor) {
-      setIsLoadingMore(true);
-    } else {
+    const CACHE_KEY = 'enlapet_lost_pets_cache';
+    const CACHE_TTL = 5 * 60 * 1000;
+
+    if (!cursor) {
+      const cached = sessionStorage.getItem(CACHE_KEY);
+      if (cached) {
+        try {
+          const { data, timestamp } = JSON.parse(cached);
+          if (Date.now() - timestamp < CACHE_TTL) {
+            setLostPets(data.pets);
+            setNextCursor(data.nextCursor);
+            setHasMore(!!data.nextCursor);
+            setIsLoading(false);
+            return;
+          }
+        } catch (e) { /* ignore */ }
+      }
       setIsLoading(true);
+    } else {
+      setIsLoadingMore(true);
     }
     setError(null);
 
@@ -49,6 +65,15 @@ function LostAndFoundPage() {
       setIsLoadingMore(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (lostPets.length > 0 && !nextCursor) {
+      sessionStorage.setItem('enlapet_lost_pets_cache', JSON.stringify({
+        timestamp: Date.now(),
+        data: { pets: lostPets, nextCursor }
+      }));
+    }
+  }, [lostPets, nextCursor]);
 
   useEffect(() => {
     fetchLostPets(null); // Carga inicial
