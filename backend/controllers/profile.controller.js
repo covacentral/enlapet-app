@@ -4,9 +4,10 @@
 const { db, bucket } = require('../config/firebase');
 const { createNotification } = require('../services/notification.service');
 const admin = require('firebase-admin');
-const NodeCache = require('node-cache');
+const globalCache = require('../utils/cache');
 
-const profileCache = new NodeCache({ stdTTL: 60, checkperiod: 120 }); // Escudo térmico temporal contra bucles del front
+// Usamos globalCache también aquí para perfil público temporal
+const profileCache = globalCache; // Reutilizamos para no tener multiples instancias de node-cache
 
 /**
  * Obtiene el perfil público de un usuario, incluyendo sus mascotas.
@@ -190,6 +191,11 @@ const followProfile = async (req, res) => {
             
             await createNotification(recipientId, uid, 'new_follower', profileId, profileType);
         });
+
+        // --- EVENT-DRIVEN CACHE INVALIDATION ---
+        // Destruye el caché de seguidos del usuario para que el feed se actualice de inmediato
+        globalCache.del(`following_${uid}`);
+
         res.status(200).json({ message: 'Ahora estás siguiendo a este perfil.' });
     } catch (error) {
         console.error('Error al seguir al perfil:', error);
@@ -219,6 +225,10 @@ const unfollowProfile = async (req, res) => {
             t.delete(followedProfileRef.collection('followers').doc(uid));
             t.update(followedProfileRef, { followersCount: admin.firestore.FieldValue.increment(-1) });
         });
+
+        // --- EVENT-DRIVEN CACHE INVALIDATION ---
+        globalCache.del(`following_${uid}`);
+
         res.status(200).json({ message: 'Has dejado de seguir a este perfil.' });
     } catch (error) {
         console.error('Error al dejar de seguir al perfil:', error);

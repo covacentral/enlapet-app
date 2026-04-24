@@ -4,12 +4,9 @@
 const { db, bucket } = require('../config/firebase');
 const { createNotification } = require('../services/notification.service');
 const admin = require('firebase-admin');
-const NodeCache = require('node-cache');
+const globalCache = require('../utils/cache');
 
-// --- [Cachés de Optimización del Feed] ---
-const feedCache = new NodeCache({ stdTTL: 900, checkperiod: 120 }); // 15 min (Reducción masiva de lecturas mientras Render esté vivo)
-const authorCache = new NodeCache({ stdTTL: 3600, checkperiod: 600 }); // 1 hora (Los perfiles rara vez cambian repetidamente)
-// Se elimina la importación de 'completeMission', ya que su lógica se integra directamente.
+// Eliminados cachés locales, ahora usamos la utilidad global.
 
 // --- (getFeed y otras funciones no relacionadas con la creación permanecen sin cambios) ---
 const getFeed = async (req, res) => {
@@ -18,8 +15,16 @@ const getFeed = async (req, res) => {
     const { cursor } = req.query;
     const POSTS_PER_PAGE = 10;
     try {
-        const followingSnapshot = await db.collection('users').doc(uid).collection('following').get();
-        const followedIds = followingSnapshot.docs.map(doc => doc.id);
+        const followingCacheKey = `following_${uid}`;
+        let followedIds = globalCache.get(followingCacheKey);
+        
+        if (!followedIds) {
+            // Lectura pesada ejecutada SOLO cuando el caché expira o se invalida por un Follow
+            const followingSnapshot = await db.collection('users').doc(uid).collection('following').get();
+            followedIds = followingSnapshot.docs.map(doc => doc.id);
+            globalCache.set(followingCacheKey, followedIds, 43200); // 12 horas
+        }
+
         const authorsToInclude = [...new Set([...followedIds, uid])];
         let posts = [];
         const fetchedPostIds = new Set();
@@ -41,7 +46,7 @@ const getFeed = async (req, res) => {
         if (remainingLimit > 0) {
             let discoveryPostsList = [];
             const cacheKey = 'discovery_posts_feed';
-            const cachedDocs = feedCache.get(cacheKey);
+            const cachedDocs = globalCache.get(cacheKey);
 
             if (cachedDocs && !cursor) {
                 // Modo Caché (Solo sin cursor para mantener frescura y lógica en la primera página)
@@ -53,7 +58,7 @@ const getFeed = async (req, res) => {
                 discoveryPostsList = discoverySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 
                 if (!cursor) {
-                    feedCache.set(cacheKey, discoveryPostsList);
+                    globalCache.set(cacheKey, discoveryPostsList); // Vida útil de 24h manejada globalmente
                 }
             }
 
@@ -67,19 +72,31 @@ const getFeed = async (req, res) => {
         posts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         if (posts.length > POSTS_PER_PAGE) posts = posts.slice(0, POSTS_PER_PAGE);
         const nextCursor = posts.length > 0 ? posts[posts.length - 1].id : null;
-        const authorIds = [...new Set(posts.map(p => p.authorId))];
+        
         const authorsData = {};
-        if (authorIds.length > 0) {
-            const authorPromises = authorIds.map(async (id) => {
-                const cachedAuthor = authorCache.get(id);
+        if (posts.length > 0) {
+            const uniqueAuthors = [];
+            const seenIds = new Set();
+            posts.forEach(p => {
+                if (!seenIds.has(p.authorId)) {
+                    seenIds.add(p.authorId);
+                    uniqueAuthors.push({ id: p.authorId, type: p.authorType });
+                }
+            });
+
+            const authorPromises = uniqueAuthors.map(async (authorRef) => {
+                const { id, type } = authorRef;
+                const cachedAuthor = globalCache.get(`author_${id}`);
                 if (cachedAuthor) return cachedAuthor;
                 
-                const doc = await db.collection('users').doc(id).get();
-                const targetDoc = doc.exists ? doc : await db.collection('pets').doc(id).get();
-                if (targetDoc.exists) {
-                    const data = targetDoc.data();
-                    const authorData = { id: targetDoc.id, name: data.name, profilePictureUrl: data.profilePictureUrl || data.petPictureUrl || '' };
-                    authorCache.set(id, authorData);
+                // Optimización O(1): Usamos el authorType del post para no leer ambas colecciones
+                const collectionName = type === 'pet' ? 'pets' : 'users';
+                const doc = await db.collection(collectionName).doc(id).get();
+                
+                if (doc.exists) {
+                    const data = doc.data();
+                    const authorData = { id: doc.id, name: data.name, profilePictureUrl: data.profilePictureUrl || data.petPictureUrl || '' };
+                    globalCache.set(`author_${id}`, authorData);
                     return authorData;
                 }
                 return null;
@@ -96,7 +113,7 @@ const getFeed = async (req, res) => {
         let rescuePetsData = [];
         if (!cursor) {
             const rescueCacheKey = 'rescue_pets_carousel';
-            const cachedRescuePets = feedCache.get(rescueCacheKey);
+            const cachedRescuePets = globalCache.get(rescueCacheKey);
             
             if (cachedRescuePets) {
                 rescuePetsData = cachedRescuePets;
@@ -134,7 +151,7 @@ const getFeed = async (req, res) => {
                         }))).catch(console.error);
                     }
                 }
-                feedCache.set(rescueCacheKey, rescuePetsData);
+                globalCache.set(rescueCacheKey, rescuePetsData);
             }
         }
 
@@ -251,6 +268,12 @@ const createPost = async (req, res) => {
                 const finalAuthorData = { id: authorId, name: authorDoc.data().name, profilePictureUrl: authorDoc.data().profilePictureUrl || authorDoc.data().petPictureUrl || '' };
                 res.status(201).json({ message: 'Publicación creada.', post: { ...newPost, author: finalAuthorData } });
 
+                // =================================================================
+                // INICIO DEL EVENT-DRIVEN CACHE INVALIDATION
+                // =================================================================
+                // El muro se siente 100% en vivo porque al publicar, destruimos el caché global.
+                globalCache.del('discovery_posts_feed');
+                // =================================================================
             } catch (transactionError) {
                 console.error('Error en la transacción de createPost:', transactionError);
                 res.status(500).json({ message: transactionError.message || 'No se pudo crear la publicación y completar la misión.' });

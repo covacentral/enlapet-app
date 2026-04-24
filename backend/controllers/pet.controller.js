@@ -4,11 +4,9 @@
 const { db, bucket } = require('../config/firebase');
 const admin = require('firebase-admin');
 const petService = require('../services/pet.service');
-const NodeCache = require('node-cache');
+const globalCache = require('../utils/cache');
 
-const petCache = new NodeCache({ stdTTL: 900, checkperiod: 120 }); // Memoria de 15 minutos para evitar lecturas repetidas al cambiar de pestaña
-
-
+const petCache = globalCache; // Reutilizamos el caché global
 // --- FUNCIONES REFACTORIZADAS (Usan pet.service.js) ---
 
 const getMyPets = async (req, res) => {
@@ -271,6 +269,11 @@ const manageRescueMode = async (req, res) => {
         }
 
         await petRef.update(updatePayload);
+        
+        // --- EVENT-DRIVEN CACHE INVALIDATION ---
+        globalCache.del('active_rescue_pets_first_page');
+        globalCache.del('rescue_pets_carousel');
+
         res.status(200).json({ message: `Modo rescate ${isActive ? 'activado' : 'desactivado'} con éxito.` });
 
     } catch (error) {

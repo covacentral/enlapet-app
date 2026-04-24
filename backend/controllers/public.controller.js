@@ -2,6 +2,7 @@
 // VERSIÓN 2.0: Añade paginación a la función getActiveRescuePets.
 
 const { db } = require('../config/firebase');
+const globalCache = require('../utils/cache');
 
 // --- (getPetPublicProfile y getUserPublicProfile no cambian) ---
 const getPetPublicProfile = async (req, res) => {
@@ -131,20 +132,28 @@ const getActiveRescuePets = async (req, res) => {
     const PAGE_SIZE = 10;
 
     try {
+        const cacheKey = cursor ? `active_rescue_pets_${cursor}` : 'active_rescue_pets_first_page';
+        const cachedData = globalCache.get(cacheKey);
+
+        if (cachedData) {
+            return res.status(200).json(cachedData);
+        }
+
         let query = db.collection('pets')
             .where('rescueMode.isActive', '==', true)
             .orderBy('rescueMode.activatedAt', 'desc')
             .limit(PAGE_SIZE);
 
         if (cursor) {
-            // Si hay un cursor, iniciamos la búsqueda a partir de ese valor.
             query = query.startAfter(cursor);
         }
 
         const snapshot = await query.get();
 
         if (snapshot.empty) {
-            return res.status(200).json({ pets: [], nextCursor: null });
+            const emptyResponse = { pets: [], nextCursor: null };
+            globalCache.set(cacheKey, emptyResponse);
+            return res.status(200).json(emptyResponse);
         }
 
         const rescuePets = [];
@@ -183,10 +192,14 @@ const getActiveRescuePets = async (req, res) => {
         const lastDoc = snapshot.docs[snapshot.docs.length - 1];
         const nextCursor = lastDoc ? lastDoc.data().rescueMode.activatedAt : null;
 
-        res.status(200).json({
+        const responseData = {
             pets: rescuePets,
             nextCursor: nextCursor
-        });
+        };
+
+        globalCache.set(cacheKey, responseData);
+
+        res.status(200).json(responseData);
 
     } catch (error) {
         console.error('Error en getActiveRescuePets:', error);
