@@ -107,7 +107,14 @@ function ProfileLayout({ user }) {
         fetchUnreadCount()
     ]).finally(() => setLoading(false));
 
-    const interval = setInterval(fetchUnreadCount, 60000); 
+    // Optimización de lecturas: Solo consultar notificaciones cada 5 minutos 
+    // y ÚNICAMENTE si la pestaña del navegador está activa/visible.
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchUnreadCount();
+      }
+    }, 300000); 
+    
     return () => clearInterval(interval);
   }, [fetchCoreData, fetchUnreadCount]);
 
