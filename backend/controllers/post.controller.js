@@ -28,18 +28,31 @@ const getFeed = async (req, res) => {
         const authorsToInclude = [...new Set([...followedIds, uid])];
         let posts = [];
         const fetchedPostIds = new Set();
+        
         if (authorsToInclude.length > 0) {
-            let followedQuery = db.collection('posts').where('authorId', 'in', authorsToInclude).orderBy('createdAt', 'desc').limit(POSTS_PER_PAGE);
-            if (cursor) {
-                const cursorDoc = await db.collection('posts').doc(cursor).get();
-                if(cursorDoc.exists) followedQuery = followedQuery.startAfter(cursorDoc);
+            // Firestore limit: 'in' queries can have at most 10 values. We must chunk.
+            const chunks = [];
+            for (let i = 0; i < authorsToInclude.length; i += 10) {
+                chunks.push(authorsToInclude.slice(i, i + 10));
             }
-            const followedSnapshot = await followedQuery.get();
-            followedSnapshot.docs.forEach(doc => {
-                if (!fetchedPostIds.has(doc.id)) {
-                    posts.push({ id: doc.id, ...doc.data() });
-                    fetchedPostIds.add(doc.id);
+            
+            const chunkPromises = chunks.map(async (chunk) => {
+                let followedQuery = db.collection('posts').where('authorId', 'in', chunk).orderBy('createdAt', 'desc').limit(POSTS_PER_PAGE);
+                if (cursor) {
+                    const cursorDoc = await db.collection('posts').doc(cursor).get();
+                    if(cursorDoc.exists) followedQuery = followedQuery.startAfter(cursorDoc);
                 }
+                return followedQuery.get();
+            });
+
+            const chunkSnapshots = await Promise.all(chunkPromises);
+            chunkSnapshots.forEach(snapshot => {
+                snapshot.docs.forEach(doc => {
+                    if (!fetchedPostIds.has(doc.id)) {
+                        posts.push({ id: doc.id, ...doc.data() });
+                        fetchedPostIds.add(doc.id);
+                    }
+                });
             });
         }
         const remainingLimit = POSTS_PER_PAGE - posts.length;
